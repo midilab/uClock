@@ -193,6 +193,11 @@ void uClockClass::setTempo(uint16_t _tempo)
 	SREG = tmpSREG;
 }
 
+uint16_t uClockClass::getTempo() 
+{
+	return tempo;
+}
+
 void uClockClass::clockMe() 
 {
 	if (uClock.mode == uClock.EXTERNAL_CLOCK) {
