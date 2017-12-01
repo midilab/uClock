@@ -79,6 +79,106 @@ uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock)
 	}
 }
 
+#define PHASE_FACTOR 16
+static uint32_t phase_mult(uint32_t val) 
+{
+	return (val * PHASE_FACTOR) >> 8;
+}
+
+void uClockClass::start() 
+{
+	if (mode == INTERNAL_CLOCK) {
+		state = STARTED;
+		mod6_counter = 0;
+		div96th_counter = 0;
+		div32th_counter = 0;
+		div16th_counter = 0;
+	} else {
+	//if (mode == EXTERNAL_CLOCK) {
+		init();
+		state = STARTING;
+		mod6_counter = 0;
+		div96th_counter = 0;
+		div32th_counter = 0;
+		div16th_counter = 0;
+		counter = 0;
+	}	
+	
+	if (onClockStartCallback) {
+		onClockStartCallback();
+	}	
+}
+
+void uClockClass::stop()
+{
+	if (mode == INTERNAL_CLOCK) {
+		state = PAUSED;
+	} else {
+	//if (mode == EXTERNAL_CLOCK) {
+		state = PAUSED;
+	}	
+	
+	if (onClockStopCallback) {
+		onClockStopCallback();
+	}	
+}
+
+void uClockClass::pause() 
+{
+	//if (mode == INTERNAL_CLOCK) {
+		if (state == PAUSED) {
+			start();
+		} else {
+			stop();
+		}
+	//}
+}
+
+void uClockClass::setTempo(uint16_t _tempo) 
+{
+	if (mode == EXTERNAL_CLOCK) {
+		return;
+	}
+	
+	if ( tempo == _tempo ) {
+		return;
+	}
+	uint8_t tmpSREG = SREG;
+	cli();
+	tempo = _tempo;
+	interval = (uint32_t)((uint32_t)156250 / tempo) - 16;
+	SREG = tmpSREG;
+}
+
+uint16_t uClockClass::getTempo() 
+{
+	return tempo;
+}
+
+void uClockClass::setMode(uint8_t tempo_mode) 
+{
+	mode = tempo_mode;
+}
+
+void uClockClass::clockMe() 
+{
+	if (uClock.mode == uClock.EXTERNAL_CLOCK) {
+	  uClock.handleClock();
+	}
+}
+
+// TODO: Tap stuff
+void uClockClass::tap() 
+{
+	// tap me
+}
+
+// TODO: Shuffle stuff
+void uClockClass::shuffle() 
+{
+	// shuffle me
+}
+
 void uClockClass::handleClock() 
 {
 	uint16_t cur_clock = _clock;
@@ -116,105 +216,15 @@ void uClockClass::handleClock()
 			}
 			break;
 
+/*
+			interval = (uint32_t)((uint32_t)156250 / tempo) - 16;
+			
+			interval = x(156250 / tempo) - 16;
+			x(156250 / tempo) = -16
+*/
+
 	}
 
-}
-
-void uClockClass::handleStart() 
-{
-	if (mode == EXTERNAL_CLOCK) {
-		init();
-		state = STARTING;
-		mod6_counter = 0;
-		div96th_counter = 0;
-		div32th_counter = 0;
-		div16th_counter = 0;
-		counter = 0;
-	}
-}
-
-void uClockClass::handleStop() 
-{
-	if (mode == EXTERNAL_CLOCK) {
-		state = PAUSED;
-	}
-}
-
-#define PHASE_FACTOR 16
-static uint32_t phase_mult(uint32_t val) 
-{
-	return (val * PHASE_FACTOR) >> 8;
-}
-
-void uClockClass::start() 
-{
-	if (mode == INTERNAL_CLOCK) {
-		state = STARTED;
-		mod6_counter = 0;
-		div96th_counter = 0;
-		div32th_counter = 0;
-		div16th_counter = 0;
-		if (onClockStartCallback) {
-			onClockStartCallback();
-		}
-	}
-}
-
-void uClockClass::stop()
-{
-	if (mode == INTERNAL_CLOCK) {
-		state = PAUSED;
-		if (onClockStopCallback) {
-			onClockStopCallback();
-		}
-	}
-}
-
-void uClockClass::pause() 
-{
-	if (mode == INTERNAL_CLOCK) {
-		if (state == PAUSED) {
-			start();
-		} else {
-			stop();
-		}
-	}
-}
-
-void uClockClass::setTempo(uint16_t _tempo) 
-{
-	if ( tempo == _tempo ) {
-		return;
-	}
-	uint8_t tmpSREG = SREG;
-	cli();
-	tempo = _tempo;
-	interval = (uint32_t)((uint32_t)156250 / tempo) - 16;
-	SREG = tmpSREG;
-}
-
-uint16_t uClockClass::getTempo() 
-{
-	return tempo;
-}
-
-void uClockClass::clockMe() 
-{
-	if (uClock.mode == uClock.EXTERNAL_CLOCK) {
-	  uClock.handleClock();
-	}
-}
-
-// TODO: Tap stuff
-void uClockClass::tap() 
-{
-	// tap me
-}
-
-// TODO: Shuffle stuff
-void uClockClass::shuffle() 
-{
-	// shuffle me
 }
 
 void uClockClass::handleTimerInt()  

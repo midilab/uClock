@@ -65,8 +65,7 @@ class uClockClass {
 		} state;
 
 		enum {
-			OFF = 0,
-			INTERNAL_CLOCK,
+			INTERNAL_CLOCK = 0,
 			EXTERNAL_CLOCK
 		} mode;
 
@@ -94,8 +93,6 @@ class uClockClass {
 
 		void init();
 		void handleClock();
-		void handleStart();
-		void handleStop();
 		void handleTimerInt();
 		
 		// external class control
@@ -106,6 +103,7 @@ class uClockClass {
 		uint16_t getTempo();
 
 		// External timming control
+		void setMode(uint8_t tempo_mode);
 		void clockMe();
 		
 		void shuffle();
