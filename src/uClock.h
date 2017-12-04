@@ -33,6 +33,10 @@
 #include <Arduino.h>
 #include <inttypes.h>
 
+#define SECS_PER_MIN  (60UL)
+#define SECS_PER_HOUR (3600UL)
+#define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
+
 namespace umodular { namespace clock {
 
 class uClockClass {
@@ -57,6 +61,7 @@ class uClockClass {
 		uint32_t indiv96th_counter;
 		uint16_t pll_x;
 		uint16_t tempo;
+		uint32_t start_timer;
 
 		enum {
 			PAUSED = 0,
@@ -108,6 +113,14 @@ class uClockClass {
 		
 		void shuffle();
 		void tap();
+		
+		// elapsed time support
+		uint8_t getNumberOfSeconds(uint32_t time);
+		uint8_t getNumberOfMinutes(uint32_t time);
+		uint8_t getNumberOfHours(uint32_t time);
+		uint8_t getNumberOfDays(uint32_t time);
+		uint32_t uClockClass::getNowTimer();
+
 };
 
 } } // end namespace umodular::clock
@@ -116,6 +129,7 @@ extern umodular::clock::uClockClass uClock;
 
 extern "C" {
 extern volatile uint16_t _clock;
+extern volatile uint32_t _timer;
 }
 
 #endif /* __U_CLOCK_H__ */

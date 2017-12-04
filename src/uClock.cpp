@@ -87,6 +87,8 @@ static uint32_t phase_mult(uint32_t val)
 
 void uClockClass::start() 
 {
+	start_timer = millis();
+	
 	if (mode == INTERNAL_CLOCK) {
 		state = STARTED;
 		mod6_counter = 0;
@@ -286,18 +288,48 @@ void uClockClass::handleTimerInt()
 	}
 
 }
+
+// elapsed time support
+uint8_t uClockClass::getNumberOfSeconds(uint32_t time)
+{
+	return ((millis() - time) / 1000) % SECS_PER_MIN;
+}
+
+uint8_t uClockClass::getNumberOfMinutes(uint32_t time)
+{
+	return (((millis() - time) / 1000) / SECS_PER_MIN) % SECS_PER_MIN;
+}
+
+uint8_t uClockClass::getNumberOfHours(uint32_t time)
+{
+	return (((millis() - time) / 1000) % SECS_PER_DAY) / SECS_PER_HOUR;
+}
+
+uint8_t uClockClass::getNumberOfDays(uint32_t time)
+{
+	return ((millis() - time) / 1000) / SECS_PER_DAY;
+}
+
+uint32_t uClockClass::getNowTimer()
+{
+	return _timer;
+}
 	
 } } // end namespace umodular::clock
 
 umodular::clock::uClockClass uClock;
 
 volatile uint16_t _clock = 0;
+volatile uint32_t _timer = 0;
 
 //
 // TIMER1 HANDLER INTERRUPT
 //
 ISR(TIMER1_OVF_vect) 
 {
+	// global timer counter
+	_timer = millis();
+	
 	if (uClock.state == uClock.STARTED) {
 		_clock++;
 		uClock.handleTimerInt();
