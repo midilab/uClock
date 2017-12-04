@@ -256,8 +256,8 @@ void uClockClass::handleTimerInt()
 			div32th_counter++;
 		}
 
-		//div96th_counter++;
-		//mod6_counter++;
+		div96th_counter++;
+		mod6_counter++;
 	
 		if (mode == EXTERNAL_CLOCK) {
 			uint16_t cur_clock = _clock;
@@ -282,9 +282,6 @@ void uClockClass::handleTimerInt()
 		if (mod6_counter == 6) {
 			mod6_counter = 0;
 		}
-
-		div96th_counter++;
-		mod6_counter++;
 		
 	} else {
 		counter--;
