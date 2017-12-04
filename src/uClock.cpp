@@ -58,6 +58,7 @@ void uClockClass::init()
 	indiv96th_counter = 0;
 	inmod6_counter = 0;
 	pll_x = 220;
+	start_timer = 0;
 
 	//
 	// Configure timers and prescale
@@ -113,6 +114,8 @@ void uClockClass::start()
 
 void uClockClass::stop()
 {
+	start_timer = 0;
+	
 	if (mode == INTERNAL_CLOCK) {
 		state = PAUSED;
 	} else {
@@ -314,6 +317,11 @@ uint32_t uClockClass::getNowTimer()
 {
 	return _timer;
 }
+	
+uint32_t uClockClass::getPlayTime()
+{
+	return start_timer;
+}	
 	
 } } // end namespace umodular::clock
 

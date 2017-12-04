@@ -119,7 +119,8 @@ class uClockClass {
 		uint8_t getNumberOfMinutes(uint32_t time);
 		uint8_t getNumberOfHours(uint32_t time);
 		uint8_t getNumberOfDays(uint32_t time);
-		uint32_t uClockClass::getNowTimer();
+		uint32_t getNowTimer();
+		uint32_t getPlayTime();
 
 };
 
