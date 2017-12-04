@@ -114,14 +114,17 @@ void uClockClass::start()
 
 void uClockClass::stop()
 {
+	state = PAUSED;
+	counter = 0;
+	last_clock = 0;
+	div96th_counter = 0;
+	div32th_counter = 0;
+	div16th_counter = 0;
+	mod6_counter = 0;
+	indiv96th_counter = 0;
+	inmod6_counter = 0;
+	pll_x = 220;	
 	start_timer = 0;
-	
-	if (mode == INTERNAL_CLOCK) {
-		state = PAUSED;
-	} else {
-	//if (mode == EXTERNAL_CLOCK) {
-		state = PAUSED;
-	}	
 	
 	if (onClockStopCallback) {
 		onClockStopCallback();
@@ -220,13 +223,6 @@ void uClockClass::handleClock()
 				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)diff) >> 8;
 			}
 			break;
-
-/*
-			interval = (uint32_t)((uint32_t)156250 / tempo) - 16;
-			
-			interval = x(156250 / tempo) - 16;
-			x(156250 / tempo) = -16
-*/
 
 	}
 
