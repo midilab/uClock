@@ -256,6 +256,10 @@ void uClockClass::handleTimerInt()
 			div32th_counter++;
 		}
 
+		if (onClock96PPQNCallback) {
+			onClock96PPQNCallback(&div96th_counter);
+		}
+		
 		div96th_counter++;
 		mod6_counter++;
 	
@@ -273,10 +277,6 @@ void uClockClass::handleTimerInt()
 					counter += phase_mult(counter - diff);
 				}
 			}
-		}
-	
-		if (onClock96PPQNCallback) {
-			onClock96PPQNCallback(&div96th_counter);
 		}
 		
 		if (mod6_counter == 6) {
