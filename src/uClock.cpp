@@ -295,22 +295,34 @@ void uClockClass::handleTimerInt()
 // elapsed time support
 uint8_t uClockClass::getNumberOfSeconds(uint32_t time)
 {
-	return ((millis() - time) / 1000) % SECS_PER_MIN;
+	if ( time == 0 ) {
+		return time;
+	}
+	return ((_timer - time) / 1000) % SECS_PER_MIN;
 }
 
 uint8_t uClockClass::getNumberOfMinutes(uint32_t time)
 {
-	return (((millis() - time) / 1000) / SECS_PER_MIN) % SECS_PER_MIN;
+	if ( time == 0 ) {
+		return time;
+	}	
+	return (((_timer - time) / 1000) / SECS_PER_MIN) % SECS_PER_MIN;
 }
 
 uint8_t uClockClass::getNumberOfHours(uint32_t time)
 {
-	return (((millis() - time) / 1000) % SECS_PER_DAY) / SECS_PER_HOUR;
+	if ( time == 0 ) {
+		return time;
+	}	
+	return (((_timer - time) / 1000) % SECS_PER_DAY) / SECS_PER_HOUR;
 }
 
 uint8_t uClockClass::getNumberOfDays(uint32_t time)
 {
-	return ((millis() - time) / 1000) / SECS_PER_DAY;
+	if ( time == 0 ) {
+		return time;
+	}	
+	return ((_timer - time) / 1000) / SECS_PER_DAY;
 }
 
 uint32_t uClockClass::getNowTimer()
