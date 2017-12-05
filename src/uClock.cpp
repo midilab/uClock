@@ -163,6 +163,11 @@ uint16_t uClockClass::getTempo()
 	return tempo;
 }
 
+uint8_t uClockClass::getMode() 
+{
+	return mode;
+}
+
 void uClockClass::setMode(uint8_t tempo_mode) 
 {
 	mode = tempo_mode;
@@ -222,6 +227,7 @@ void uClockClass::handleClock()
 			} else {
 				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)diff) >> 8;
 			}
+			tempo = (uint16_t)(156250 / (interval + 16));
 			break;
 
 	}

@@ -109,6 +109,7 @@ class uClockClass {
 
 		// External timming control
 		void setMode(uint8_t tempo_mode);
+		uint8_t getMode();
 		void clockMe();
 		
 		void shuffle();
