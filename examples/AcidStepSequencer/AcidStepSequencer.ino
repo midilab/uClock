@@ -4,29 +4,49 @@
 // Sequencer config
 #define STEP_MAX_SIZE      16
 #define SEQUENCER_MIN_BPM  50
-#define SEQUENCER_MAX_BPM  178
+#define SEQUENCER_MAX_BPM  177
 #define NOTE_VELOCITY      90
 #define ACCENT_VELOCITY    110
 
-// Choose only 1 mode and comment the other.
-// OLD_SCHOOL_ACID_ACCENTED
-// a button/led extra hardware to control steps velocity using accent only
-// NEW_SCHOOL_VELOCITY_CONTROLLED
-// a 10k potentiomer extra hardware to freely control steps velocity
-#define OLD_SCHOOL_ACID_ACCENTED
-#define NEW_SCHOOL_FREE_VELOCITY
+// MIDI modes
+#define MIDI_CHANNEL      0 // 0 = channel 1
+#define MIDI_MODE
+//#define SERIAL_MODE
 
+// hardware setup to fit different kinda of setups and arduino models
+#define OCTAVE_POT_PIN            A3
+#define NOTE_POT_PIN              A2
+#define STEP_LENGTH_POT_PIN       A1
+#define TEMPO_POT_PIN             A0
+
+#define PREVIOUS_STEP_BUTTON_PIN  2
+#define NEXT_STEP_BUTTON_PIN      3
+#define REST_BUTTON_PIN           4
+#define GLIDE_BUTTON_PIN          5
+#define ACCENT_BUTTON_PIN         6
+#define PLAY_STOP_BUTTON_PIN      7
+
+#define PREVIOUS_STEP_LED_PIN     8
+#define NEXT_STEP_LED_PIN         9
+#define REST_LED_PIN              10
+#define GLIDE_LED_PIN             11
+#define ACCENT_LED_PIN            12
+#define PLAY_STOP_LED_PIN         13
+
+// Sequencer data
 typedef struct
 {
   uint8_t note;
-  uint8_t velocity;
   bool accent;
   bool glide;
   bool rest;
 } SEQUENCER_STEP_DATA;
 
 SEQUENCER_STEP_DATA _sequencer[STEP_MAX_SIZE];
-uint16_t _last_step = 0;
+
+bool _playing = false;
+uint16_t _step, _last_step, _step_edit = 0;
+uint16_t _step_length = STEP_MAX_SIZE;
 
 // MIDI clock, start, stop, note on and note off byte definitions - based on MIDI 1.0 Standards.
 #define MIDI_CLOCK 0xF8
@@ -35,22 +55,34 @@ uint16_t _last_step = 0;
 #define NOTE_ON    0x90
 #define NOTE_OFF   0x80
 
+// User Interface data
+// 6 buttons to keep last value track
+uint8_t _button_state[6] = {1};
+// 4 10k potentiometers to keep lasta value track
+uint16_t _pot_state[4] = {0};
+uint8_t _last_octave = 3;
+uint8_t _last_note = 0;
+
+// for interrupted control access of shared memory data
+uint8_t _tmpSREG;
+
 void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 { 
   // send midi message
+  command = command | (uint8_t)MIDI_CHANNEL;
   Serial.write(command);
   Serial.write(byte1);
   Serial.write(byte2);
 }
 
 // The callback function wich will be called by uClock each Pulse of 16PPQN clock resolution.
-// At this resolution each call represents exactly one step.
+// Each call represents exactly one step here.
 void ClockOut16PPQN(uint32_t * tick) 
 {
-  uint16_t step;
+  uint8_t velocity = NOTE_VELOCITY;
   
   // get actual step.
-  step = *tick % STEP_MAX_SIZE;
+  _step = *tick % _step_length;
   
   // send note off for the last step note on if we had send it on last ClockOut16PPQN() call and if this step are not in glide mode also.
   if ( _sequencer[_last_step].rest == false && _sequencer[_last_step].glide == false ) {
@@ -58,23 +90,26 @@ void ClockOut16PPQN(uint32_t * tick)
   }
 
   // send note on only if this step are not in rest mode
-  if ( _sequencer[step].rest == false ) {
-    sendMidiMessage(NOTE_ON, _sequencer[step].note, _sequencer[step].velocity);
+  if ( _sequencer[_step].rest == false ) {
+    if ( _sequencer[_step].accent == true ) {
+      velocity = ACCENT_VELOCITY;
+    }
+    sendMidiMessage(NOTE_ON, _sequencer[_step].note, velocity);
   }
 
-  // time to let glide go away? be shure to send glided note off before the _last_step send his note off
+  // time to let glide go away? be shure to send glided note off after the actual step send his note on
   // same note? do not send note off
-  if ( _sequencer[_last_step].glide == true && _sequencer[step].note != _sequencer[_last_step].note ) {
+  if ( _sequencer[_last_step].glide == true && _sequencer[_step].note != _sequencer[_last_step].note ) {
     sendMidiMessage(NOTE_OFF, _sequencer[_last_step].note, 0);
   }
 
-  _last_step = step;
+  _last_step = _step;
 }
 
 // The callback function wich will be called by uClock each Pulse of 96PPQN clock resolution.
 void ClockOut96PPQN(uint32_t * tick) 
 {
-  // Send MIDI_CLOCK to external gears
+  // Send MIDI_CLOCK to external hardware
   Serial.write(MIDI_CLOCK);
 }
 
@@ -82,18 +117,56 @@ void ClockOut96PPQN(uint32_t * tick)
 void onClockStart() 
 {
   Serial.write(MIDI_START);
+  _playing = true;
 }
 
 // The callback function wich will be called when clock stops by using Clock.stop() method.
 void onClockStop() 
 {
   Serial.write(MIDI_STOP);
+  sendMidiMessage(NOTE_OFF, _sequencer[_last_step].note, 0);
+  sendMidiMessage(NOTE_OFF, _sequencer[_step].note, 0);
+  _playing = false;
+}
+
+void configureInterface()
+{
+  // Buttons config
+  // use internal pullup for buttons
+  pinMode(PREVIOUS_STEP_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(NEXT_STEP_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(REST_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(GLIDE_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(ACCENT_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(PLAY_STOP_BUTTON_PIN, INPUT_PULLUP);
+
+  // Leds config
+  pinMode(PREVIOUS_STEP_LED_PIN, OUTPUT);
+  pinMode(NEXT_STEP_LED_PIN, OUTPUT);
+  pinMode(REST_LED_PIN, OUTPUT);
+  pinMode(GLIDE_LED_PIN, OUTPUT);
+  pinMode(ACCENT_LED_PIN, OUTPUT);
+  pinMode(PLAY_STOP_LED_PIN, OUTPUT);
+
+  digitalWrite(PREVIOUS_STEP_LED_PIN, LOW);
+  digitalWrite(NEXT_STEP_LED_PIN, LOW);
+  digitalWrite(REST_LED_PIN, LOW);
+  digitalWrite(GLIDE_LED_PIN, LOW);
+  digitalWrite(ACCENT_LED_PIN, LOW);
+  digitalWrite(PLAY_STOP_LED_PIN, LOW);  
 }
 
 void setup() 
 {
-  // Initialize serial communication at 31250 bits per second, the default MIDI serial speed communication:
-  Serial.begin(31250);
+  // Initialize serial communication
+#ifdef MIDI_MODE
+  // the default MIDI serial speed communication at 31250 bits per second
+  Serial.begin(31250); 
+#endif
+#ifdef SERIAL_MODE
+  // for usage with a PC with a serial to MIDI bridge
+  Serial.begin(115200);
+#endif
 
   // Inits the clock
   uClock.init();
@@ -114,27 +187,216 @@ void setup()
   // initing sequencer data
   for ( uint16_t i = 0; i < STEP_MAX_SIZE; i++ ) {
     _sequencer[i].note = 36;
-    _sequencer[i].velocity = NOTE_VELOCITY;
     _sequencer[i].accent = false;
     _sequencer[i].glide = false;
     _sequencer[i].rest = false;
   }
 
-  // Starts the clock, tick-tac-tick-tac...
-  uClock.start();
+  // pins, buttons, leds and pots config
+  configureInterface();
+}
+
+bool pressed(uint8_t button_pin)
+{
+  uint8_t value;
+  uint8_t * last_value;
+
+  switch(button_pin) {
+    case PREVIOUS_STEP_BUTTON_PIN:
+      last_value = &_button_state[0];
+      break;
+    case NEXT_STEP_BUTTON_PIN:
+      last_value = &_button_state[1];
+      break;
+    case REST_BUTTON_PIN:
+      last_value = &_button_state[2];
+      break;   
+    case GLIDE_BUTTON_PIN:
+      last_value = &_button_state[3];
+      break;
+    case ACCENT_BUTTON_PIN:
+      last_value = &_button_state[4];
+      break;
+    case PLAY_STOP_BUTTON_PIN:
+      last_value = &_button_state[5];
+      break;    
+    default:
+      return false;                    
+  }
+  
+  value = digitalRead(button_pin);
+  // check, using pullup pressed button goes LOW
+  if ( value != *last_value && value == LOW ) {
+    *last_value = value; 
+    return true;    
+  } else {
+    *last_value = value; 
+    return false;
+  }
+   
+}
+
+int16_t getPotChanges(uint8_t pot_pin, uint16_t min_value, uint16_t max_value)
+{
+  uint16_t value;
+  uint16_t * last_value;
+
+  switch(pot_pin) {
+    case OCTAVE_POT_PIN:
+      last_value = &_pot_state[0];
+      break;
+    case NOTE_POT_PIN:
+      last_value = &_pot_state[1];
+      break;
+    case STEP_LENGTH_POT_PIN:
+      last_value = &_pot_state[2];
+      break;   
+    case TEMPO_POT_PIN:
+      last_value = &_pot_state[3];
+      break;
+    default:
+      return -1;
+  }
+
+  // range our value
+  value = (analogRead(pot_pin) / (1024 / ((max_value - min_value) + 1))) + min_value;
+  
+  // check, using pullup pressed button goes LOW
+  if ( abs(value - *last_value) >= 1 ) {
+    *last_value = value; 
+    return value;    
+  } else {
+    *last_value = value; 
+    return -1;
+  }  
+}
+
+void processPots()
+{
+  int8_t octave, note, step_note;
+  uint16_t tempo, step_length;
+
+  // process octave
+  if ( (octave = getPotChanges(OCTAVE_POT_PIN, 0, 10)) >= 0 ) {
+    _last_octave = octave;
+  }
+
+  if ( (note = getPotChanges(NOTE_POT_PIN, 0, 11)) >= 0 ) {
+    _last_note = note;
+  }
+
+  // changes on octave or note pot?
+  if ( octave != -1 || note != -1 ) {
+    _tmpSREG = SREG; cli();
+    _sequencer[_step_edit].note = (_last_octave * 8) + _last_note;
+    SREG = _tmpSREG;
+  }
+/*
+  if ( (step_length = getPotChanges(STEP_LENGTH_POT_PIN, 1, STEP_MAX_SIZE)) >= 0 ) {
+    _tmpSREG = SREG; cli();
+    _step_length = step_length;
+    SREG = _tmpSREG;
+  }
+  
+  if ( (tempo = getPotChanges(TEMPO_POT_PIN, SEQUENCER_MIN_BPM, SEQUENCER_MAX_BPM)) >= 0 ) {
+    uClock.setTempo(tempo);
+  }
+*/
+}
+  
+void processButtons()
+{
+  // play/stop
+  if ( pressed(PLAY_STOP_BUTTON_PIN) ) {
+    if ( _playing == false ) {
+      // Starts the clock, tick-tac-tick-tac...
+      uClock.start();
+    } else {
+      // stop the clock
+      uClock.stop();
+    }
+  }
+
+  // previous step edit
+  if ( pressed(PREVIOUS_STEP_BUTTON_PIN) ) {
+    if ( _step_edit != 0 ) {
+      --_step_edit;
+    }
+  }
+
+  // next step edit
+  if ( pressed(NEXT_STEP_BUTTON_PIN) ) {
+    if ( _step_edit < STEP_MAX_SIZE-1 ) {
+      ++_step_edit;
+    }
+  }
+
+  // step rest
+  if ( pressed(REST_BUTTON_PIN) ) {
+    _sequencer[_step_edit].rest = !_sequencer[_step_edit].rest;
+  }
+
+  // step glide
+  if ( pressed(GLIDE_BUTTON_PIN) ) {
+    _sequencer[_step_edit].glide = !_sequencer[_step_edit].glide;
+  }
+
+  // step accent
+  if ( pressed(ACCENT_BUTTON_PIN) ) {
+    _sequencer[_step_edit].accent = !_sequencer[_step_edit].accent;
+  }     
+}
+  
+void processLeds()
+{   
+  // Editing First Step? 
+  if ( _step_edit == 0 ) {
+    digitalWrite(PREVIOUS_STEP_LED_PIN , HIGH);
+  } else {
+    digitalWrite(PREVIOUS_STEP_LED_PIN , LOW);
+  }  
+
+  // Editing Last Step? 
+  if ( _step_edit == _step_length-1 ) {
+    digitalWrite(NEXT_STEP_LED_PIN , HIGH);
+  } else {
+    digitalWrite(NEXT_STEP_LED_PIN , LOW);
+  }  
+  
+  // Rest 
+  if ( _sequencer[_step_edit].rest == true ) {
+    digitalWrite(REST_LED_PIN , HIGH);
+  } else {
+    digitalWrite(REST_LED_PIN , LOW);
+  }
+
+  // Glide 
+  if ( _sequencer[_step_edit].glide == true ) {
+    digitalWrite(GLIDE_LED_PIN , HIGH);
+  } else {
+    digitalWrite(GLIDE_LED_PIN , LOW);
+  }  
+
+  // Accent 
+  if ( _sequencer[_step_edit].accent == true ) {
+    digitalWrite(ACCENT_LED_PIN , HIGH);
+  } else {
+    digitalWrite(ACCENT_LED_PIN , LOW);
+  }  
+
+  // Play/Stop 
+  if ( _playing == true ) {
+    digitalWrite(PLAY_STOP_LED_PIN , HIGH);
+  } else {
+    digitalWrite(PLAY_STOP_LED_PIN , LOW);
+  }  
+
 }
 
 // User interaction goes here
 void loop() 
 {
-  // octave pot
-  // note pot
-  // tempo pot
-  // pattern step init pot
-  // pattern step size pot
-  // previous step button
-  // next step button
-  // rest button/led
-  // glide button/led
-  // accent button/led
+  processPots();
+  processButtons();
+  processLeds();
 }
