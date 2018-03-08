@@ -63,9 +63,6 @@ uint16_t _pot_state[4] = {0};
 uint8_t _last_octave = 3;
 uint8_t _last_note = 0;
 
-// for interrupted control access of shared memory data
-uint8_t _tmpSREG;
-
 void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 { 
   // send midi message
@@ -257,7 +254,7 @@ int16_t getPotChanges(uint8_t pot_pin, uint16_t min_value, uint16_t max_value)
     default:
       return -1;
   }
-
+    
   // range our value
   value = (analogRead(pot_pin) / (1024 / ((max_value - min_value) + 1))) + min_value;
   
@@ -274,34 +271,32 @@ int16_t getPotChanges(uint8_t pot_pin, uint16_t min_value, uint16_t max_value)
 void processPots()
 {
   int8_t octave, note, step_note;
-  uint16_t tempo, step_length;
+  int16_t tempo, step_length;
 
-  // process octave
-  if ( (octave = getPotChanges(OCTAVE_POT_PIN, 0, 10)) >= 0 ) {
+  octave = getPotChanges(OCTAVE_POT_PIN, 0, 10);
+  if ( octave != -1 ) {  
     _last_octave = octave;
   }
 
-  if ( (note = getPotChanges(NOTE_POT_PIN, 0, 11)) >= 0 ) {
+  note = getPotChanges(NOTE_POT_PIN, 0, 11);
+  if ( note != -1 ) { 
     _last_note = note;
   }
 
   // changes on octave or note pot?
   if ( octave != -1 || note != -1 ) {
-    _tmpSREG = SREG; cli();
     _sequencer[_step_edit].note = (_last_octave * 8) + _last_note;
-    SREG = _tmpSREG;
   }
-/*
-  if ( (step_length = getPotChanges(STEP_LENGTH_POT_PIN, 1, STEP_MAX_SIZE)) >= 0 ) {
-    _tmpSREG = SREG; cli();
+
+  step_length = getPotChanges(STEP_LENGTH_POT_PIN, 1, STEP_MAX_SIZE);
+  if ( step_length != -1 ) {  
     _step_length = step_length;
-    SREG = _tmpSREG;
   }
-  
-  if ( (tempo = getPotChanges(TEMPO_POT_PIN, SEQUENCER_MIN_BPM, SEQUENCER_MAX_BPM)) >= 0 ) {
+
+  tempo = getPotChanges(TEMPO_POT_PIN, SEQUENCER_MIN_BPM, SEQUENCER_MAX_BPM);
+  if ( tempo != -1 ) {   
     uClock.setTempo(tempo);
   }
-*/
 }
   
 void processButtons()
