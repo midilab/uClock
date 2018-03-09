@@ -1,4 +1,6 @@
-// PITCH MODE EMULATION OF ROLAND TB303
+// Acid StepSequencer, a Roland TB303 step sequencer engine clone
+// author: midilab contact@midilab.co
+// under MIT license
 #include "Arduino.h"
 #include <uClock.h>
 
