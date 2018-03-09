@@ -73,13 +73,13 @@ uint16_t _step_length = STEP_MAX_SIZE;
 
 // User Interface data
 // 6 buttons to keep last value track
-uint8_t _button_state[6] = {1};
 // 4 10k potentiometers to keep lasta value track
+uint8_t _button_state[6] = {1};
 uint16_t _pot_state[4] = {0};
 uint8_t _last_octave = 3;
 uint8_t _last_note = 0;
 uint8_t _bpm_blink_timer = 1;
-bool _lock_pots = true; // init locked for octave and note pots
+bool _lock_pots = true;
 
 void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 { 
@@ -94,40 +94,37 @@ void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 // Each call represents exactly one step here.
 void ClockOut16PPQN(uint32_t * tick) 
 {
-  uint16_t step;
-  bool glide_ahead;
+  uint16_t step, length;
   
   // get actual step.
   _step = *tick % _step_length;
   
   // send note on only if this step are not in rest mode
   if ( _sequencer[_step].rest == false ) {
+    // send note on
     sendMidiMessage(NOTE_ON, _sequencer[_step].note, _sequencer[_step].accent ? ACCENT_VELOCITY : NOTE_VELOCITY);
-    // do we have a glide ahead us?
+    
+    // check for glide event ahead of _step
     step = _step;
     for ( uint16_t i = 1; i < _step_length; i++  ) {
       ++step;
       step = step % _step_length;
       if ( _sequencer[step].glide == true && _sequencer[step].rest == false ) {
-        // find a free note stack. we got 2 for overlap glide notes handle.
-        // first position of stack is reserved for common step notes(not glided ahead)
-        for ( uint8_t j = 1; j < NOTE_STACK_SIZE; j++ ) {
-          if ( _note_stack[j].length == -1 ) {
-            _note_stack[j].note = _sequencer[_step].note;
-            _note_stack[j].length = NOTE_LENGTH + (i * 6);
-            break;
-          }
-        }
-        glide_ahead = true;
+        length = NOTE_LENGTH + (i * 6);
         break;
       } else if ( _sequencer[step].rest == false ) {
-        glide_ahead = false;
+        length = NOTE_LENGTH;
         break;
       }
     }
-    if ( glide_ahead == false ) {
-      _note_stack[0].note = _sequencer[_step].note;
-      _note_stack[0].length = NOTE_LENGTH;
+
+    // find a free note stack to fit in
+    for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {
+      if ( _note_stack[i].length == -1 ) {
+        _note_stack[i].note = _sequencer[_step].note;
+        _note_stack[i].length = length;
+        break;
+      }
     }
   }  
 }
@@ -375,9 +372,11 @@ void processPots()
     if ( _step_edit >= _step_length ) {
       _step_edit = _step_length-1;
     }
-    // send stack note off
-    for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {     
-      sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
+    if ( _step >= _step_length ) {
+      // send stack note off
+      for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {     
+        sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
+      }
     }
   }
 
