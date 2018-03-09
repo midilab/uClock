@@ -1,3 +1,4 @@
+// PITCH MODE EMULATION OF ROLAND TB303
 #include "Arduino.h"
 #include <uClock.h>
 
@@ -6,7 +7,7 @@
 #define SEQUENCER_MIN_BPM  50
 #define SEQUENCER_MAX_BPM  177
 #define NOTE_VELOCITY      90
-#define ACCENT_VELOCITY    110
+#define ACCENT_VELOCITY    127
 
 // MIDI modes
 #define MIDI_CHANNEL      0 // 0 = channel 1
@@ -44,8 +45,16 @@ typedef struct
 
 SEQUENCER_STEP_DATA _sequencer[STEP_MAX_SIZE];
 
+typedef struct
+{
+  uint8_t note;
+  int8_t length;
+} STACK_NOTE_DATA;
+
+STACK_NOTE_DATA _note_stack[2];
+
 bool _playing = false;
-uint16_t _step, _last_step, _step_edit = 0;
+uint16_t _step, _step_edit = 0;
 uint16_t _step_length = STEP_MAX_SIZE;
 
 // MIDI clock, start, stop, note on and note off byte definitions - based on MIDI 1.0 Standards.
@@ -62,6 +71,7 @@ uint8_t _button_state[6] = {1};
 uint16_t _pot_state[4] = {0};
 uint8_t _last_octave = 3;
 uint8_t _last_note = 0;
+uint8_t _bpm_blink_timer = 1;
 
 void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 { 
@@ -76,31 +86,35 @@ void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 // Each call represents exactly one step here.
 void ClockOut16PPQN(uint32_t * tick) 
 {
-  uint8_t velocity = NOTE_VELOCITY;
+  uint16_t step;
+  bool glide_ahead;
   
   // get actual step.
   _step = *tick % _step_length;
   
-  // send note off for the last step note on if we had send it on last ClockOut16PPQN() call and if this step are not in glide mode also.
-  if ( _sequencer[_last_step].rest == false && _sequencer[_last_step].glide == false ) {
-    sendMidiMessage(NOTE_OFF, _sequencer[_last_step].note, 0);
-  }
-
   // send note on only if this step are not in rest mode
   if ( _sequencer[_step].rest == false ) {
-    if ( _sequencer[_step].accent == true ) {
-      velocity = ACCENT_VELOCITY;
+    sendMidiMessage(NOTE_ON, _sequencer[_step].note, _sequencer[_step].accent ? ACCENT_VELOCITY : NOTE_VELOCITY);
+    // do we have a glide ahead us?
+    step = _step;
+    for ( uint16_t i = 1; i < _step_length; i++  ) {
+      ++step;
+      step = step % _step_length;
+      if ( _sequencer[step].glide == true && _sequencer[step].rest == false ) {
+        _note_stack[1].note = _sequencer[_step].note;
+        _note_stack[1].length = 2 + (i * 6);
+        glide_ahead = true;
+        break;
+      } else if ( _sequencer[step].rest == false ) {
+        glide_ahead = false;
+        break;
+      }
     }
-    sendMidiMessage(NOTE_ON, _sequencer[_step].note, velocity);
-  }
-
-  // time to let glide go away? be shure to send glided note off after the actual step send his note on
-  // same note? do not send note off
-  if ( _sequencer[_last_step].glide == true && _sequencer[_step].note != _sequencer[_last_step].note ) {
-    sendMidiMessage(NOTE_OFF, _sequencer[_last_step].note, 0);
-  }
-
-  _last_step = _step;
+    if ( glide_ahead == false ) {
+      _note_stack[0].note = _sequencer[_step].note;
+      _note_stack[0].length = 4;
+    }
+  }  
 }
 
 // The callback function wich will be called by uClock each Pulse of 96PPQN clock resolution.
@@ -108,12 +122,46 @@ void ClockOut96PPQN(uint32_t * tick)
 {
   // Send MIDI_CLOCK to external hardware
   Serial.write(MIDI_CLOCK);
+
+  // handle note on stack
+  if ( _note_stack[1].length != -1 ) {
+    --_note_stack[1].length;
+    if ( _note_stack[1].length == 0 ) {
+      sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
+      _note_stack[1].length = -1;
+    }
+  }  
+  if ( _note_stack[0].length != -1 ) {
+    --_note_stack[0].length;
+    if ( _note_stack[0].length == 0 ) {
+      sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
+      _note_stack[0].length = -1;
+    }
+  }
+
+  // time to let glide go away? be shure to send glided note off after the actual step send his note on
+  // same note? do not send note off
+  //if ( _sequencer[_last_step].glide == true && _sequencer[_step].note != _sequencer[_last_step].note ) {
+  //  sendMidiMessage(NOTE_OFF, _sequencer[_last_step].note, 0);
+  //}
+
+  // BPM led indicator
+  if ( !(*tick % (96)) || (*tick == 0) ) {  // first compass step will flash longer
+    _bpm_blink_timer = 8;
+    digitalWrite(PLAY_STOP_LED_PIN , HIGH);
+  } else if ( !(*tick % (24)) ) {   // each quarter led on
+    digitalWrite(PLAY_STOP_LED_PIN , HIGH);
+  } else if ( !(*tick % _bpm_blink_timer) ) { // get led off
+    digitalWrite(PLAY_STOP_LED_PIN , LOW);
+    _bpm_blink_timer = 1;
+  }
 }
 
 // The callback function wich will be called when clock starts by using Clock.start() method.
 void onClockStart() 
 {
   Serial.write(MIDI_START);
+  digitalWrite(PLAY_STOP_LED_PIN , LOW);
   _playing = true;
 }
 
@@ -121,8 +169,9 @@ void onClockStart()
 void onClockStop() 
 {
   Serial.write(MIDI_STOP);
-  sendMidiMessage(NOTE_OFF, _sequencer[_last_step].note, 0);
-  sendMidiMessage(NOTE_OFF, _sequencer[_step].note, 0);
+  //sendMidiMessage(NOTE_OFF, _last_note_on, 0);
+  sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
+  sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
   _playing = false;
 }
 
@@ -191,6 +240,13 @@ void setup()
 
   // pins, buttons, leds and pots config
   configureInterface();
+}
+
+void sendPreviewNote(uint16_t step)
+{
+  sendMidiMessage(NOTE_ON, _sequencer[step].note, _sequencer[step].accent ? ACCENT_VELOCITY : NOTE_VELOCITY);
+  delay(200);
+  sendMidiMessage(NOTE_OFF, _sequencer[step].note, 0);
 }
 
 bool pressed(uint8_t button_pin)
@@ -286,6 +342,9 @@ void processPots()
   // changes on octave or note pot?
   if ( octave != -1 || note != -1 ) {
     _sequencer[_step_edit].note = (_last_octave * 8) + _last_note;
+    if ( _playing == false ) {
+      sendPreviewNote(_step_edit);
+    }
   }
 
   step_length = getPotChanges(STEP_LENGTH_POT_PIN, 1, STEP_MAX_SIZE);
@@ -317,13 +376,19 @@ void processButtons()
     if ( _step_edit != 0 ) {
       --_step_edit;
     }
+    if ( _playing == false ) {
+      sendPreviewNote(_step_edit);
+    }
   }
 
   // next step edit
   if ( pressed(NEXT_STEP_BUTTON_PIN) ) {
-    if ( _step_edit < STEP_MAX_SIZE-1 ) {
+    if ( _step_edit < _step_length-1 ) {
       ++_step_edit;
     }
+    if ( _playing == false ) {
+      sendPreviewNote(_step_edit);
+    }    
   }
 
   // step rest
@@ -377,15 +442,12 @@ void processLeds()
     digitalWrite(ACCENT_LED_PIN , HIGH);
   } else {
     digitalWrite(ACCENT_LED_PIN , LOW);
-  }  
+  } 
 
-  // Play/Stop 
-  if ( _playing == true ) {
-    digitalWrite(PLAY_STOP_LED_PIN , HIGH);
-  } else {
+  // shut down play led if we are stoped
+  if ( _playing == false ) {
     digitalWrite(PLAY_STOP_LED_PIN , LOW);
-  }  
-
+  }
 }
 
 // User interaction goes here
