@@ -363,6 +363,14 @@ void processPots()
   step_length = getPotChanges(STEP_LENGTH_POT_PIN, 1, STEP_MAX_SIZE);
   if ( step_length != -1 ) {  
     _step_length = step_length;
+    if ( _step_edit >= _step_length ) {
+      _step_edit = _step_length-1;
+    }
+    if ( _step >= _step_length ) {
+      // send stack note off
+      sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
+      sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
+    }
   }
 
   tempo = getPotChanges(TEMPO_POT_PIN, SEQUENCER_MIN_BPM, SEQUENCER_MAX_BPM);
