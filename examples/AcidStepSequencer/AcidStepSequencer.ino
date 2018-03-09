@@ -6,6 +6,7 @@
 #define STEP_MAX_SIZE      16
 #define SEQUENCER_MIN_BPM  50
 #define SEQUENCER_MAX_BPM  177
+#define NOTE_LENGTH        4 // min: 1 max: 5 DO NOT EDIT BEYOND!!!
 #define NOTE_VELOCITY      90
 #define ACCENT_VELOCITY    127
 
@@ -102,7 +103,7 @@ void ClockOut16PPQN(uint32_t * tick)
       step = step % _step_length;
       if ( _sequencer[step].glide == true && _sequencer[step].rest == false ) {
         _note_stack[1].note = _sequencer[_step].note;
-        _note_stack[1].length = 2 + (i * 6);
+        _note_stack[1].length = NOTE_LENGTH + (i * 6);
         glide_ahead = true;
         break;
       } else if ( _sequencer[step].rest == false ) {
@@ -112,7 +113,7 @@ void ClockOut16PPQN(uint32_t * tick)
     }
     if ( glide_ahead == false ) {
       _note_stack[0].note = _sequencer[_step].note;
-      _note_stack[0].length = 4;
+      _note_stack[0].length = NOTE_LENGTH;
     }
   }  
 }
