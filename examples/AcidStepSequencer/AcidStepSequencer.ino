@@ -123,7 +123,7 @@ void ClockOut16PPQN(uint32_t * tick)
       if ( _note_stack[i].length == -1 ) {
         _note_stack[i].note = _sequencer[_step].note;
         _note_stack[i].length = length;
-        break;
+        return;
       }
     }
   }  
@@ -172,6 +172,7 @@ void onClockStop()
   Serial.write(MIDI_STOP);
   for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {
     sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
+    _note_stack[i].length = -1;
   }
   _playing = false;
 }
@@ -372,12 +373,13 @@ void processPots()
     if ( _step_edit >= _step_length ) {
       _step_edit = _step_length-1;
     }
-    if ( _step >= _step_length ) {
+    //if ( _step >= _step_length ) {
       // send stack note off
       for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {     
         sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
+        _note_stack[i].length = -1;
       }
-    }
+    //}
   }
 
   tempo = getPotChanges(TEMPO_POT_PIN, SEQUENCER_MIN_BPM, SEQUENCER_MAX_BPM);
