@@ -11,6 +11,7 @@
 #define NOTE_LENGTH        4 // min: 1 max: 5 DO NOT EDIT BEYOND!!!
 #define NOTE_VELOCITY      90
 #define ACCENT_VELOCITY    127
+#define NOTE_STACK_SIZE    3
 
 // Ui config
 #define LOCK_POT_SENSTIVITY 4
@@ -57,7 +58,7 @@ typedef struct
   int8_t length;
 } STACK_NOTE_DATA;
 
-STACK_NOTE_DATA _note_stack[2];
+STACK_NOTE_DATA _note_stack[NOTE_STACK_SIZE];
 
 bool _playing = false;
 uint16_t _step, _step_edit = 0;
@@ -108,8 +109,15 @@ void ClockOut16PPQN(uint32_t * tick)
       ++step;
       step = step % _step_length;
       if ( _sequencer[step].glide == true && _sequencer[step].rest == false ) {
-        _note_stack[1].note = _sequencer[_step].note;
-        _note_stack[1].length = NOTE_LENGTH + (i * 6);
+        // find a free note stack. we got 2 for overlap glide notes handle.
+        // first position of stack is reserved for common step notes(not glided ahead)
+        for ( uint8_t j = 1; j < NOTE_STACK_SIZE; j++ ) {
+          if ( _note_stack[j].length == -1 ) {
+            _note_stack[j].note = _sequencer[_step].note;
+            _note_stack[j].length = NOTE_LENGTH + (i * 6);
+            break;
+          }
+        }
         glide_ahead = true;
         break;
       } else if ( _sequencer[step].rest == false ) {
@@ -131,21 +139,14 @@ void ClockOut96PPQN(uint32_t * tick)
   Serial.write(MIDI_CLOCK);
 
   // handle note on stack
-  // [1] is notes to be glided, its in hold on mode until we reach the glided step
-  if ( _note_stack[1].length != -1 ) {
-    --_note_stack[1].length;
-    if ( _note_stack[1].length == 0 ) {
-      sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
-      _note_stack[1].length = -1;
-    }
-  }  
-  // [0] is the actual step note stack
-  if ( _note_stack[0].length != -1 ) {
-    --_note_stack[0].length;
-    if ( _note_stack[0].length == 0 ) {
-      sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
-      _note_stack[0].length = -1;
-    }
+  for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {
+    if ( _note_stack[i].length != -1 ) {
+      --_note_stack[i].length;
+      if ( _note_stack[i].length == 0 ) {
+        sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
+        _note_stack[i].length = -1;
+      }
+    }  
   }
 
   // BPM led indicator
@@ -172,8 +173,9 @@ void onClockStart()
 void onClockStop() 
 {
   Serial.write(MIDI_STOP);
-  sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
-  sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
+  for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {
+    sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
+  }
   _playing = false;
 }
 
@@ -238,6 +240,12 @@ void setup()
     _sequencer[i].accent = false;
     _sequencer[i].glide = false;
     _sequencer[i].rest = false;
+  }
+
+  // initing note stack data
+  for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {
+    _note_stack[i].note = 0;
+    _note_stack[i].length = -1;
   }
 
   // pins, buttons, leds and pots config
@@ -368,8 +376,9 @@ void processPots()
       _step_edit = _step_length-1;
     }
     // send stack note off
-    sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
-    sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
+    for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {     
+      sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
+    }
   }
 
   tempo = getPotChanges(TEMPO_POT_PIN, SEQUENCER_MIN_BPM, SEQUENCER_MAX_BPM);
