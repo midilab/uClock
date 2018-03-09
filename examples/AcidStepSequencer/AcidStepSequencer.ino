@@ -124,6 +124,7 @@ void ClockOut96PPQN(uint32_t * tick)
   Serial.write(MIDI_CLOCK);
 
   // handle note on stack
+  // [1] is notes to be glided, its in hold on mode until we reach the glided step
   if ( _note_stack[1].length != -1 ) {
     --_note_stack[1].length;
     if ( _note_stack[1].length == 0 ) {
@@ -131,6 +132,7 @@ void ClockOut96PPQN(uint32_t * tick)
       _note_stack[1].length = -1;
     }
   }  
+  // [0] is the actual step note stack
   if ( _note_stack[0].length != -1 ) {
     --_note_stack[0].length;
     if ( _note_stack[0].length == 0 ) {
@@ -138,12 +140,6 @@ void ClockOut96PPQN(uint32_t * tick)
       _note_stack[0].length = -1;
     }
   }
-
-  // time to let glide go away? be shure to send glided note off after the actual step send his note on
-  // same note? do not send note off
-  //if ( _sequencer[_last_step].glide == true && _sequencer[_step].note != _sequencer[_last_step].note ) {
-  //  sendMidiMessage(NOTE_OFF, _sequencer[_last_step].note, 0);
-  //}
 
   // BPM led indicator
   if ( !(*tick % (96)) || (*tick == 0) ) {  // first compass step will flash longer
@@ -169,7 +165,6 @@ void onClockStart()
 void onClockStop() 
 {
   Serial.write(MIDI_STOP);
-  //sendMidiMessage(NOTE_OFF, _last_note_on, 0);
   sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
   sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
   _playing = false;
@@ -342,7 +337,7 @@ void processPots()
   // changes on octave or note pot?
   if ( octave != -1 || note != -1 ) {
     _sequencer[_step_edit].note = (_last_octave * 8) + _last_note;
-    if ( _playing == false ) {
+    if ( _playing == false && _sequencer[_step_edit].rest == false ) {
       sendPreviewNote(_step_edit);
     }
   }
@@ -376,7 +371,7 @@ void processButtons()
     if ( _step_edit != 0 ) {
       --_step_edit;
     }
-    if ( _playing == false ) {
+    if ( _playing == false && _sequencer[_step_edit].rest == false ) {
       sendPreviewNote(_step_edit);
     }
   }
@@ -386,7 +381,7 @@ void processButtons()
     if ( _step_edit < _step_length-1 ) {
       ++_step_edit;
     }
-    if ( _playing == false ) {
+    if ( _playing == false && _sequencer[_step_edit].rest == false ) {
       sendPreviewNote(_step_edit);
     }    
   }
@@ -394,6 +389,9 @@ void processButtons()
   // step rest
   if ( pressed(REST_BUTTON_PIN) ) {
     _sequencer[_step_edit].rest = !_sequencer[_step_edit].rest;
+    if ( _playing == false && _sequencer[_step_edit].rest == false ) {
+      sendPreviewNote(_step_edit);
+    }
   }
 
   // step glide
@@ -404,6 +402,9 @@ void processButtons()
   // step accent
   if ( pressed(ACCENT_BUTTON_PIN) ) {
     _sequencer[_step_edit].accent = !_sequencer[_step_edit].accent;
+    if ( _playing == false && _sequencer[_step_edit].rest == false ) {
+      sendPreviewNote(_step_edit);
+    }       
   }     
 }
   
