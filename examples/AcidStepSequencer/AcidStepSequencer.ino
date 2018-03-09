@@ -310,6 +310,7 @@ int16_t getPotChanges(uint8_t pot_pin, uint16_t min_value, uint16_t max_value)
       break;
     case STEP_LENGTH_POT_PIN:
       last_value = &_pot_state[2];
+      check_lock = true;
       break;   
     case TEMPO_POT_PIN:
       last_value = &_pot_state[3];
@@ -366,11 +367,9 @@ void processPots()
     if ( _step_edit >= _step_length ) {
       _step_edit = _step_length-1;
     }
-    if ( _step >= _step_length ) {
-      // send stack note off
-      sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
-      sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
-    }
+    // send stack note off
+    sendMidiMessage(NOTE_OFF, _note_stack[1].note, 0);
+    sendMidiMessage(NOTE_OFF, _note_stack[0].note, 0);
   }
 
   tempo = getPotChanges(TEMPO_POT_PIN, SEQUENCER_MIN_BPM, SEQUENCER_MAX_BPM);
