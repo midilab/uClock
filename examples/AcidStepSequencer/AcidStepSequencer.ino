@@ -10,6 +10,9 @@
 #define NOTE_VELOCITY      90
 #define ACCENT_VELOCITY    127
 
+// Ui config
+#define LOCK_POT_SENSTIVITY 4
+
 // MIDI modes
 #define MIDI_CHANNEL      0 // 0 = channel 1
 #define MIDI_MODE
@@ -73,6 +76,7 @@ uint16_t _pot_state[4] = {0};
 uint8_t _last_octave = 3;
 uint8_t _last_note = 0;
 uint8_t _bpm_blink_timer = 1;
+bool _lock_pots = true; // init locked for octave and note pots
 
 void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 { 
@@ -274,6 +278,7 @@ bool pressed(uint8_t button_pin)
   }
   
   value = digitalRead(button_pin);
+  
   // check, using pullup pressed button goes LOW
   if ( value != *last_value && value == LOW ) {
     *last_value = value; 
@@ -289,13 +294,17 @@ int16_t getPotChanges(uint8_t pot_pin, uint16_t min_value, uint16_t max_value)
 {
   uint16_t value;
   uint16_t * last_value;
+  bool check_lock = false;
+  uint8_t pot_sensitivity = 1;
 
   switch(pot_pin) {
     case OCTAVE_POT_PIN:
       last_value = &_pot_state[0];
+      check_lock = true;
       break;
     case NOTE_POT_PIN:
       last_value = &_pot_state[1];
+      check_lock = true;
       break;
     case STEP_LENGTH_POT_PIN:
       last_value = &_pot_state[2];
@@ -309,13 +318,19 @@ int16_t getPotChanges(uint8_t pot_pin, uint16_t min_value, uint16_t max_value)
     
   // range our value
   value = (analogRead(pot_pin) / (1024 / ((max_value - min_value) + 1))) + min_value;
+
+  // a lock system to not mess with some data(pots are terrible for some kinda of user interface data controls)
+  if ( check_lock == true && _lock_pots == true ) {
+      pot_sensitivity = LOCK_POT_SENSTIVITY;
+  }
   
-  // check, using pullup pressed button goes LOW
-  if ( abs(value - *last_value) >= 1 ) {
+  if ( abs(value - *last_value) >= pot_sensitivity ) {
     *last_value = value; 
+    if ( check_lock == true && _lock_pots ) {
+      _lock_pots = false;
+    }
     return value;    
   } else {
-    *last_value = value; 
     return -1;
   }  
 }
@@ -370,6 +385,8 @@ void processButtons()
   // previous step edit
   if ( pressed(PREVIOUS_STEP_BUTTON_PIN) ) {
     if ( _step_edit != 0 ) {
+      // add a lock here for octave and note to not mess with edit mode when moving steps around 
+      _lock_pots = true;     
       --_step_edit;
     }
     if ( _playing == false && _sequencer[_step_edit].rest == false ) {
@@ -380,6 +397,8 @@ void processButtons()
   // next step edit
   if ( pressed(NEXT_STEP_BUTTON_PIN) ) {
     if ( _step_edit < _step_length-1 ) {
+      // add a lock here for octave and note to not mess with edit mode when moving steps around
+      _lock_pots = true;    
       ++_step_edit;
     }
     if ( _playing == false && _sequencer[_step_edit].rest == false ) {
@@ -455,7 +474,7 @@ void processLeds()
 // User interaction goes here
 void loop() 
 {
-  processPots();
   processButtons();
   processLeds();
+  processPots();
 }
