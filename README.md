@@ -83,9 +83,8 @@ A clone of Roland TB303 step sequencer main engine, here is a example with no us
 ```c++
 // Roland TB303 Step Sequencer engine clone.
 // No interface here, just the engine as example.
-// Acid StepSequencer, a Roland TB303 step sequencer engine clone
 // author: midilab contact@midilab.co
-// under MIT license
+// Under MIT license
 #include "Arduino.h"
 #include <uClock.h>
 
@@ -95,12 +94,10 @@ A clone of Roland TB303 step sequencer main engine, here is a example with no us
 #define NOTE_VELOCITY      90
 #define ACCENT_VELOCITY    127
 
-// MIDI modes
+// MIDI config
 #define MIDI_CHANNEL      0 // 0 = channel 1
-#define MIDI_MODE
-//#define SERIAL_MODE
 
-// do not edit from here!
+// do not edit below!
 #define NOTE_STACK_SIZE    3
 
 // MIDI clock, start, stop, note on and note off byte definitions - based on MIDI 1.0 Standards.
@@ -202,9 +199,6 @@ void ClockOut96PPQN(uint32_t * tick)
       }
     }  
   }
-
-  // user feedback about sequence time events
-  tempoInterface(tick);
 }
 
 // The callback function wich will be called when clock starts by using Clock.start() method.
@@ -229,14 +223,8 @@ void onClockStop()
 void setup() 
 {
   // Initialize serial communication
-#ifdef MIDI_MODE
   // the default MIDI serial speed communication at 31250 bits per second
   Serial.begin(31250); 
-#endif
-#ifdef SERIAL_MODE
-  // for usage with a PC with a serial to MIDI bridge
-  Serial.begin(115200);
-#endif
 
   // Inits the clock
   uClock.init();
@@ -279,6 +267,9 @@ void setup()
 void loop() 
 {
   // Controls your 303 engine interacting with user here...
+  // you can change data by using _sequencer[] and _step_length only! do not mess with _note_stack[]!
+  // IMPORTANT!!! Sequencer main data are used inside a interrupt enabled by uClock for BPM clock timing. Make sure all sequencer data are modified atomicly using this macro ATOMIC();
+  // eg. ATOMIC(_sequencer[0].accent = true); ATOMIC(_step_length = 7);
   //processYourButtons();
   //processYourLeds();
   //processYourPots();
