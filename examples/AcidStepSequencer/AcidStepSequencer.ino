@@ -11,10 +11,12 @@
 #define NOTE_LENGTH        4 // min: 1 max: 5 DO NOT EDIT BEYOND!!!
 #define NOTE_VELOCITY      90
 #define ACCENT_VELOCITY    127
+
+// do not edit this!
 #define NOTE_STACK_SIZE    3
 
 // Ui config
-#define LOCK_POT_SENSTIVITY 4
+#define LOCK_POT_SENSTIVITY 3
 
 // MIDI modes
 #define MIDI_CHANNEL      0 // 0 = channel 1
@@ -76,10 +78,10 @@ uint16_t _step_length = STEP_MAX_SIZE;
 // 4 10k potentiometers to keep lasta value track
 uint8_t _button_state[6] = {1};
 uint16_t _pot_state[4] = {0};
+bool _lock_pot[4] = {true};
 uint8_t _last_octave = 3;
 uint8_t _last_note = 0;
 uint8_t _bpm_blink_timer = 1;
-bool _lock_pots = true;
 
 void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 { 
@@ -126,6 +128,9 @@ void ClockOut16PPQN(uint32_t * tick)
         return;
       }
     }
+
+    // if we reach at this point means we could not find a free note stack for this note... so lets send note off to avoid ghost notes in the air
+    sendMidiMessage(NOTE_OFF, _sequencer[_step].note, 0);
   }  
 }
 
@@ -248,13 +253,45 @@ void setup()
 
   // pins, buttons, leds and pots config
   configureInterface();
+
+  acidRandomize();
+}
+
+void acidRandomize() 
+{
+  // ramdom it all
+  for ( uint16_t i = 0; i < STEP_MAX_SIZE; i++ ) {
+    _sequencer[i].note = random(36, 70); // octave 2 to 4. octave 3 to 5 (40 - 83)
+    _sequencer[i].accent = random(0, 2);
+    _sequencer[i].glide = random(0, 2);
+    _sequencer[i].rest = random(0, 1);
+  }
 }
 
 void sendPreviewNote(uint16_t step)
 {
+  unsigned long milliTime, preMilliTime;
+  
   sendMidiMessage(NOTE_ON, _sequencer[step].note, _sequencer[step].accent ? ACCENT_VELOCITY : NOTE_VELOCITY);
-  delay(200);
+
+  // avoid delay() call here because of uClock timmer1 usage
+  //delay(200);
+  preMilliTime = millis();
+  while ( true ) {
+    milliTime = millis();
+    if (abs(milliTime - preMilliTime) >= 200) {
+      break;
+    }
+  }
+  
   sendMidiMessage(NOTE_OFF, _sequencer[step].note, 0);
+}
+
+void lockPotsState(bool state)
+{
+  for ( uint8_t i = 0; i < 4; i++ ) {
+    _lock_pot[i] = state;
+  }
 }
 
 bool pressed(uint8_t button_pin)
@@ -302,24 +339,25 @@ int16_t getPotChanges(uint8_t pot_pin, uint16_t min_value, uint16_t max_value)
 {
   uint16_t value;
   uint16_t * last_value;
-  bool check_lock = false;
+  bool * lock_pot;
   uint8_t pot_sensitivity = 1;
 
   switch(pot_pin) {
     case OCTAVE_POT_PIN:
       last_value = &_pot_state[0];
-      check_lock = true;
+      lock_pot = &_lock_pot[0];
       break;
     case NOTE_POT_PIN:
       last_value = &_pot_state[1];
-      check_lock = true;
+      lock_pot = &_lock_pot[1];
       break;
     case STEP_LENGTH_POT_PIN:
       last_value = &_pot_state[2];
-      check_lock = true;
+      lock_pot = &_lock_pot[2];
       break;   
     case TEMPO_POT_PIN:
       last_value = &_pot_state[3];
+      lock_pot = &_lock_pot[3];
       break;
     default:
       return -1;
@@ -329,14 +367,14 @@ int16_t getPotChanges(uint8_t pot_pin, uint16_t min_value, uint16_t max_value)
   value = (analogRead(pot_pin) / (1024 / ((max_value - min_value) + 1))) + min_value;
 
   // a lock system to not mess with some data(pots are terrible for some kinda of user interface data controls)
-  if ( check_lock == true && _lock_pots == true ) {
+  if ( *lock_pot == true ) {
       pot_sensitivity = LOCK_POT_SENSTIVITY;
   }
   
   if ( abs(value - *last_value) >= pot_sensitivity ) {
     *last_value = value; 
-    if ( check_lock == true && _lock_pots ) {
-      _lock_pots = false;
+    if ( *lock_pot == true ) {
+      *lock_pot = false;
     }
     return value;    
   } else {
@@ -373,13 +411,6 @@ void processPots()
     if ( _step_edit >= _step_length ) {
       _step_edit = _step_length-1;
     }
-    //if ( _step >= _step_length ) {
-      // send stack note off
-      for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {     
-        sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
-        _note_stack[i].length = -1;
-      }
-    //}
   }
 
   tempo = getPotChanges(TEMPO_POT_PIN, SEQUENCER_MIN_BPM, SEQUENCER_MAX_BPM);
@@ -405,7 +436,7 @@ void processButtons()
   if ( pressed(PREVIOUS_STEP_BUTTON_PIN) ) {
     if ( _step_edit != 0 ) {
       // add a lock here for octave and note to not mess with edit mode when moving steps around 
-      _lock_pots = true;     
+      lockPotsState(true);   
       --_step_edit;
     }
     if ( _playing == false && _sequencer[_step_edit].rest == false ) {
@@ -417,7 +448,7 @@ void processButtons()
   if ( pressed(NEXT_STEP_BUTTON_PIN) ) {
     if ( _step_edit < _step_length-1 ) {
       // add a lock here for octave and note to not mess with edit mode when moving steps around
-      _lock_pots = true;    
+      lockPotsState(true);     
       ++_step_edit;
     }
     if ( _playing == false && _sequencer[_step_edit].rest == false ) {
