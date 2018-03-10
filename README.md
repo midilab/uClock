@@ -78,7 +78,7 @@ void loop() {
 
 ### Acid Step Sequencer
 
-A clone of Roland TB303 step sequencer main engine, here is a example with no user interface for interaction. If you're looking for a user interactable TB303 sequencer engine clone with user interface please take a look here https://github.com/midilab/uClock/tree/development/examples/AcidStepSequencer.
+A clone of Roland TB303 step sequencer main engine, here is a example with no user interface for interaction. If you're looking for a user interactable TB303 sequencer engine clone with user interface please take a look here https://github.com/midilab/uClock/tree/master/examples/AcidStepSequencer.
 
 ```c++
 // Roland TB303 Step Sequencer engine clone.
