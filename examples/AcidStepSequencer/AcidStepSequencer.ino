@@ -66,7 +66,8 @@ void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 // The callback function wich will be called by uClock each Pulse of 16PPQN clock resolution. Each call represents exactly one step.
 void ClockOut16PPQN(uint32_t * tick) 
 {
-  uint16_t step, length;
+  uint16_t step;
+  uint16_t length = NOTE_LENGTH;
   
   // get actual step.
   _step = *tick % _step_length;
@@ -83,7 +84,6 @@ void ClockOut16PPQN(uint32_t * tick)
         length = NOTE_LENGTH + (i * 6);
         break;
       } else if ( _sequencer[step].rest == false ) {
-        length = NOTE_LENGTH;
         break;
       }
     }
