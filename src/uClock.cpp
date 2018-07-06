@@ -151,6 +151,11 @@ void uClockClass::setTempo(uint16_t _tempo)
 	if ( tempo == _tempo ) {
 		return;
 	}
+	
+	if ( _tempo > 300 || _tempo == 0 ) {
+		return;
+	}
+	
 	uint8_t tmpSREG = SREG;
 	cli();
 	tempo = _tempo;
@@ -240,12 +245,16 @@ void uClockClass::handleTimerInt()
 		
 		counter = interval;
 
+		if (onClock96PPQNCallback) {
+			onClock96PPQNCallback(&div96th_counter);
+		}
+		
 		if (mod6_counter == 0) {
-			if (onClock16PPQNCallback) {
-				onClock16PPQNCallback(&div16th_counter);
-			}
 			if (onClock32PPQNCallback) {
 				onClock32PPQNCallback(&div32th_counter);
+			}			
+			if (onClock16PPQNCallback) {
+				onClock16PPQNCallback(&div16th_counter);
 			}
 			div16th_counter++;
 			div32th_counter++;
@@ -256,10 +265,6 @@ void uClockClass::handleTimerInt()
 				onClock32PPQNCallback(&div32th_counter);
 			}
 			div32th_counter++;
-		}
-
-		if (onClock96PPQNCallback) {
-			onClock96PPQNCallback(&div96th_counter);
 		}
 		
 		div96th_counter++;
