@@ -90,6 +90,10 @@ void uClockClass::start()
 {
 	start_timer = millis();
 	
+	if (onClockStartCallback) {
+		onClockStartCallback();
+	}	
+		
 	if (mode == INTERNAL_CLOCK) {
 		state = STARTED;
 		mod6_counter = 0;
@@ -105,10 +109,6 @@ void uClockClass::start()
 		div32th_counter = 0;
 		div16th_counter = 0;
 		counter = 0;
-	}	
-	
-	if (onClockStartCallback) {
-		onClockStartCallback();
 	}	
 }
 
