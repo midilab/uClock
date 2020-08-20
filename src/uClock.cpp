@@ -45,11 +45,25 @@ static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock)
 	}
 }
 
+void uClockClass::resetCounters() 
+{
+	counter = 0;
+	last_clock = 0;
+	div96th_counter = 0;
+	div32th_counter = 0;
+	div16th_counter = 0;
+	mod6_counter = 0;
+	indiv96th_counter = 0;
+	inmod6_counter = 0;
+	pll_x = 200;
+	start_timer = 0;
+}
+
 uClockClass::uClockClass()
 {
-	init();
 	mode = INTERNAL_CLOCK;
 	state = PAUSED;
+	resetCounters();
 	setTempo(120);
 	
 	onClock96PPQNCallback = NULL;
@@ -63,23 +77,16 @@ void uClockClass::init()
 {
 	uint8_t tmpSREG;
 	
-	state = PAUSED;
-	counter = 0;
-	last_clock = 0;
-	div96th_counter = 0;
-	div32th_counter = 0;
-	div16th_counter = 0;
-	mod6_counter = 0;
-	indiv96th_counter = 0;
-	inmod6_counter = 0;
-	pll_x = 220;
-	start_timer = 0;
-
 	//
 	// Configure timers and prescale
 	// Timmer1: ATMega128, ATMega328, AtMega16U4 and AtMega32U4
 	tmpSREG = SREG;
 	cli();
+	// Waveform Generation Mode (WGM) 16-bit timer settings
+	// WGM10, WGM12
+	// Mode 5: Fast Pulse Width Modulation (PWM), 8-bit
+	// Clock Speed Selection
+	// CS10: Clock (No prescaling)	
 	TCCR1A = _BV(WGM10);
 	TCCR1B = _BV(CS10) | _BV(WGM12); // every cycle
 	TIMSK1 |= _BV(TOIE1);
@@ -90,56 +97,40 @@ void uClockClass::start()
 {
 	start_timer = millis();
 	
+	resetCounters();
+	
 	if (onClockStartCallback) {
 		onClockStartCallback();
 	}	
 	
 	if (mode == INTERNAL_CLOCK) {
 		state = STARTED;
-		mod6_counter = 0;
-		div96th_counter = 0;
-		div32th_counter = 0;
-		div16th_counter = 0;
 	} else {
-	//if (mode == EXTERNAL_CLOCK) {
-		init();
 		state = STARTING;
-		mod6_counter = 0;
-		div96th_counter = 0;
-		div32th_counter = 0;
-		div16th_counter = 0;
-		counter = 0;
 	}	
 }
 
+
+
 void uClockClass::stop()
 {
-	state = PAUSED;
-	counter = 0;
-	last_clock = 0;
-	div96th_counter = 0;
-	div32th_counter = 0;
-	div16th_counter = 0;
-	mod6_counter = 0;
-	indiv96th_counter = 0;
-	inmod6_counter = 0;
-	pll_x = 220;	
-	start_timer = 0;
+	resetCounters();
 	
 	if (onClockStopCallback) {
 		onClockStopCallback();
 	}	
+	//state = PAUSED;
 }
 
 void uClockClass::pause() 
 {
-	//if (mode == INTERNAL_CLOCK) {
+	if (mode == INTERNAL_CLOCK) {
 		if (state == PAUSED) {
 			start();
 		} else {
 			stop();
 		}
-	//}
+	}
 }
 
 void uClockClass::setTempo(uint16_t _tempo) 
@@ -159,12 +150,14 @@ void uClockClass::setTempo(uint16_t _tempo)
 	uint8_t tmpSREG = SREG;
 	cli();
 	tempo = _tempo;
-	interval = (uint32_t)((uint32_t)156250 / tempo) - 16;
+	//interval = 62500 / (tempo * 24 / 60) - 4;
+	interval = (156250 / tempo) - 4;
 	SREG = tmpSREG;
 }
 
 uint16_t uClockClass::getTempo() 
 {
+	tempo = (uint16_t)(156250 / (interval));
 	return tempo;
 }
 
@@ -200,13 +193,7 @@ void uClockClass::shuffle()
 void uClockClass::handleClock() 
 {
 	uint16_t cur_clock = _clock;
-	uint16_t diff;
-
-	if (cur_clock > last_clock) {
-		diff = cur_clock - last_clock;
-	} else {
-		diff = cur_clock + (65535 - last_clock);
-	}
+	uint16_t diff = clock_diff(last_clock, cur_clock);
 	
 	last_interval = diff;
 	last_clock = cur_clock;
@@ -232,9 +219,7 @@ void uClockClass::handleClock()
 			} else {
 				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)diff) >> 8;
 			}
-			tempo = (uint16_t)(156250 / (interval + 16));
 			break;
-
 	}
 
 }

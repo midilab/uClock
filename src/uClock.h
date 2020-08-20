@@ -106,6 +106,7 @@ class uClockClass {
 		void init();
 		void handleClock();
 		void handleTimerInt();
+		void resetCounters();
 		
 		// external class control
 		void start();
