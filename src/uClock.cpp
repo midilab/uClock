@@ -27,6 +27,10 @@
  * DEALINGS IN THE SOFTWARE. 
  */
 
+// TODO: use decimal for timming prescision: 120.10, 120.20
+// each 0.1 bpm equals 15.625 intervals on 16Mhz clock
+// each 1 bpm equals 156.250 intervals on 16Mhz clock
+
 #include "uClock.h"
 
 namespace umodular { namespace clock {
@@ -43,20 +47,6 @@ static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock)
 	} else {
 		return new_clock + (65535 - old_clock);
 	}
-}
-
-void uClockClass::resetCounters() 
-{
-	counter = 0;
-	last_clock = 0;
-	div96th_counter = 0;
-	div32th_counter = 0;
-	div16th_counter = 0;
-	mod6_counter = 0;
-	indiv96th_counter = 0;
-	inmod6_counter = 0;
-	pll_x = 200;
-	start_timer = 0;
 }
 
 uClockClass::uClockClass()
@@ -151,14 +141,13 @@ void uClockClass::setTempo(uint16_t _tempo)
 	cli();
 	tempo = _tempo;
 	//interval = 62500 / (tempo * 24 / 60) - 4;
-	interval = (156250 / tempo) - 4;
+	interval = (uint16_t)(156250 / tempo) - 4;
 	SREG = tmpSREG;
 }
 
 uint16_t uClockClass::getTempo() 
 {
-	tempo = (uint16_t)(156250 / (interval));
-	return tempo;
+	return (156250 / interval);
 }
 
 uint8_t uClockClass::getMode() 
@@ -176,6 +165,20 @@ void uClockClass::clockMe()
 	if (mode == EXTERNAL_CLOCK) {
 		handleClock();
 	}
+}
+
+void uClockClass::resetCounters() 
+{
+	counter = 0;
+	last_clock = 0;
+	div96th_counter = 0;
+	div32th_counter = 0;
+	div16th_counter = 0;
+	mod6_counter = 0;
+	indiv96th_counter = 0;
+	inmod6_counter = 0;
+	pll_x = 220;
+	start_timer = 0;
 }
 
 // TODO: Tap stuff
