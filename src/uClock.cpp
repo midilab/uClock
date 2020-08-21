@@ -3,10 +3,10 @@
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.8
+ *  @version    0.8.1
  *  @author     Romulo Silva
- *  @date       10/06/17
- *  @license    MIT - (c) 2017 - Romulo Silva - contact@midilab.co
+ *  @date       08/21/2020
+ *  @license    MIT - (c) 2020 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,13 +27,15 @@
  * DEALINGS IN THE SOFTWARE. 
  */
 
-// TODO: use decimal for timming prescision: 120.10, 120.20
+// TODO: use float for decimal timming precision: 120.10, 120.20
 // each 0.1 bpm equals 15.625 intervals on 16Mhz clock
 // each 1 bpm equals 156.250 intervals on 16Mhz clock
 
 #include "uClock.h"
 
 namespace umodular { namespace clock {
+
+uint8_t _tmpSREG;
 
 static inline uint32_t phase_mult(uint32_t val) 
 {
@@ -51,8 +53,8 @@ static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock)
 
 uClockClass::uClockClass()
 {
+	pll_x = 220;
 	mode = INTERNAL_CLOCK;
-	state = PAUSED;
 	resetCounters();
 	setTempo(120);
 	
@@ -65,29 +67,27 @@ uClockClass::uClockClass()
 
 void uClockClass::init() 
 {
-	uint8_t tmpSREG;
-	
+	start_timer = 0;
+	state = PAUSED;
 	//
 	// Configure timers and prescale
 	// Timmer1: ATMega128, ATMega328, AtMega16U4 and AtMega32U4
-	tmpSREG = SREG;
+	_tmpSREG = SREG;
 	cli();
 	// Waveform Generation Mode (WGM) 16-bit timer settings
-	// WGM10, WGM12
-	// Mode 5: Fast Pulse Width Modulation (PWM), 8-bit
+	// (WGM10, WGM12) Mode 5: Fast Pulse Width Modulation (PWM), 8-bit
 	// Clock Speed Selection
 	// CS10: Clock (No prescaling)	
 	TCCR1A = _BV(WGM10);
-	TCCR1B = _BV(CS10) | _BV(WGM12); // every cycle
+	TCCR1B = _BV(CS10) | _BV(WGM12);
 	TIMSK1 |= _BV(TOIE1);
-	SREG = tmpSREG;
+	SREG = _tmpSREG;
 }
 
 void uClockClass::start() 
 {
-	start_timer = millis();
-	
 	resetCounters();
+	start_timer = millis();
 	
 	if (onClockStartCallback) {
 		onClockStartCallback();
@@ -100,16 +100,13 @@ void uClockClass::start()
 	}	
 }
 
-
-
 void uClockClass::stop()
 {
 	resetCounters();
-	
+	start_timer = 0;
 	if (onClockStopCallback) {
 		onClockStopCallback();
-	}	
-	//state = PAUSED;
+	}
 }
 
 void uClockClass::pause() 
@@ -123,26 +120,26 @@ void uClockClass::pause()
 	}
 }
 
-void uClockClass::setTempo(uint16_t _tempo) 
+void uClockClass::setTempo(uint16_t bpm) 
 {
 	if (mode == EXTERNAL_CLOCK) {
 		return;
 	}
 	
-	if (tempo == _tempo) {
+	if (tempo == bpm) {
 		return;
 	}
 	
-	if (_tempo > 300 || _tempo == 0) {
+	if (bpm > 300 || bpm == 0) {
 		return;
 	}
 	
-	uint8_t tmpSREG = SREG;
+	_tmpSREG = SREG;
 	cli();
-	tempo = _tempo;
+	tempo = bpm;
 	//interval = 62500 / (tempo * 24 / 60) - 4;
 	interval = (uint16_t)(156250 / tempo) - 4;
-	SREG = tmpSREG;
+	SREG = _tmpSREG;
 }
 
 uint16_t uClockClass::getTempo() 
@@ -177,8 +174,6 @@ void uClockClass::resetCounters()
 	mod6_counter = 0;
 	indiv96th_counter = 0;
 	inmod6_counter = 0;
-	pll_x = 220;
-	start_timer = 0;
 }
 
 // TODO: Tap stuff
