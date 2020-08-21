@@ -3,7 +3,7 @@
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.8.1
+ *  @version    0.8.2
  *  @author     Romulo Silva
  *  @date       08/21/2020
  *  @license    MIT - (c) 2020 - Romulo Silva - contact@midilab.co
@@ -53,13 +53,14 @@ static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock)
 
 uClockClass::uClockClass()
 {
-	// 4 is good for usb-to-midi hid
 	// 11 is good for native 31250bps midi interface
+	// 4 is good for usb-to-midi hid
 	drift = 11;
 	pll_x = 220;
+	start_timer = 0;
+	state = PAUSED;
 	mode = INTERNAL_CLOCK;
 	resetCounters();
-	setTempo(120);
 	
 	onClock96PPQNCallback = NULL;
 	onClock32PPQNCallback = NULL;
@@ -70,8 +71,7 @@ uClockClass::uClockClass()
 
 void uClockClass::init() 
 {
-	start_timer = 0;
-	state = PAUSED;
+	setTempo(120);
 	//
 	// Configure timers and prescale
 	// Timmer1: ATMega128, ATMega328, AtMega16U4 and AtMega32U4
