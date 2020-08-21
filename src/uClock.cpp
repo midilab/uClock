@@ -102,8 +102,9 @@ void uClockClass::start()
 
 void uClockClass::stop()
 {
-	resetCounters();
+	state = PAUSED;
 	start_timer = 0;
+	resetCounters();
 	if (onClockStopCallback) {
 		onClockStopCallback();
 	}
