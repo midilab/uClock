@@ -138,6 +138,8 @@ void uClockClass::setTempo(uint16_t bpm)
 	_tmpSREG = SREG;
 	cli();
 	tempo = bpm;
+	// 4 is good for usb-to-midi hid
+	// 11 is good for native 31400bps midi interface
 	//interval = 62500 / (tempo * 24 / 60) - 4;
 	interval = (uint16_t)(156250 / tempo) - 4;
 	SREG = _tmpSREG;
@@ -145,7 +147,10 @@ void uClockClass::setTempo(uint16_t bpm)
 
 uint16_t uClockClass::getTempo() 
 {
-	return (156250 / interval);
+	if (mode == EXTERNAL_CLOCK) {
+		tempo = (156250 / interval);
+	}
+	return tempo;
 }
 
 uint8_t uClockClass::getMode() 
