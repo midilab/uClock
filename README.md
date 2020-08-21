@@ -275,3 +275,11 @@ void loop()
   //processYourPots();
 }
 ```
+
+## Troubleshooting
+
+If you slave host are not showing correct of close bpm on sync, please try to use the drift variable to adjust. It normaly goes from value 4(good for clock over USB) to 11(good for common MIDI interfaces running at 31250 speed). The default value is 11.
+  
+To use MIDI via USB please start setting the drift to 4:  
+uClock.setDrift(4);  
+  

@@ -73,6 +73,7 @@ class uClockClass {
 		uint16_t last_interval;
 		uint32_t indiv96th_counter;
 		uint16_t pll_x;
+		uint8_t drift;
 		uint16_t tempo;
 		uint32_t start_timer;
 		uint8_t mode;
@@ -114,6 +115,7 @@ class uClockClass {
 		void pause();
 		void setTempo(uint16_t bpm);
 		uint16_t getTempo();
+		void setDrift(uint8_t value);
 
 		// external timming control
 		void setMode(uint8_t tempo_mode);

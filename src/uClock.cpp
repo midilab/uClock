@@ -53,6 +53,9 @@ static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock)
 
 uClockClass::uClockClass()
 {
+	// 4 is good for usb-to-midi hid
+	// 11 is good for native 31250bps midi interface
+	drift = 11;
 	pll_x = 220;
 	mode = INTERNAL_CLOCK;
 	resetCounters();
@@ -138,10 +141,8 @@ void uClockClass::setTempo(uint16_t bpm)
 	_tmpSREG = SREG;
 	cli();
 	tempo = bpm;
-	// 4 is good for usb-to-midi hid
-	// 11 is good for native 31400bps midi interface
-	//interval = 62500 / (tempo * 24 / 60) - 4;
-	interval = (uint16_t)(156250 / tempo) - 4;
+	//interval = 62500 / (tempo * 24 / 60) - drift;
+	interval = (uint16_t)(156250 / tempo) - drift;
 	SREG = _tmpSREG;
 }
 
@@ -151,6 +152,11 @@ uint16_t uClockClass::getTempo()
 		tempo = (156250 / interval);
 	}
 	return tempo;
+}
+
+void uClockClass::setDrift(uint8_t value)
+{
+	drift = value;
 }
 
 uint8_t uClockClass::getMode() 
