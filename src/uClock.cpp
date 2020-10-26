@@ -34,7 +34,7 @@
 // Timer setup
 // Work clock at: 62.5kHz/16usec
 //
-#if defined(TEENSYDUINO)
+#if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
 IntervalTimer _teensyTimer;
 void teensyInterrupt();
 void initTeensyTimer()
@@ -73,7 +73,7 @@ void initArduinoTimer()
 #endif
 
 void initWorkTimer() {
-#if defined(TEENSYDUINO)
+#if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
 	initTeensyTimer();
 #else
 	initArduinoTimer();
@@ -104,6 +104,8 @@ uClockClass::uClockClass()
 	drift = 11;
 	pll_x = 220;
 	start_timer = 0;
+	last_interval = 0;
+	sync_interval = 0;
 	state = PAUSED;
 	mode = INTERNAL_CLOCK;
 	resetCounters();
@@ -240,11 +242,9 @@ void uClockClass::shuffle()
 
 void uClockClass::handleExternalClock() 
 {
-	uint16_t cur_clock = _clock;
-	uint16_t diff = clock_diff(last_clock, cur_clock);
-	
-	last_interval = diff;
-	last_clock = cur_clock;
+	last_interval = clock_diff(last_clock, _clock);
+	last_clock = _clock;
+
 	indiv96th_counter++;
 	inmod6_counter++;
 
@@ -263,9 +263,9 @@ void uClockClass::handleExternalClock()
 
 		case STARTED:
 			if (indiv96th_counter == 2) {
-				interval = diff;
+				interval = last_interval;
 			} else {
-				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)diff) >> 8;
+				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)last_interval) >> 8;
 			}
 			break;
 	}
@@ -303,17 +303,16 @@ void uClockClass::handleTimerInt()
 		mod6_counter++;
 	
 		if (mode == EXTERNAL_CLOCK) {
-			uint16_t cur_clock = _clock;
-			uint16_t diff = clock_diff(last_clock, cur_clock);
+			sync_interval = clock_diff(last_clock, _clock);
 			if ((div96th_counter < indiv96th_counter) || (div96th_counter > (indiv96th_counter + 1))) {
 				div96th_counter = indiv96th_counter;
 				mod6_counter = inmod6_counter;
 			}
 			if (div96th_counter <= indiv96th_counter) {
-				counter -= phase_mult(diff);
+				counter -= phase_mult(sync_interval);
 			} else {
-				if (counter > diff) {
-					counter += phase_mult(counter - diff);
+				if (counter > sync_interval) {
+					counter += phase_mult(counter - sync_interval);
 				}
 			}
 		}
@@ -382,7 +381,7 @@ volatile uint32_t _timer = 0;
 // TIMER INTERRUPT HANDLER 
 // Clocked at: 62.5kHz/16usec
 //
-#if defined(TEENSYDUINO)
+#if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
 void teensyInterrupt() 
 #else
 ISR(TIMER1_OVF_vect) 

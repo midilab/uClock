@@ -62,22 +62,26 @@ class uClockClass {
 		void (*onClockStartCallback)();
 		void (*onClockStopCallback)();
 
+		volatile uint8_t inmod6_counter;
+		volatile uint32_t indiv96th_counter;
+		volatile uint16_t interval;
+		volatile uint16_t last_clock;
+		
 		uint32_t div96th_counter;
 		uint32_t div32th_counter;
 		uint32_t div16th_counter;
 		uint8_t mod6_counter;
-		uint8_t inmod6_counter;
-		volatile uint16_t interval;
 		uint16_t counter;
-		uint16_t last_clock;
-		uint16_t last_interval;
-		uint32_t indiv96th_counter;
+
 		uint16_t pll_x;
 		uint8_t drift;
 		uint16_t tempo;
 		uint32_t start_timer;
 		uint8_t mode;
 	
+		uint16_t last_interval;
+		uint16_t sync_interval;
+
 	public:
 
 		uint8_t state;
