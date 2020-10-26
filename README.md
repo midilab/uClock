@@ -1,6 +1,6 @@
 # uClock
 
-**BPM clock generator for Arduino** is a library to implement BPM clock tick calls using **hardware timer1 interruption** for tight and solid timming clock ticks. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
+**BPM clock generator for Arduino and Teensy** is a library to implement BPM clock tick calls using **hardware interruption** for tight and solid timming clock ticks. Tested on ATmega168/328, ATmega16u4/32u4, ATmega2560 and Teensy LC.
 
 Generate your self tight BPM clock for music, audio/video productions, performances or instalations. You can clock your MIDI setup or sync different protocols as you wish.
 
@@ -23,7 +23,7 @@ Here a few examples on the usage of Clock library for MIDI devices, keep in mind
 If you dont want to build a MIDI interface and you are going to use your arduino only with your PC, you can use a Serial-to-Midi bridge and connects your arduino via USB cable to your conputer to use it as a MIDI tool [like this one](http://projectgus.github.io/hairless-midiserial/).
 
 ### A Simple MIDI Sync Box sketch example
-Here is a example on how to create a simple MIDI Sync Box
+Here is a example on how to create a simple MIDI Sync Box on Arduino boards
 
 ```c++
 #include <uClock.h>
@@ -75,6 +75,48 @@ void loop() {
 }
 ```
 
+A example on how to create a simple MIDI Sync Box on Teensy boards and USB Midi setup. Select "MIDI" from the Tools->USB Type menu for Teensy to becomes a USB MIDI first.
+
+```c++
+#include <uClock.h>
+
+// The callback function wich will be called by Clock each Pulse of 96PPQN clock resolution.
+void ClockOut96PPQN(uint32_t * tick) {
+  // Send MIDI_CLOCK to external gears
+  usbMIDI.sendRealTime(usbMIDI.Clock);
+}
+
+// The callback function wich will be called when clock starts by using Clock.start() method.
+void onClockStart() {
+  usbMIDI.sendRealTime(usbMIDI.Start);
+}
+
+// The callback function wich will be called when clock stops by using Clock.stop() method.
+void onClockStop() {
+  usbMIDI.sendRealTime(usbMIDI.Stop);
+}
+
+void setup() {
+  // drift for USB Teensy
+  uClock.setDrift(1);
+  // Inits the clock
+  uClock.init();
+  // Set the callback function for the clock output to send MIDI Sync message.
+  uClock.setClock96PPQNOutput(ClockOut96PPQN);
+  // Set the callback function for MIDI Start and Stop messages.
+  uClock.setOnClockStartOutput(onClockStart);  
+  uClock.setOnClockStopOutput(onClockStop);
+  // Set the clock BPM to 126 BPM
+  uClock.setTempo(126);
+  // Starts the clock, tick-tac-tick-tac...
+  uClock.start();
+}
+
+// Do it whatever to interface with Clock.stop(), Clock.start(), Clock.setTempo() and integrate your environment...
+void loop() {
+
+}
+```
 
 ### Acid Step Sequencer
 
@@ -280,6 +322,11 @@ void loop()
 
 If you slave host are not showing correct of close bpm on sync, please try to use the drift variable to adjust. It normaly goes from value 4(good for clock over USB) to 11(good for common MIDI interfaces running at 31250 speed). The default value is 11.
   
-To use MIDI via USB please start setting the drift to 4:  
+To use MIDI via USB on Leonardo boards please start setting the drift to 4:  
 uClock.setDrift(4);  
+  
+For teensy boards and USB Midi try:  
+uClock.setDrift(1);  
+  
+Please use uClock.setDrift() before uClock.init();  
   
