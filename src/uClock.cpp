@@ -185,7 +185,11 @@ void uClockClass::setTempo(uint16_t bpm)
 uint16_t uClockClass::getTempo() 
 {
 	if (mode == EXTERNAL_CLOCK) {
-		tempo = (156250 / interval);
+		uint16_t external_interval;
+		ATOMIC(
+			external_interval = interval;
+		)
+		tempo = (156250 / external_interval);
 	}
 	return tempo;
 }
