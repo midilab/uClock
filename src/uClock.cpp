@@ -3,7 +3,7 @@
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.9.0
+ *  @version    0.9.3
  *  @author     Romulo Silva
  *  @date       08/21/2020
  *  @license    MIT - (c) 2020 - Romulo Silva - contact@midilab.co
@@ -101,7 +101,8 @@ uClockClass::uClockClass()
 	// 11 is good for native 31250bps midi interface
 	// 4 is good for usb-to-midi hid on leonardo
 	// 1 is good on teensy lc usb midi
-	drift = 11;
+	internal_drift = 11;
+	external_drift = 11;
 	pll_x = 220;
 	start_timer = 0;
 	last_interval = 0;
@@ -170,15 +171,15 @@ void uClockClass::setTempo(uint16_t bpm)
 		return;
 	}
 	
-	if (bpm > 300 || bpm == 0) {
+	if (bpm > 300 || bpm < 10) {
 		return;
 	}
 
 	tempo = bpm;
 
 	ATOMIC(	
-		//interval = 62500 / (tempo * 24 / 60) - drift;
-		interval = (uint16_t)(156250 / tempo) - drift;
+		//interval = 62500 / (tempo * 24 / 60) - internal_drift;
+		interval = (uint16_t)(156250 / tempo) - internal_drift;
 	)
 }
 
@@ -189,15 +190,16 @@ uint16_t uClockClass::getTempo()
 		ATOMIC(
 			external_interval = interval;
 		)
-		tempo = (156250 / external_interval);
+		tempo = (156250 / (external_interval + external_drift));
 	}
 	return tempo;
 }
 
-void uClockClass::setDrift(uint8_t value)
+void uClockClass::setDrift(uint8_t internal, uint8_t external)
 {
 	ATOMIC(
-		drift = value;
+		internal_drift = internal;
+		external_drift = external == 255 ? internal : external;
 	)
 }
 
