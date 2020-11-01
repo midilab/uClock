@@ -112,7 +112,7 @@ void setup() {
   //
   // Setup our clock system
   // drift for USB Teensy
-  uClock.setDrift(1, 4);
+  uClock.setDrift(0, 4);
   uClock.init();
   uClock.setClock96PPQNOutput(ClockOut96PPQN);
   // For MIDI Sync Start and Stop
