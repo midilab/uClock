@@ -3,7 +3,7 @@
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.9.3
+ *  @version    0.9.4
  *  @author     Romulo Silva
  *  @date       08/21/2020
  *  @license    MIT - (c) 2020 - Romulo Silva - contact@midilab.co
@@ -39,13 +39,14 @@ IntervalTimer _teensyTimer;
 void teensyInterrupt();
 void initTeensyTimer()
 {
-	_teensyTimer.begin(teensyInterrupt, 16); 
+	// 62500Hz
+	_teensyTimer.begin(teensyInterrupt, 16);
 	// Set the interrupt priority level, controlling which other interrupts
 	// this timer is allowed to interrupt. Lower numbers are higher priority, 
 	// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
 	// As a general guideline, interrupt routines that run longer should be given 
 	// lower priority (higher numerical values).
-	//_teensyTimer.priority(128);
+	_teensyTimer.priority(0);
 }
 #else
 void initArduinoTimer()
@@ -103,6 +104,7 @@ uClockClass::uClockClass()
 	// 1 is good on teensy lc usb midi
 	internal_drift = 11;
 	external_drift = 11;
+	tempo = 120;
 	pll_x = 220;
 	start_timer = 0;
 	last_interval = 0;
@@ -116,11 +118,13 @@ uClockClass::uClockClass()
 	onClock16PPQNCallback = NULL;
 	onClockStartCallback = NULL;
 	onClockStopCallback = NULL;
+
+	// first interval calculus
+	setTempo(tempo);
 }
 
 void uClockClass::init() 
 {
-	setTempo(120);
 	initWorkTimer();
 }
 
@@ -161,7 +165,7 @@ void uClockClass::pause()
 	}
 }
 
-void uClockClass::setTempo(uint16_t bpm) 
+void uClockClass::setTempo(float bpm) 
 {
 	if (mode == EXTERNAL_CLOCK) {
 		return;
@@ -177,20 +181,27 @@ void uClockClass::setTempo(uint16_t bpm)
 
 	tempo = bpm;
 
-	ATOMIC(	
+	ATOMIC(
+		interval = (uint16_t)((156250.0 / tempo) - internal_drift);
 		//interval = 62500 / (tempo * 24 / 60) - internal_drift;
-		interval = (uint16_t)(156250 / tempo) - internal_drift;
 	)
 }
 
-uint16_t uClockClass::getTempo() 
+float uClockClass::getTempo() 
 {
 	if (mode == EXTERNAL_CLOCK) {
-		uint16_t external_interval;
-		ATOMIC(
-			external_interval = interval;
-		)
-		tempo = (156250 / (external_interval + external_drift));
+		uint32_t acc = 0;
+		uint8_t acc_counter = 0;
+		for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
+			if ( ext_interval_buffer[i] != 0) {
+				acc += ext_interval_buffer[i];
+				++acc_counter;
+			}
+		}
+		if (acc != 0) {
+			// get average interval, because MIDI sync world is a wild place...
+			tempo = (float)(156250.0 / ((acc / acc_counter) + external_drift));
+		}
 	}
 	return tempo;
 }
@@ -232,6 +243,8 @@ void uClockClass::resetCounters()
 	mod6_counter = 0;
 	indiv96th_counter = 0;
 	inmod6_counter = 0;
+	ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE] = {0};
+	ext_interval_idx = 0;
 }
 
 // TODO: Tap stuff
@@ -273,6 +286,9 @@ void uClockClass::handleExternalClock()
 			} else {
 				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)last_interval) >> 8;
 			}
+			// accumulate interval incomming ticks data(for a better getTempo stability over bad clocks)
+			ext_interval_buffer[ext_interval_idx] = interval;
+			ext_interval_idx = ++ext_interval_idx % EXT_INTERVAL_BUFFER_SIZE;
 			break;
 	}
 }

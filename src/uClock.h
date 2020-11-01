@@ -3,7 +3,7 @@
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.9.3
+ *  @version    0.9.4
  *  @author     Romulo Silva
  *  @date       08/21/2020
  *  @license    MIT - (c) 2020 - Romulo Silva - contact@midilab.co
@@ -35,6 +35,8 @@
 
 #define PHASE_FACTOR 16
 
+#define EXT_INTERVAL_BUFFER_SIZE 40
+
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
@@ -47,11 +49,6 @@ enum {
 	STARTED
 } state;
 
-enum {
-	INTERNAL_CLOCK = 0,
-	EXTERNAL_CLOCK
-} mode;
-		
 class uClockClass {
 
 	private:
@@ -67,7 +64,6 @@ class uClockClass {
 		volatile uint16_t interval;
 		volatile uint16_t last_clock;
 
-		uint8_t ppqn;
 		uint32_t div96th_counter;
 		uint32_t div32th_counter;
 		uint32_t div16th_counter;
@@ -77,12 +73,15 @@ class uClockClass {
 		uint16_t pll_x;
 		uint8_t internal_drift;
 		uint8_t external_drift;
-		uint16_t tempo;
+		float tempo;
 		uint32_t start_timer;
 		uint8_t mode;
 	
 		uint16_t last_interval;
 		uint16_t sync_interval;
+
+		uint16_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
+		uint16_t ext_interval_idx;
 
 	public:
 
@@ -122,8 +121,8 @@ class uClockClass {
 		void start();
 		void stop();
 		void pause();
-		void setTempo(uint16_t bpm);
-		uint16_t getTempo();
+		void setTempo(float bpm);
+		float getTempo();
 		void setDrift(uint8_t internal, uint8_t external = 255);
 
 		// external timming control

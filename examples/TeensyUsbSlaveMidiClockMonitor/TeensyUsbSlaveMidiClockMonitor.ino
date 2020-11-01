@@ -4,15 +4,21 @@
  * MIDI hid compilant slave clock box with 
  * monitor support using oled displays
  *
- * Making use of a 250 usceconds timer to
+ * Making use of a 16 usceconds timer to
  * handle MIDI input to avoid jitter on clock
  * 
  * You need the following libraries to make it work
  * - u8g2
  * - uClock
+ *
+ * This example make use of drift values (1, 4) 
+ * respectively for internal and external drift reference.
+ * This example was tested on a macbook 
+ * running ableton live 9 as master clock
+ *
  * This example code is in the public domain.
  */
-
+ 
 #include <U8x8lib.h>
 
 //
@@ -28,8 +34,8 @@ IntervalTimer teensyTimer;
 #define MIDI_START 0xFA
 #define MIDI_STOP  0xFC
 
-char bpm_str[3];
-uint16_t bpm = 126;
+char bpm_str[4];
+float bpm = 126;
 uint8_t bpm_blink_timer = 1;
 uint8_t clock_state = 1;
 
@@ -60,6 +66,7 @@ void onClockStart() {
 
 void onClockStop() {
   usbMIDI.sendRealTime(MIDI_STOP);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 // External clock handlers
@@ -105,15 +112,16 @@ void setup() {
   //
   // Setup our clock system
   // drift for USB Teensy
-  uClock.setDrift(1);
+  uClock.setDrift(1, 4);
   uClock.init();
   uClock.setClock96PPQNOutput(ClockOut96PPQN);
   // For MIDI Sync Start and Stop
   uClock.setOnClockStartOutput(onClockStart);
   uClock.setOnClockStopOutput(onClockStop);
   uClock.setMode(uClock.EXTERNAL_CLOCK);
-  // make use of 250us timer to handle midi input sync
-  teensyTimer.begin(handleMidiInput, 250); 
+  // make use of 16us timer to handle midi input sync
+  teensyTimer.begin(handleMidiInput, 16); 
+  teensyTimer.priority(80);
 }
 
 void handleMidiInput() {
@@ -121,12 +129,27 @@ void handleMidiInput() {
   }
 }
 
+void printBpm(float _bpm, uint8_t col, uint8_t line) {
+    int b = (int)_bpm;
+    int c = (int)((_bpm-b)*10);
+    itoa(b, bpm_str, 10);
+    if (b > 99) {
+      u8x8->drawUTF8(col, line, bpm_str);
+    } else {
+      bpm_str[2] = "\0";
+      u8x8->drawUTF8(col, line, " ");
+      u8x8->drawUTF8(col+1, line, bpm_str);
+    }
+    u8x8->drawUTF8(col+3, line, ".");
+    itoa(c, bpm_str, 10);
+    u8x8->drawUTF8(col+4, line, bpm_str);
+    u8x8->drawUTF8(col+5, line, "bpm"); 
+}
+
 void loop() {
   if (bpm != uClock.getTempo()) {
     bpm = uClock.getTempo();
-    itoa(bpm, bpm_str, 10);
-    u8x8->drawUTF8(10, 7, bpm_str);
-    u8x8->drawUTF8(13, 7, "bpm"); 
+    printBpm(bpm, 8, 7);
   }
   if (clock_state != uClock.state) { 
     clock_state = uClock.state;
