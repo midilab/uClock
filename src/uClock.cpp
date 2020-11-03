@@ -145,13 +145,13 @@ static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock)
 uClockClass::uClockClass()
 {
 	// some tested values
-	// 11 is good for native 31250bps midi interface
+	// 1 is good for native 31250bps midi interface
 	// 4 is good for usb-to-midi hid on leonardo
 	// (6, 1) is good on teensy lc usb midi
 	// internal drift is used to calibrate master clock
-	internal_drift = 11;
+	internal_drift = 1;
 	// internal drift is used to calibrate slave clock
-	external_drift = 11;
+	external_drift = 1;
 	tempo = 120;
 	pll_x = 220;
 	start_timer = 0;
