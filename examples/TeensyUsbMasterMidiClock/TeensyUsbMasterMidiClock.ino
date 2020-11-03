@@ -56,7 +56,7 @@ void setup() {
   
   // Setup our clock system
   // drift for USB Teensy
-  uClock.setDrift(1);
+  uClock.setDrift(6, 1);
   // Inits the clock
   uClock.init();
   // Set the callback function for the clock output to send MIDI Sync message.

@@ -4,14 +4,14 @@
  * MIDI hid compilant slave clock box with 
  * monitor support using oled displays
  *
- * Making use of a 16 usceconds timer to
+ * Making use of a 250 usceconds timer to
  * handle MIDI input to avoid jitter on clock
  * 
  * You need the following libraries to make it work
  * - u8g2
  * - uClock
  *
- * This example make use of drift values (1, 4) 
+ * This example make use of drift values (6, 1) 
  * respectively for internal and external drift reference.
  * This example was tested on a macbook 
  * running ableton live 9 as master clock
@@ -112,15 +112,15 @@ void setup() {
   //
   // Setup our clock system
   // drift for USB Teensy
-  uClock.setDrift(0, 4);
+  uClock.setDrift(6, 1);
   uClock.init();
   uClock.setClock96PPQNOutput(ClockOut96PPQN);
   // For MIDI Sync Start and Stop
   uClock.setOnClockStartOutput(onClockStart);
   uClock.setOnClockStopOutput(onClockStop);
   uClock.setMode(uClock.EXTERNAL_CLOCK);
-  // make use of 16us timer to handle midi input sync
-  teensyTimer.begin(handleMidiInput, 16); 
+  // make use of 250us timer to handle midi input sync
+  teensyTimer.begin(handleMidiInput, 250); 
   teensyTimer.priority(80);
 }
 

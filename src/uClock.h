@@ -3,7 +3,7 @@
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.9.4
+ *  @version    0.10.0
  *  @author     Romulo Silva
  *  @date       08/21/2020
  *  @license    MIT - (c) 2020 - Romulo Silva - contact@midilab.co
@@ -35,19 +35,20 @@
 
 #define PHASE_FACTOR 16
 
-#define EXT_INTERVAL_BUFFER_SIZE 40
+#define EXT_INTERVAL_BUFFER_SIZE 24
 
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
 
-namespace umodular { namespace clock {
+#define CLOCK_62500HZ 	62500	// 16 microseconds
+#define CLOCK_125000HZ	125000	// 8 microseconds
+#define CLOCK_250000HZ	250000	// 4 microseconds
 
-enum {
-	PAUSED = 0,
-	STARTING,
-	STARTED
-} state;
+#define MIN_BPM	1
+#define MAX_BPM	300
+
+namespace umodular { namespace clock {
 
 class uClockClass {
 
@@ -58,6 +59,9 @@ class uClockClass {
 		void (*onClock16PPQNCallback)(uint32_t * tick);
 		void (*onClockStartCallback)();
 		void (*onClockStopCallback)();
+
+		// expressed in Hertz
+		uint32_t freq_resolution;
 
 		volatile uint8_t inmod6_counter;
 		volatile uint32_t indiv96th_counter;
@@ -81,12 +85,21 @@ class uClockClass {
 		uint16_t sync_interval;
 
 		uint16_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
+		uint32_t ext_interval_acc;
 		uint16_t ext_interval_idx;
 
 	public:
 
-		uint8_t INTERNAL_CLOCK = 0;
-		uint8_t EXTERNAL_CLOCK = 1;
+		enum {
+			INTERNAL_CLOCK = 0,
+			EXTERNAL_CLOCK
+		};
+
+		enum {
+			PAUSED = 0,
+			STARTING,
+			STARTED
+		};
 
 		uint8_t state;
 		
@@ -124,6 +137,11 @@ class uClockClass {
 		void setTempo(float bpm);
 		float getTempo();
 		void setDrift(uint8_t internal, uint8_t external = 255);
+		uint8_t getInternalDrift();
+		uint8_t getExternalDrift();
+		void setResolution(uint32_t hertz);
+		uint32_t getResolution();
+		uint16_t getInterval();
 
 		// external timming control
 		void setMode(uint8_t tempo_mode);

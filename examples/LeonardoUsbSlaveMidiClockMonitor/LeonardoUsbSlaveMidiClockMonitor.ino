@@ -9,12 +9,6 @@
  * - USB-MIDI and MIDIUSB
  * - u8g2
  * - uClock
- *
- * This example make use of drift values (10, 14) 
- * respectively for internal and external drift reference.
- * This example was tested on a macbook 
- * runing ableton live 9 as master clock
- *
  * This example code is in the public domain.
  */
 
@@ -102,19 +96,22 @@ void setup() {
   u8x8->begin();
   u8x8->setFont(u8x8_font_pressstart2p_r); 
   u8x8->clear();
+  u8x8->setFlipMode(true);
   u8x8->drawUTF8(0, 0, "uClock"); 
 
   //
   // uClock Setup
   //
   // fine tunning adjstments for you clock slaves/host setDrift(internal, external)
-  uClock.setDrift(10, 14);
+  uClock.setDrift(10, 2);
   uClock.init();
   uClock.setClock96PPQNOutput(ClockOut96PPQN);
   // For MIDI Sync Start and Stop
   uClock.setOnClockStartOutput(onClockStart);
   uClock.setOnClockStopOutput(onClockStop);
   uClock.setMode(uClock.EXTERNAL_CLOCK);
+  //uClock.setTempo(126.5);
+  //uClock.start();
 }
 
 void printBpm(float _bpm, uint8_t col, uint8_t line) {
