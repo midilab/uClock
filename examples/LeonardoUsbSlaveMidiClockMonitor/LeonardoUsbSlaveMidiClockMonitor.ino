@@ -32,6 +32,7 @@ char bpm_str[4];
 float bpm = 126.0;
 uint8_t bpm_blink_timer = 1;
 uint8_t clock_state = 1;
+uint8_t clock_mode = 0;
 
 void handle_bpm_led(uint32_t * tick)
 {
@@ -102,15 +103,15 @@ void setup() {
   //
   // uClock Setup
   //
-  // fine tunning adjstments for you clock slaves/host setDrift(internal, external)
-  uClock.setDrift(10, 2);
+  // Drift for arudino leonardo over USB as MIDI HID
+  uClock.setSlaveDrift(10);
   uClock.init();
   uClock.setClock96PPQNOutput(ClockOut96PPQN);
   // For MIDI Sync Start and Stop
   uClock.setOnClockStartOutput(onClockStart);
   uClock.setOnClockStopOutput(onClockStop);
   uClock.setMode(uClock.EXTERNAL_CLOCK);
-  //uClock.setTempo(126.5);
+  //uClock.setTempo(136.5);
   //uClock.start();
 }
 
@@ -133,7 +134,7 @@ void printBpm(float _bpm, uint8_t col, uint8_t line) {
 }
 
 void loop() {
-  MIDI.read();
+  while(MIDI.read()) {}
   // DO NOT ADD MORE PROCESS HERE AT THE COST OF LOSING CLOCK SYNC
   // Since arduino make use of Serial RX interruption we need to 
   // read Serial as fast as we can on the loop
@@ -147,6 +148,14 @@ void loop() {
       u8x8->drawUTF8(0, 7, "playing"); 
     } else { 
       u8x8->drawUTF8(0, 7, "stoped "); 
+    }
+  }
+  if (clock_mode != uClock.getMode()) {
+    clock_mode = uClock.getMode();
+    if (clock_mode == uClock.EXTERNAL_CLOCK) {
+      u8x8->drawUTF8(10, 0, "slave "); 
+    } else { 
+      u8x8->drawUTF8(10, 0, "master"); 
     }
   }
 }
