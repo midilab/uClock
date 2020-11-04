@@ -112,6 +112,8 @@ uClockClass::uClockClass()
 	mode = INTERNAL_CLOCK;
 	ext_interval_acc = 0;
 	resetCounters();
+
+	onClock96PPQNCallback = NULL;
 	
 	// first interval calculus
 	setTempo(tempo);
