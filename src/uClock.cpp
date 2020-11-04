@@ -114,7 +114,11 @@ uClockClass::uClockClass()
 	resetCounters();
 
 	onClock96PPQNCallback = NULL;
-	
+	onClock32PPQNCallback = NULL;
+	onClock16PPQNCallback = NULL;
+	onClockStartCallback = NULL;
+	onClockStopCallback = NULL;
+
 	// first interval calculus
 	setTempo(tempo);
 }
@@ -228,11 +232,11 @@ uint16_t uClockClass::getInterval()
 }
 
 // Main poolling tick call
-uint8_t uClockClass::getTick(uint32_t *_tick)
+uint8_t uClockClass::getTick(uint32_t * tick)
 {
-	ATOMIC(uint32_t last_tick = tick)
-	if (*_tick != last_tick) {
-		*_tick = last_tick;
+	ATOMIC(uint32_t last_tick = internal_tick)
+	if (*tick != last_tick) {
+		*tick = last_tick;
 		return 1;
 	}
 	return 0;
@@ -261,8 +265,12 @@ void uClockClass::resetCounters()
 {
 	counter = 0;
 	last_clock = 0;
-	tick = 0;
-	intick = 0;
+	internal_tick = 0;
+	external_tick = 0;
+	div32th_counter = 0;
+	div16th_counter = 0;
+	mod6_counter = 0;
+	inmod6_counter = 0;
 	ext_interval_idx = 0;
 }
 
@@ -282,8 +290,15 @@ void uClockClass::handleExternalClock()
 {
 	last_interval = clock_diff(last_clock, _clock);
 	last_clock = _clock;
+
 	// slave tick me!
-	intick++;
+	external_tick++;
+
+	// callback counters
+	inmod6_counter++;
+	if (inmod6_counter == 6) {
+		inmod6_counter = 0;
+	}
 
 	switch (state) {
 		case PAUSED:
@@ -304,21 +319,43 @@ void uClockClass::handleExternalClock()
 void uClockClass::handleTimerInt()  
 {
 	if (counter == 0) {
+		// update internal clock base counter
+		counter = interval;
+
 		// need a callback?
 		// please, use the polling method with getTick() instead...
 		if (onClock96PPQNCallback) {
-			onClock96PPQNCallback(&tick);
+			onClock96PPQNCallback(&internal_tick);
+		}
+
+		if (mod6_counter == 0) {
+			if (onClock32PPQNCallback) {
+				onClock32PPQNCallback(&div32th_counter);
+			}
+			if (onClock16PPQNCallback) {
+				onClock16PPQNCallback(&div16th_counter);
+			}
+			div16th_counter++;
+			div32th_counter++;
+		}
+
+		if (mod6_counter == 3) {
+			if (onClock32PPQNCallback) {
+				onClock32PPQNCallback(&div32th_counter);
+			}
+			div32th_counter++;
 		}
 
 		// tick me!
-		tick++;
-		counter = interval;
+		internal_tick++;
+		mod6_counter++;
+
 		if (mode == EXTERNAL_CLOCK) {
 			sync_interval = clock_diff(last_clock, _clock);
-			if ((tick < intick) || (tick > (intick + 1))) {
-				tick = intick;
+			if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
+				internal_tick = external_tick;
 			}
-			if (tick <= intick) {
+			if (internal_tick <= external_tick) {
 				counter -= phase_mult(sync_interval);
 			} else {
 				if (counter > sync_interval) {
@@ -326,6 +363,11 @@ void uClockClass::handleTimerInt()
 				}
 			}
 		}
+		
+		if (mod6_counter == 6) {
+			mod6_counter = 0;
+		}
+
 	} else {
 		counter--;
 	}

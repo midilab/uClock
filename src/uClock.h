@@ -51,17 +51,22 @@ class uClockClass {
 	private:
 		
 		void (*onClock96PPQNCallback)(uint32_t * tick);
+		void (*onClock32PPQNCallback)(uint32_t * tick);
+		void (*onClock16PPQNCallback)(uint32_t * tick);
 		void (*onClockStartCallback)();
 		void (*onClockStopCallback)();
 
-		volatile uint32_t tick;
-		volatile uint32_t intick;
+		volatile uint32_t internal_tick;
+		volatile uint32_t external_tick;
 		volatile uint16_t interval;
 		volatile uint16_t last_clock;
-		
+		volatile uint8_t inmod6_counter;
+		uint32_t div32th_counter;
+		uint32_t div16th_counter;
+		uint8_t mod6_counter;
 		uint16_t counter;
-		uint32_t last_tick;
 
+		uint32_t last_tick;
 		uint8_t drift;
 		uint8_t slave_drift;
 		float tempo;
@@ -96,6 +101,14 @@ class uClockClass {
 			onClock96PPQNCallback = callback;
 		}
 		
+		void setClock32PPQNOutput(void (*callback)(uint32_t * tick)) {
+			onClock32PPQNCallback = callback;
+		}
+
+		void setClock16PPQNOutput(void (*callback)(uint32_t * tick)) {
+			onClock16PPQNCallback = callback;
+		}
+
 		void setOnClockStartOutput(void (*callback)()) {
 			onClockStartCallback = callback;
 		}
