@@ -104,6 +104,7 @@ uClockClass::uClockClass()
 	// drift is used to sligth calibrate with your slave clock
 	drift = 1;
 	slave_drift = 0;
+	pll_x = 220;
 	tempo = 120;
 	start_timer = 0;
 	last_interval = 0;
@@ -291,14 +292,11 @@ void uClockClass::handleExternalClock()
 	last_interval = clock_diff(last_clock, _clock);
 	last_clock = _clock;
 
+	// accumulate interval incomming ticks data for getTempo() smooth reads on slave mode
+	ext_interval_buffer[ext_interval_idx++ % EXT_INTERVAL_BUFFER_SIZE] = last_interval;
+	
 	// slave tick me!
 	external_tick++;
-
-	// callback counters
-	inmod6_counter++;
-	if (inmod6_counter == 6) {
-		inmod6_counter = 0;
-	}
 
 	switch (state) {
 		case PAUSED:
@@ -309,9 +307,11 @@ void uClockClass::handleExternalClock()
 			break;
 
 		case STARTED:
-			interval = last_interval + slave_drift;
-			// accumulate interval incomming ticks data for getTempo() smooth reads on slave mode
-			ext_interval_buffer[ext_interval_idx++ % EXT_INTERVAL_BUFFER_SIZE] = interval;
+			if (external_tick == 1) {
+				interval = last_interval;
+			} else {
+				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)last_interval) >> 8;
+			}
 			break;
 	}
 }

@@ -65,6 +65,7 @@ class uClockClass {
 		uint32_t div16th_counter;
 		uint8_t mod6_counter;
 		uint16_t counter;
+		uint16_t pll_x;
 
 		uint32_t last_tick;
 		uint8_t drift;
