@@ -219,7 +219,6 @@ void uClockClass::setSlaveDrift(uint8_t value)
 	ATOMIC(slave_drift = value)
 }
 
-
 uint8_t uClockClass::getDrift()
 {
 	return drift;
@@ -235,9 +234,15 @@ uint16_t uClockClass::getInterval()
 // Main poolling tick call
 uint8_t uClockClass::getTick(uint32_t * tick)
 {
-	ATOMIC(uint32_t last_tick = internal_tick)
+	ATOMIC(
+		uint32_t last_tick = internal_tick;
+	)
 	if (*tick != last_tick) {
 		*tick = last_tick;
+		return 1;
+	}
+	if (last_tick - *tick > 1) {
+		*tick++;
 		return 1;
 	}
 	return 0;
@@ -293,7 +298,7 @@ void uClockClass::handleExternalClock()
 	last_clock = _clock;
 
 	// accumulate interval incomming ticks data for getTempo() smooth reads on slave mode
-	ext_interval_buffer[ext_interval_idx++ % EXT_INTERVAL_BUFFER_SIZE] = last_interval;
+	ext_interval_buffer[ext_interval_idx++ % EXT_INTERVAL_BUFFER_SIZE] = last_interval;	
 	
 	// slave tick me!
 	external_tick++;
