@@ -33,6 +33,8 @@
 #include <Arduino.h>
 #include <inttypes.h>
 
+namespace umodular { namespace clock {
+
 #define PHASE_FACTOR 16
 
 #define EXT_INTERVAL_BUFFER_SIZE 24
@@ -44,7 +46,7 @@
 #define MIN_BPM	1
 #define MAX_BPM	300
 
-namespace umodular { namespace clock {
+#define ATOMIC(X) noInterrupts(); X; interrupts();
 
 class uClockClass {
 

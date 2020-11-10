@@ -28,27 +28,24 @@
  */
 #include "uClock.h"
 
-#define ATOMIC(X) noInterrupts(); X; interrupts();
-
 // 
 // Timer setup for work clock
 //
 #if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
-IntervalTimer _teensyTimer;
-void teensyInterrupt();
-void workClock()
+IntervalTimer _uclockTimer;
+void uclockISR();
+void uclockInitTimer()
 {
-	_teensyTimer.begin(teensyInterrupt, 16);
+	_uclockTimer.begin(uclockISR, 16);
 	// Set the interrupt priority level, controlling which other interrupts
 	// this timer is allowed to interrupt. Lower numbers are higher priority, 
 	// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
 	// As a general guideline, interrupt routines that run longer should be given 
 	// lower priority (higher numerical values).
-	_teensyTimer.priority(0);
-
+	_uclockTimer.priority(0);
 }
 #else
-void workClock()
+void uclockInitTimer()
 {
 	ATOMIC(
 		// Timer1
@@ -126,8 +123,8 @@ uClockClass::uClockClass()
 
 void uClockClass::init() 
 {
-	// init work clock timer interrupt in Hz
-	workClock();
+	// init work clock timer interrupt at 16 microseconds
+	uclockInitTimer();
 }
 
 void uClockClass::start() 
@@ -433,7 +430,7 @@ volatile uint32_t _timer = 0;
 // Clocked at: 62.5kHz/16usec
 //
 #if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
-void teensyInterrupt() 
+void uclockISR() 
 #else
 ISR(TIMER1_COMPA_vect) 
 //ISR(TIMER2_COMPA_vect) 
