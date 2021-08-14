@@ -3,10 +3,10 @@
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.10.2
+ *  @version    0.10.5
  *  @author     Romulo Silva
- *  @date       08/21/2020
- *  @license    MIT - (c) 2020 - Romulo Silva - contact@midilab.co
+ *  @date       08/14/2021
+ *  @license    MIT - (c) 2021 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -187,18 +187,14 @@ float uClockClass::getTempo()
 {
 	if (mode == EXTERNAL_CLOCK) {
 		uint32_t acc = 0;
-		uint8_t acc_counter = 0;
 		for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
-			if ( ext_interval_buffer[i] != 0) {
-				acc += ext_interval_buffer[i];
-				++acc_counter;
-			}
+			acc += ext_interval_buffer[i];
 		}
 		if (acc != 0) {
 			// get average interval, because MIDI sync world is a wild place...
-			//tempo = (((float)freq_resolution/24) * 60) / (float)(acc / acc_counter);
+			//tempo = (((float)freq_resolution/24) * 60) / (float)(acc / EXT_INTERVAL_BUFFER_SIZE);
 			// derivated one time calc value = ( freq_resolution / 24 ) * 60
-			tempo = (float)(156250.0 / (acc / acc_counter));
+			tempo = (float)(156250.0 / (acc / EXT_INTERVAL_BUFFER_SIZE));
 		}
 	}
 	return tempo;
@@ -294,9 +290,6 @@ void uClockClass::handleExternalClock()
 	last_interval = clock_diff(last_clock, _clock);
 	last_clock = _clock;
 
-	// accumulate interval incomming ticks data for getTempo() smooth reads on slave mode
-	ext_interval_buffer[ext_interval_idx++ % EXT_INTERVAL_BUFFER_SIZE] = last_interval;	
-	
 	// slave tick me!
 	external_tick++;
 
@@ -309,6 +302,12 @@ void uClockClass::handleExternalClock()
 			break;
 
 		case STARTED:
+			// accumulate interval incomming ticks data for getTempo() smooth reads on slave mode
+			if(++ext_interval_idx >= EXT_INTERVAL_BUFFER_SIZE) {
+				ext_interval_idx = 0;
+			}
+			ext_interval_buffer[ext_interval_idx] = last_interval;
+			
 			if (external_tick == 1) {
 				interval = last_interval;
 			} else {
