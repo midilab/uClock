@@ -3,10 +3,10 @@
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.10.5
+ *  @version    0.10.6
  *  @author     Romulo Silva
- *  @date       08/14/2021
- *  @license    MIT - (c) 2021 - Romulo Silva - contact@midilab.co
+ *  @date       13/03/2022
+ *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,6 +28,16 @@
  */
 #include "uClock.h"
 
+// pickup a avr timer to make use.
+// pickup only one!
+// try to avoid timer0, only use it if you know what you are doing.
+// 0 = delay(), millis() e micros()
+// 1 = Servo.h library(any other?)
+// 2 = tone()
+//#define AVR_TIMER_0
+#define AVR_TIMER_1
+//#define AVR_TIMER_2
+
 // 
 // Timer setup for work clock
 //
@@ -47,36 +57,57 @@ void uclockInitTimer()
 #else
 void uclockInitTimer()
 {
+#if defined(AVR_TIMER_0)
 	ATOMIC(
-		// Timer1
+		// Timer0 init
+		TCCR0A = 0;
+		TCCR0B = 0;
+		TCNT0  = 0;
+		// set compare match register for 62500 Hz increments
+		// = 16000000 / (1 * 62500) - 1 (must be <256)
+		OCR0A = 255; 
+		// turn on CTC mode
+		TCCR0B |= (1 << WGM02);
+		// Set CS02, CS01 and CS00 bits for 1 prescaler
+		TCCR0B |= (0 << CS02) | (0 << CS01) | (1 << CS00);
+		// enable timer compare interrupt
+		TIMSK0 |= (1 << OCIE0A);
+	)
+#endif 
+#if defined(AVR_TIMER_1)
+	ATOMIC(
+		// Timer1 init
 		TCCR1A = 0;
 		TCCR1B = 0;
 		TCNT1  = 0;
-		// set the speed of our internal clock system
+		// set compare match register for 62500 Hz increments
+		// = 16000000 / (1 * 62500) - 1 (must be <65536)
 		OCR1A = 255;
 		// turn on CTC mode
 		TCCR1B |= (1 << WGM12);
 		// Set CS12, CS11 and CS10 bits for 1 prescaler
 		TCCR1B |= (0 << CS12) | (0 << CS11) | (1 << CS10);
 		// enable timer compare interrupt
-		TIMSK1 |= (1 << OCIE1A);
+		TIMSK1 |= (1 << OCIE1A);	
 	)
-	/*
+#endif
+#if defined(AVR_TIMER_2)
 	ATOMIC(
-		// Timer2
+		// Timer2 init
 		TCCR2A = 0;
 		TCCR2B = 0;
 		TCNT2  = 0;
-		// set the speed of our internal clock system
+		// set compare match register for 62500 Hz increments
+		// = 16000000 / (1 * 62500) - 1 (must be <256)
 		OCR2A = 255;
 		// turn on CTC mode
-		TCCR2B |= (1 << WGM21);
+		TCCR2B |= (1 << WGM22);
 		// Set CS22, CS21 and CS20 bits for 1 prescaler
 		TCCR2B |= (0 << CS22) | (0 << CS21) | (1 << CS20);
 		// enable timer compare interrupt
 		TIMSK2 |= (1 << OCIE2A);
 	)
-	*/
+#endif
 }
 #endif
 
@@ -431,8 +462,15 @@ volatile uint32_t _timer = 0;
 #if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
 void uclockISR() 
 #else
+#if defined(AVR_TIMER_0)
+ISR(TIMER0_COMPA_vect) 
+#endif
+#if defined(AVR_TIMER_1)
 ISR(TIMER1_COMPA_vect) 
-//ISR(TIMER2_COMPA_vect) 
+#endif
+#if defined(AVR_TIMER_2)
+ISR(TIMER2_COMPA_vect) 
+#endif
 #endif
 {
 	// global timer counter
