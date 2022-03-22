@@ -35,6 +35,8 @@
 
 namespace umodular { namespace clock {
 
+#define AVR_CLOCK_FREQ	16000000
+
 #define PHASE_FACTOR 16
 
 #define EXT_INTERVAL_BUFFER_SIZE 24
@@ -52,6 +54,8 @@ class uClockClass {
 
 	private:
 		
+		void setTimerTempo(float bpm);
+
 		void (*onClock96PPQNCallback)(uint32_t * tick);
 		void (*onClock32PPQNCallback)(uint32_t * tick);
 		void (*onClock16PPQNCallback)(uint32_t * tick);
@@ -82,6 +86,7 @@ class uClockClass {
 		uint16_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
 		uint32_t ext_interval_acc;
 		uint16_t ext_interval_idx;
+
 
 	public:
 
@@ -153,7 +158,6 @@ class uClockClass {
 		uint8_t getNumberOfDays(uint32_t time);
 		uint32_t getNowTimer();
 		uint32_t getPlayTime();
-
 };
 
 } } // end namespace umodular::clock

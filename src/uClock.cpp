@@ -1,8 +1,7 @@
 /*!
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
- *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
+ *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
  *  @version    0.10.6
  *  @author     Romulo Silva
  *  @date       13/03/2022
@@ -28,16 +27,6 @@
  */
 #include "uClock.h"
 
-// pickup a avr timer to make use.
-// pickup only one!
-// try to avoid timer0, only use it if you know what you are doing.
-// 0 = delay(), millis() e micros()
-// 1 = Servo.h library(any other?)
-// 2 = tone()
-//#define AVR_TIMER_0
-#define AVR_TIMER_1
-//#define AVR_TIMER_2
-
 // 
 // Timer setup for work clock
 //
@@ -46,68 +35,37 @@ IntervalTimer _uclockTimer;
 void uclockISR();
 void uclockInitTimer()
 {
-	_uclockTimer.begin(uclockISR, 16);
+	ATOMIC(
+
+	// begin at 120bpm (20833us)
+	_uclockTimer.begin(uclockISR, 20833); 
+
 	// Set the interrupt priority level, controlling which other interrupts
 	// this timer is allowed to interrupt. Lower numbers are higher priority, 
 	// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
 	// As a general guideline, interrupt routines that run longer should be given 
 	// lower priority (higher numerical values).
 	_uclockTimer.priority(0);
+	)
 }
 #else
 void uclockInitTimer()
 {
-#if defined(AVR_TIMER_0)
-	ATOMIC(
-		// Timer0 init
-		TCCR0A = 0;
-		TCCR0B = 0;
-		TCNT0  = 0;
-		// set compare match register for 62500 Hz increments
-		// = 16000000 / (1 * 62500) - 1 (must be <256)
-		OCR0A = 255; 
-		// turn on CTC mode
-		TCCR0B |= (1 << WGM02);
-		// Set CS02, CS01 and CS00 bits for 1 prescaler
-		TCCR0B |= (0 << CS02) | (0 << CS01) | (1 << CS00);
-		// enable timer compare interrupt
-		TIMSK0 |= (1 << OCIE0A);
-	)
-#endif 
-#if defined(AVR_TIMER_1)
 	ATOMIC(
 		// Timer1 init
-		TCCR1A = 0;
-		TCCR1B = 0;
-		TCNT1  = 0;
-		// set compare match register for 62500 Hz increments
-		// = 16000000 / (1 * 62500) - 1 (must be <65536)
-		OCR1A = 255;
+		// begin at 120bpm (48.0007680122882 Hz)
+		TCCR1A = 0; // set entire TCCR1A register to 0
+		TCCR1B = 0; // same for TCCR1B
+		TCNT1  = 0; // initialize counter value to 0
+		// set compare match register for 48.0007680122882 Hz increments
+		OCR1A = 41665; // = 16000000 / (8 * 48.0007680122882) - 1 (must be <65536)
 		// turn on CTC mode
 		TCCR1B |= (1 << WGM12);
-		// Set CS12, CS11 and CS10 bits for 1 prescaler
-		TCCR1B |= (0 << CS12) | (0 << CS11) | (1 << CS10);
+		// Set CS12, CS11 and CS10 bits for 8 prescaler
+		TCCR1B |= (0 << CS12) | (1 << CS11) | (0 << CS10);
 		// enable timer compare interrupt
-		TIMSK1 |= (1 << OCIE1A);	
+		TIMSK1 |= (1 << OCIE1A);
 	)
-#endif
-#if defined(AVR_TIMER_2)
-	ATOMIC(
-		// Timer2 init
-		TCCR2A = 0;
-		TCCR2B = 0;
-		TCNT2  = 0;
-		// set compare match register for 62500 Hz increments
-		// = 16000000 / (1 * 62500) - 1 (must be <256)
-		OCR2A = 255;
-		// turn on CTC mode
-		TCCR2B |= (1 << WGM22);
-		// Set CS22, CS21 and CS20 bits for 1 prescaler
-		TCCR2B |= (0 << CS22) | (0 << CS21) | (1 << CS20);
-		// enable timer compare interrupt
-		TIMSK2 |= (1 << OCIE2A);
-	)
-#endif
 }
 #endif
 
@@ -195,6 +153,50 @@ void uClockClass::pause()
 	}
 }
 
+void uClockClass::setTimerTempo(float bpm) 
+{
+	// 96 ppqn resolution
+	uint32_t tick_us_interval = (60000000 / 96 / bpm)*4;
+
+#if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
+	ATOMIC(
+		_uclockTimer.update(tick_us_interval);
+	)
+#else
+	float tick_hertz_interval = 1/((float)tick_us_interval/1000000);
+	uint32_t ocr;
+	uint8_t tccr = 0;
+
+	// 16bits avr timer setup
+	if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 1 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 1 prescaler
+		tccr |= (0 << CS12) | (0 << CS11) | (1 << CS10);
+	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 8 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 8 prescaler
+		tccr |= (0 << CS12) | (1 << CS11) | (0 << CS10);
+	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 64 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 64 prescaler
+		tccr |= (0 << CS12) | (1 << CS11) | (1 << CS10);
+	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 256 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 256 prescaler
+		tccr |= (1 << CS12) | (0 << CS11) | (0 << CS10);
+	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 1024 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 1024 prescaler
+		tccr |= (1 << CS12) | (0 << CS11) | (1 << CS10);
+	} else {
+		// tempo not achiavable
+		return;
+	}
+
+	ATOMIC(
+		TCCR1B = 0;
+		OCR1A = ocr-1;
+		TCCR1B |= (1 << WGM12);
+		TCCR1B |= tccr;
+	)
+#endif
+}
+
 void uClockClass::setTempo(float bpm) 
 {
 	if (mode == EXTERNAL_CLOCK) {
@@ -205,13 +207,9 @@ void uClockClass::setTempo(float bpm)
 		return;
 	}
 
-	tempo = bpm;
+	setTimerTempo(bpm);
 
-	ATOMIC(
-		//interval = (freq_resolution / (tempo * 24 / 60)) - drift;
-		//interval = 62500 / (tempo * 24 / 60) - drift;
-		interval = (uint16_t)((156250.0 / tempo) - drift);
-	)
+	tempo = bpm;
 }
 
 float uClockClass::getTempo() 
@@ -223,9 +221,9 @@ float uClockClass::getTempo()
 		}
 		if (acc != 0) {
 			// get average interval, because MIDI sync world is a wild place...
-			//tempo = (((float)freq_resolution/24) * 60) / (float)(acc / EXT_INTERVAL_BUFFER_SIZE);
+			////tempo = (float)((((float)FREQ_RESOLUTION/24) * 60) / (float)(acc / EXT_INTERVAL_BUFFER_SIZE));
 			// derivated one time calc value = ( freq_resolution / 24 ) * 60
-			tempo = (float)(156250.0 / (acc / EXT_INTERVAL_BUFFER_SIZE));
+			//tempo = (float)(156250.0 / (acc / EXT_INTERVAL_BUFFER_SIZE));
 		}
 	}
 	return tempo;
@@ -350,7 +348,7 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::handleTimerInt()  
 {
-	if (counter == 0) {
+	//if (counter == 0) {
 		// update internal clock base counter
 		counter = interval;
 
@@ -400,9 +398,9 @@ void uClockClass::handleTimerInt()
 			mod6_counter = 0;
 		}
 
-	} else {
-		counter--;
-	}
+	//} else {
+	//	counter--;
+	//}
 }
 
 // elapsed time support
@@ -457,20 +455,12 @@ volatile uint32_t _timer = 0;
 
 //
 // TIMER INTERRUPT HANDLER 
-// Clocked at: 62.5kHz/16usec
+// 
 //
 #if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
 void uclockISR() 
 #else
-#if defined(AVR_TIMER_0)
-ISR(TIMER0_COMPA_vect) 
-#endif
-#if defined(AVR_TIMER_1)
 ISR(TIMER1_COMPA_vect) 
-#endif
-#if defined(AVR_TIMER_2)
-ISR(TIMER2_COMPA_vect) 
-#endif
 #endif
 {
 	// global timer counter
