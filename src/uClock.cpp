@@ -87,9 +87,6 @@ static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock)
 
 uClockClass::uClockClass()
 {
-	// drift is used to sligth calibrate with your slave clock
-	drift = 1;
-	slave_drift = 0;
 	pll_x = 220;
 	tempo = 120;
 	start_timer = 0;
@@ -97,7 +94,6 @@ uClockClass::uClockClass()
 	sync_interval = 0;
 	state = PAUSED;
 	mode = INTERNAL_CLOCK;
-	ext_interval_acc = 0;
 	resetCounters();
 
 	onClock96PPQNCallback = NULL;
@@ -112,7 +108,6 @@ uClockClass::uClockClass()
 
 void uClockClass::init() 
 {
-	// init work clock timer interrupt at 16 microseconds
 	uclockInitTimer();
 }
 
@@ -156,14 +151,14 @@ void uClockClass::pause()
 void uClockClass::setTimerTempo(float bpm) 
 {
 	// 96 ppqn resolution
-	uint32_t tick_us_interval = (60000000 / 96 / bpm)*4;
+	tick_us_interval = (60000000 / 24 / bpm);
+	tick_hertz_interval = 1/((float)tick_us_interval/1000000);
 
 #if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
 	ATOMIC(
 		_uclockTimer.update(tick_us_interval);
 	)
 #else
-	float tick_hertz_interval = 1/((float)tick_us_interval/1000000);
 	uint32_t ocr;
 	uint8_t tccr = 0;
 
@@ -214,60 +209,7 @@ void uClockClass::setTempo(float bpm)
 
 float uClockClass::getTempo() 
 {
-	if (mode == EXTERNAL_CLOCK) {
-		uint32_t acc = 0;
-		for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
-			acc += ext_interval_buffer[i];
-		}
-		if (acc != 0) {
-			// get average interval, because MIDI sync world is a wild place...
-			////tempo = (float)((((float)FREQ_RESOLUTION/24) * 60) / (float)(acc / EXT_INTERVAL_BUFFER_SIZE));
-			// derivated one time calc value = ( freq_resolution / 24 ) * 60
-			//tempo = (float)(156250.0 / (acc / EXT_INTERVAL_BUFFER_SIZE));
-		}
-	}
 	return tempo;
-}
-
-void uClockClass::setDrift(uint8_t value)
-{
-	ATOMIC(drift = value)
-	// force set tempo to update runtime interval
-	setTempo(tempo);
-}
-
-void uClockClass::setSlaveDrift(uint8_t value)
-{
-	ATOMIC(slave_drift = value)
-}
-
-uint8_t uClockClass::getDrift()
-{
-	return drift;
-}
-
-// each interval is 16us
-// this method is usefull for debug
-uint16_t uClockClass::getInterval()
-{
-	return interval;
-}
-
-// Main poolling tick call
-uint8_t uClockClass::getTick(uint32_t * tick)
-{
-	ATOMIC(
-		uint32_t last_tick = internal_tick;
-	)
-	if (*tick != last_tick) {
-		*tick = last_tick;
-		return 1;
-	}
-	if (last_tick - *tick > 1) {
-		*tick++;
-		return 1;
-	}
-	return 0;
 }
 
 void uClockClass::setMode(uint8_t tempo_mode) 
@@ -292,14 +234,12 @@ void uClockClass::clockMe()
 void uClockClass::resetCounters() 
 {
 	counter = 0;
-	last_clock = 0;
+	external_clock = 0;
 	internal_tick = 0;
 	external_tick = 0;
 	div32th_counter = 0;
 	div16th_counter = 0;
 	mod6_counter = 0;
-	inmod6_counter = 0;
-	ext_interval_idx = 0;
 }
 
 // TODO: Tap stuff
@@ -316,8 +256,9 @@ void uClockClass::shuffle()
 
 void uClockClass::handleExternalClock() 
 {
-	last_interval = clock_diff(last_clock, _clock);
-	last_clock = _clock;
+	uint32_t u_timer = micros();
+	last_interval = clock_diff(external_clock, u_timer);
+	external_clock = u_timer;
 
 	// slave tick me!
 	external_tick++;
@@ -331,12 +272,6 @@ void uClockClass::handleExternalClock()
 			break;
 
 		case STARTED:
-			// accumulate interval incomming ticks data for getTempo() smooth reads on slave mode
-			if(++ext_interval_idx >= EXT_INTERVAL_BUFFER_SIZE) {
-				ext_interval_idx = 0;
-			}
-			ext_interval_buffer[ext_interval_idx] = last_interval;
-			
 			if (external_tick == 1) {
 				interval = last_interval;
 			} else {
@@ -349,11 +284,9 @@ void uClockClass::handleExternalClock()
 void uClockClass::handleTimerInt()  
 {
 	//if (counter == 0) {
-		// update internal clock base counter
+
 		counter = interval;
 
-		// need a callback?
-		// please, use the polling method with getTick() instead...
 		if (onClock96PPQNCallback) {
 			onClock96PPQNCallback(&internal_tick);
 		}
@@ -381,7 +314,8 @@ void uClockClass::handleTimerInt()
 		mod6_counter++;
 
 		if (mode == EXTERNAL_CLOCK) {
-			sync_interval = clock_diff(last_clock, _clock);
+			uint32_t u_timer = micros();
+			sync_interval = clock_diff(external_clock, u_timer);
 			if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
 				internal_tick = external_tick;
 			}
@@ -390,6 +324,16 @@ void uClockClass::handleTimerInt()
 			} else {
 				if (counter > sync_interval) {
 					counter += phase_mult(counter - sync_interval);
+				}
+			}
+
+			// update internal clock base counter
+			float diff = 1/((float)counter/1000000.0);
+			float bpm = (float)((float)(diff/24.0) * 60.0);
+			if (bpm != tempo) {
+				if (bpm > 1 && bpm < 300) {
+					tempo = bpm;
+					setTimerTempo(tempo);
 				}
 			}
 		}

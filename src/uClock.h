@@ -39,8 +39,6 @@ namespace umodular { namespace clock {
 
 #define PHASE_FACTOR 16
 
-#define EXT_INTERVAL_BUFFER_SIZE 24
-
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
@@ -64,9 +62,10 @@ class uClockClass {
 
 		volatile uint32_t internal_tick;
 		volatile uint32_t external_tick;
-		volatile uint16_t interval;
-		volatile uint16_t last_clock;
-		volatile uint8_t inmod6_counter;
+		volatile uint32_t interval;
+		volatile uint32_t external_clock;
+		uint32_t tick_us_interval;
+		float tick_hertz_interval;
 		uint32_t div32th_counter;
 		uint32_t div16th_counter;
 		uint8_t mod6_counter;
@@ -74,19 +73,12 @@ class uClockClass {
 		uint16_t pll_x;
 
 		uint32_t last_tick;
-		uint8_t drift;
-		uint8_t slave_drift;
 		float tempo;
 		uint32_t start_timer;
 		uint8_t mode;
 	
 		uint16_t last_interval;
 		uint16_t sync_interval;
-
-		uint16_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
-		uint32_t ext_interval_acc;
-		uint16_t ext_interval_idx;
-
 
 	public:
 
@@ -136,11 +128,6 @@ class uClockClass {
 		void pause();
 		void setTempo(float bpm);
 		float getTempo();
-		void setDrift(uint8_t value);
-		uint8_t getDrift();
-		void setSlaveDrift(uint8_t value);
-		uint16_t getInterval();
-		uint8_t getTick(uint32_t *_tick);
 
 		// external timming control
 		void setMode(uint8_t tempo_mode);
