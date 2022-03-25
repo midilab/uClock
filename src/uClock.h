@@ -39,6 +39,8 @@ namespace umodular { namespace clock {
 
 #define PHASE_FACTOR 16
 
+#define EXT_INTERVAL_BUFFER_SIZE 24
+
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
@@ -53,6 +55,7 @@ class uClockClass {
 	private:
 		
 		void setTimerTempo(float bpm);
+		float inline freqToBpm(uint32_t freq);
 
 		void (*onClock96PPQNCallback)(uint32_t * tick);
 		void (*onClock32PPQNCallback)(uint32_t * tick);
@@ -60,16 +63,27 @@ class uClockClass {
 		void (*onClockStartCallback)();
 		void (*onClockStopCallback)();
 
-		volatile uint32_t internal_tick;
-		volatile uint32_t external_tick;
+
 		volatile uint32_t interval;
 		volatile uint32_t external_clock;
 		uint32_t tick_us_interval;
 		float tick_hertz_interval;
-		uint32_t div32th_counter;
-		uint32_t div16th_counter;
-		uint8_t mod6_counter;
-		uint16_t counter;
+
+		volatile uint32_t internal_tick;
+		volatile uint32_t external_tick;
+
+		// tick external and internal control
+		volatile uint32_t indiv32th_counter;
+		volatile uint32_t indiv16th_counter;
+		volatile uint8_t inmod6_counter;
+
+  		volatile uint32_t div96th_counter;
+		volatile uint32_t div32th_counter;
+		volatile uint32_t div16th_counter;
+		volatile uint8_t mod6_counter;
+
+
+		uint32_t counter;
 		uint16_t pll_x;
 
 		uint32_t last_tick;
@@ -79,6 +93,9 @@ class uClockClass {
 	
 		uint16_t last_interval;
 		uint16_t sync_interval;
+
+		uint16_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
+		uint16_t ext_interval_idx;
 
 	public:
 

@@ -76,12 +76,12 @@ static inline uint32_t phase_mult(uint32_t val)
 	return (val * PHASE_FACTOR) >> 8;
 }
 
-static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock) 
+static inline uint16_t clock_diff(uint32_t old_clock, uint32_t new_clock) 
 {
 	if (new_clock >= old_clock) {
 		return new_clock - old_clock;
 	} else {
-		return new_clock + (65535 - old_clock);
+		return new_clock + (4294967295 - old_clock);
 	}
 }
 
@@ -207,8 +207,23 @@ void uClockClass::setTempo(float bpm)
 	tempo = bpm;
 }
 
+float inline uClockClass::freqToBpm(uint32_t freq)
+{
+	float usecs = 1/((float)freq/1000000.0);
+	return (float)((float)(usecs/24.0) * 60.0);
+}
+
 float uClockClass::getTempo() 
 {
+	if (mode == EXTERNAL_CLOCK) {
+		uint32_t acc = 0;
+		for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
+			acc += ext_interval_buffer[i];
+		}
+		if (acc != 0) {
+			return freqToBpm(acc / EXT_INTERVAL_BUFFER_SIZE);
+		}
+	}
 	return tempo;
 }
 
@@ -239,7 +254,11 @@ void uClockClass::resetCounters()
 	external_tick = 0;
 	div32th_counter = 0;
 	div16th_counter = 0;
-	mod6_counter = 0;
+	mod6_counter = 0;	
+	indiv32th_counter = 0;
+	indiv16th_counter = 0;
+	inmod6_counter = 0;
+	ext_interval_idx = 0;
 }
 
 // TODO: Tap stuff
@@ -256,12 +275,6 @@ void uClockClass::shuffle()
 
 void uClockClass::handleExternalClock() 
 {
-	uint32_t u_timer = micros();
-	last_interval = clock_diff(external_clock, u_timer);
-	external_clock = u_timer;
-
-	// slave tick me!
-	external_tick++;
 
 	switch (state) {
 		case PAUSED:
@@ -272,6 +285,34 @@ void uClockClass::handleExternalClock()
 			break;
 
 		case STARTED:
+
+			uint32_t u_timer = micros();
+			last_interval = clock_diff(external_clock, u_timer);
+			external_clock = u_timer;
+
+			if (inmod6_counter == 0) {
+				indiv16th_counter++;
+				indiv32th_counter++;
+			}
+
+			if (inmod6_counter == 3) {
+				indiv32th_counter++;
+			}
+
+			// slave tick me!
+			external_tick++;
+			inmod6_counter++;
+
+			if (inmod6_counter == 6) {
+				inmod6_counter = 0;
+			}
+
+			// accumulate interval incomming ticks data for getTempo() smooth reads on slave mode
+			if(++ext_interval_idx >= EXT_INTERVAL_BUFFER_SIZE) {
+				ext_interval_idx = 0;
+			}
+			ext_interval_buffer[ext_interval_idx] = last_interval;
+
 			if (external_tick == 1) {
 				interval = last_interval;
 			} else {
@@ -283,68 +324,67 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::handleTimerInt()  
 {
-	//if (counter == 0) {
+	counter = interval;
 
-		counter = interval;
+	if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
+		internal_tick = external_tick;
+		div32th_counter = indiv32th_counter;
+		div16th_counter = indiv16th_counter;
+		mod6_counter = inmod6_counter;
+	}
 
-		if (onClock96PPQNCallback) {
-			onClock96PPQNCallback(&internal_tick);
+	if (onClock96PPQNCallback) {
+		onClock96PPQNCallback(&internal_tick);
+	}
+
+	if (mod6_counter == 0) {
+		if (onClock32PPQNCallback) {
+			onClock32PPQNCallback(&div32th_counter);
+		}
+		if (onClock16PPQNCallback) {
+			onClock16PPQNCallback(&div16th_counter);
+		}
+		div16th_counter++;
+		div32th_counter++;
+	}
+
+	if (mod6_counter == 3) {
+		if (onClock32PPQNCallback) {
+			onClock32PPQNCallback(&div32th_counter);
+		}
+		div32th_counter++;
+	}
+
+	// tick me!
+	internal_tick++;
+	mod6_counter++;
+
+	if (mod6_counter == 6) {
+		mod6_counter = 0;
+	}
+
+	if (mode == EXTERNAL_CLOCK) {
+		uint32_t u_timer = micros();
+		sync_interval = clock_diff(external_clock, u_timer);
+
+		if (internal_tick <= external_tick) {
+			counter -= phase_mult(sync_interval);
+		} else {
+			if (counter > sync_interval) {
+				counter += phase_mult(counter - sync_interval);
+			}
 		}
 
-		if (mod6_counter == 0) {
-			if (onClock32PPQNCallback) {
-				onClock32PPQNCallback(&div32th_counter);
-			}
-			if (onClock16PPQNCallback) {
-				onClock16PPQNCallback(&div16th_counter);
-			}
-			div16th_counter++;
-			div32th_counter++;
-		}
-
-		if (mod6_counter == 3) {
-			if (onClock32PPQNCallback) {
-				onClock32PPQNCallback(&div32th_counter);
-			}
-			div32th_counter++;
-		}
-
-		// tick me!
-		internal_tick++;
-		mod6_counter++;
-
-		if (mode == EXTERNAL_CLOCK) {
-			uint32_t u_timer = micros();
-			sync_interval = clock_diff(external_clock, u_timer);
-			if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
-				internal_tick = external_tick;
-			}
-			if (internal_tick <= external_tick) {
-				counter -= phase_mult(sync_interval);
-			} else {
-				if (counter > sync_interval) {
-					counter += phase_mult(counter - sync_interval);
-				}
-			}
-
-			// update internal clock base counter
-			float diff = 1/((float)counter/1000000.0);
-			float bpm = (float)((float)(diff/24.0) * 60.0);
-			if (bpm != tempo) {
-				if (bpm > 1 && bpm < 300) {
-					tempo = bpm;
-					setTimerTempo(tempo);
-				}
+		// update internal clock timer frequency
+		float bpm = freqToBpm(counter);
+		if (bpm != tempo) {
+			if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
+				tempo = bpm;
+				setTimerTempo(tempo);
 			}
 		}
-		
-		if (mod6_counter == 6) {
-			mod6_counter = 0;
-		}
-
-	//} else {
-	//	counter--;
-	//}
+	}
+	
 }
 
 // elapsed time support
