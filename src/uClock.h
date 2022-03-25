@@ -63,7 +63,6 @@ class uClockClass {
 		void (*onClockStartCallback)();
 		void (*onClockStopCallback)();
 
-
 		volatile uint32_t interval;
 		volatile uint32_t external_clock;
 		uint32_t tick_us_interval;

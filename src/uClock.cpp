@@ -324,13 +324,34 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::handleTimerInt()  
 {
-	counter = interval;
+	if (mode == EXTERNAL_CLOCK) {
+		if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
+			internal_tick = external_tick;
+			div32th_counter = indiv32th_counter;
+			div16th_counter = indiv16th_counter;
+			mod6_counter = inmod6_counter;
+		}
 
-	if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
-		internal_tick = external_tick;
-		div32th_counter = indiv32th_counter;
-		div16th_counter = indiv16th_counter;
-		mod6_counter = inmod6_counter;
+		counter = interval;
+		uint32_t u_timer = micros();
+		sync_interval = clock_diff(external_clock, u_timer);
+
+		if (internal_tick <= external_tick) {
+			counter -= phase_mult(sync_interval);
+		} else {
+			if (counter > sync_interval) {
+				counter += phase_mult(counter - sync_interval);
+			}
+		}
+
+		// update internal clock timer frequency
+		float bpm = freqToBpm(counter);
+		if (bpm != tempo) {
+			if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
+				tempo = bpm;
+				setTimerTempo(tempo);
+			}
+		}
 	}
 
 	if (onClock96PPQNCallback) {
@@ -361,28 +382,6 @@ void uClockClass::handleTimerInt()
 
 	if (mod6_counter == 6) {
 		mod6_counter = 0;
-	}
-
-	if (mode == EXTERNAL_CLOCK) {
-		uint32_t u_timer = micros();
-		sync_interval = clock_diff(external_clock, u_timer);
-
-		if (internal_tick <= external_tick) {
-			counter -= phase_mult(sync_interval);
-		} else {
-			if (counter > sync_interval) {
-				counter += phase_mult(counter - sync_interval);
-			}
-		}
-
-		// update internal clock timer frequency
-		float bpm = freqToBpm(counter);
-		if (bpm != tempo) {
-			if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
-				tempo = bpm;
-				setTimerTempo(tempo);
-			}
-		}
 	}
 	
 }
