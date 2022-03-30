@@ -280,14 +280,12 @@ void uClockClass::handleExternalClock()
 
 		case STARTING:
 			state = STARTED;
+			external_clock = micros();
 			break;
 
 		case STARTED:
 
 			uint32_t u_timer = micros();
-			if(external_tick == 0) {
-				external_clock = u_timer;
-			}
 			last_interval = clock_diff(external_clock, u_timer);
 			external_clock = u_timer;
 
