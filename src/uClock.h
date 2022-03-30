@@ -39,6 +39,11 @@ namespace umodular { namespace clock {
 
 #define PHASE_FACTOR 16
 
+#define PLL_X 220
+
+// for smooth slave tempo calculate display you should raise this value 
+// in between 64 to 128.
+// note: this doesn't impact on sync time, only display time getTempo()
 #define EXT_INTERVAL_BUFFER_SIZE 24
 
 #define SECS_PER_MIN  (60UL)
@@ -63,37 +68,30 @@ class uClockClass {
 		void (*onClockStartCallback)();
 		void (*onClockStopCallback)();
 
-		volatile uint32_t interval;
-		volatile uint32_t external_clock;
-		uint32_t tick_us_interval;
-		float tick_hertz_interval;
-
+		// internal clock control
 		volatile uint32_t internal_tick;
-		volatile uint32_t external_tick;
-
-		// tick external and internal control
-		volatile uint32_t indiv32th_counter;
-		volatile uint32_t indiv16th_counter;
-		volatile uint8_t inmod6_counter;
-
-  		volatile uint32_t div96th_counter;
 		volatile uint32_t div32th_counter;
 		volatile uint32_t div16th_counter;
 		volatile uint8_t mod6_counter;
 
+		// external clock control
+		volatile uint32_t external_clock;
+		volatile uint32_t external_tick;
+		volatile uint32_t indiv32th_counter;
+		volatile uint32_t indiv16th_counter;
+		volatile uint8_t inmod6_counter;
+		volatile uint32_t interval;
+		volatile uint32_t last_interval;
+		uint32_t sync_interval;
 
-		uint32_t counter;
-		uint16_t pll_x;
+		uint32_t tick_us_interval;
+		float tick_hertz_interval;
 
-		uint32_t last_tick;
 		float tempo;
 		uint32_t start_timer;
 		uint8_t mode;
 	
-		uint16_t last_interval;
-		uint16_t sync_interval;
-
-		uint16_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
+		volatile uint32_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
 		uint16_t ext_interval_idx;
 
 	public:

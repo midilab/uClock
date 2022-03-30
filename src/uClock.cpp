@@ -76,7 +76,7 @@ static inline uint32_t phase_mult(uint32_t val)
 	return (val * PHASE_FACTOR) >> 8;
 }
 
-static inline uint16_t clock_diff(uint32_t old_clock, uint32_t new_clock) 
+static inline uint32_t clock_diff(uint32_t old_clock, uint32_t new_clock) 
 {
 	if (new_clock >= old_clock) {
 		return new_clock - old_clock;
@@ -87,7 +87,6 @@ static inline uint16_t clock_diff(uint32_t old_clock, uint32_t new_clock)
 
 uClockClass::uClockClass()
 {
-	pll_x = 220;
 	tempo = 120;
 	start_timer = 0;
 	last_interval = 0;
@@ -248,7 +247,6 @@ void uClockClass::clockMe()
 
 void uClockClass::resetCounters() 
 {
-	counter = 0;
 	external_clock = 0;
 	internal_tick = 0;
 	external_tick = 0;
@@ -287,6 +285,9 @@ void uClockClass::handleExternalClock()
 		case STARTED:
 
 			uint32_t u_timer = micros();
+			if(external_tick == 0) {
+				external_clock = u_timer;
+			}
 			last_interval = clock_diff(external_clock, u_timer);
 			external_clock = u_timer;
 
@@ -316,7 +317,7 @@ void uClockClass::handleExternalClock()
 			if (external_tick == 1) {
 				interval = last_interval;
 			} else {
-				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)last_interval) >> 8;
+				interval = (((uint32_t)interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
 			}
 			break;
 	}
@@ -325,6 +326,7 @@ void uClockClass::handleExternalClock()
 void uClockClass::handleTimerInt()  
 {
 	if (mode == EXTERNAL_CLOCK) {
+		// sync tick position with external tick clock
 		if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
 			internal_tick = external_tick;
 			div32th_counter = indiv32th_counter;
@@ -332,7 +334,7 @@ void uClockClass::handleTimerInt()
 			mod6_counter = inmod6_counter;
 		}
 
-		counter = interval;
+		uint32_t counter = interval;
 		uint32_t u_timer = micros();
 		sync_interval = clock_diff(external_clock, u_timer);
 
@@ -433,7 +435,6 @@ uint32_t uClockClass::getPlayTime()
 
 umodular::clock::uClockClass uClock;
 
-volatile uint16_t _clock = 0;
 volatile uint32_t _timer = 0;
 
 //
@@ -450,7 +451,6 @@ ISR(TIMER1_COMPA_vect)
 	_timer = millis();
 	
 	if (uClock.state == uClock.STARTED) {
-		_clock++;
 		uClock.handleTimerInt();
 	}
 }
