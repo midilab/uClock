@@ -103,8 +103,6 @@ void setup() {
   //
   // uClock Setup
   //
-  // Drift for arudino leonardo over USB as MIDI HID
-  uClock.setSlaveDrift(10);
   uClock.init();
   uClock.setClock96PPQNOutput(ClockOut96PPQN);
   // For MIDI Sync Start and Stop

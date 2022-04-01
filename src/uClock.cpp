@@ -1,11 +1,10 @@
 /*!
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
- *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.10.6
+ *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560 and Teensy LC.
+ *  @version    1.0.0
  *  @author     Romulo Silva
- *  @date       13/03/2022
+ *  @date       01/04/2022
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -28,16 +27,6 @@
  */
 #include "uClock.h"
 
-// pickup a avr timer to make use.
-// pickup only one!
-// try to avoid timer0, only use it if you know what you are doing.
-// 0 = delay(), millis() e micros()
-// 1 = Servo.h library(any other?)
-// 2 = tone()
-//#define AVR_TIMER_0
-#define AVR_TIMER_1
-//#define AVR_TIMER_2
-
 // 
 // Timer setup for work clock
 //
@@ -46,68 +35,37 @@ IntervalTimer _uclockTimer;
 void uclockISR();
 void uclockInitTimer()
 {
-	_uclockTimer.begin(uclockISR, 16);
+	ATOMIC(
+
+	// begin at 120bpm (20833us)
+	_uclockTimer.begin(uclockISR, 20833); 
+
 	// Set the interrupt priority level, controlling which other interrupts
 	// this timer is allowed to interrupt. Lower numbers are higher priority, 
 	// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
 	// As a general guideline, interrupt routines that run longer should be given 
 	// lower priority (higher numerical values).
 	_uclockTimer.priority(0);
+	)
 }
 #else
 void uclockInitTimer()
 {
-#if defined(AVR_TIMER_0)
-	ATOMIC(
-		// Timer0 init
-		TCCR0A = 0;
-		TCCR0B = 0;
-		TCNT0  = 0;
-		// set compare match register for 62500 Hz increments
-		// = 16000000 / (1 * 62500) - 1 (must be <256)
-		OCR0A = 255; 
-		// turn on CTC mode
-		TCCR0B |= (1 << WGM02);
-		// Set CS02, CS01 and CS00 bits for 1 prescaler
-		TCCR0B |= (0 << CS02) | (0 << CS01) | (1 << CS00);
-		// enable timer compare interrupt
-		TIMSK0 |= (1 << OCIE0A);
-	)
-#endif 
-#if defined(AVR_TIMER_1)
 	ATOMIC(
 		// Timer1 init
-		TCCR1A = 0;
-		TCCR1B = 0;
-		TCNT1  = 0;
-		// set compare match register for 62500 Hz increments
-		// = 16000000 / (1 * 62500) - 1 (must be <65536)
-		OCR1A = 255;
+		// begin at 120bpm (48.0007680122882 Hz)
+		TCCR1A = 0; // set entire TCCR1A register to 0
+		TCCR1B = 0; // same for TCCR1B
+		TCNT1  = 0; // initialize counter value to 0
+		// set compare match register for 48.0007680122882 Hz increments
+		OCR1A = 41665; // = 16000000 / (8 * 48.0007680122882) - 1 (must be <65536)
 		// turn on CTC mode
 		TCCR1B |= (1 << WGM12);
-		// Set CS12, CS11 and CS10 bits for 1 prescaler
-		TCCR1B |= (0 << CS12) | (0 << CS11) | (1 << CS10);
+		// Set CS12, CS11 and CS10 bits for 8 prescaler
+		TCCR1B |= (0 << CS12) | (1 << CS11) | (0 << CS10);
 		// enable timer compare interrupt
-		TIMSK1 |= (1 << OCIE1A);	
+		TIMSK1 |= (1 << OCIE1A);
 	)
-#endif
-#if defined(AVR_TIMER_2)
-	ATOMIC(
-		// Timer2 init
-		TCCR2A = 0;
-		TCCR2B = 0;
-		TCNT2  = 0;
-		// set compare match register for 62500 Hz increments
-		// = 16000000 / (1 * 62500) - 1 (must be <256)
-		OCR2A = 255;
-		// turn on CTC mode
-		TCCR2B |= (1 << WGM22);
-		// Set CS22, CS21 and CS20 bits for 1 prescaler
-		TCCR2B |= (0 << CS22) | (0 << CS21) | (1 << CS20);
-		// enable timer compare interrupt
-		TIMSK2 |= (1 << OCIE2A);
-	)
-#endif
 }
 #endif
 
@@ -118,28 +76,23 @@ static inline uint32_t phase_mult(uint32_t val)
 	return (val * PHASE_FACTOR) >> 8;
 }
 
-static inline uint16_t clock_diff(uint16_t old_clock, uint16_t new_clock) 
+static inline uint32_t clock_diff(uint32_t old_clock, uint32_t new_clock) 
 {
 	if (new_clock >= old_clock) {
 		return new_clock - old_clock;
 	} else {
-		return new_clock + (65535 - old_clock);
+		return new_clock + (4294967295 - old_clock);
 	}
 }
 
 uClockClass::uClockClass()
 {
-	// drift is used to sligth calibrate with your slave clock
-	drift = 1;
-	slave_drift = 0;
-	pll_x = 220;
 	tempo = 120;
 	start_timer = 0;
 	last_interval = 0;
 	sync_interval = 0;
 	state = PAUSED;
 	mode = INTERNAL_CLOCK;
-	ext_interval_acc = 0;
 	resetCounters();
 
 	onClock96PPQNCallback = NULL;
@@ -154,7 +107,6 @@ uClockClass::uClockClass()
 
 void uClockClass::init() 
 {
-	// init work clock timer interrupt at 16 microseconds
 	uclockInitTimer();
 }
 
@@ -195,6 +147,50 @@ void uClockClass::pause()
 	}
 }
 
+void uClockClass::setTimerTempo(float bpm) 
+{
+	// 96 ppqn resolution
+	tick_us_interval = (60000000 / 24 / bpm);
+	tick_hertz_interval = 1/((float)tick_us_interval/1000000);
+
+#if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
+	ATOMIC(
+		_uclockTimer.update(tick_us_interval);
+	)
+#else
+	uint32_t ocr;
+	uint8_t tccr = 0;
+
+	// 16bits avr timer setup
+	if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 1 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 1 prescaler
+		tccr |= (0 << CS12) | (0 << CS11) | (1 << CS10);
+	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 8 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 8 prescaler
+		tccr |= (0 << CS12) | (1 << CS11) | (0 << CS10);
+	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 64 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 64 prescaler
+		tccr |= (0 << CS12) | (1 << CS11) | (1 << CS10);
+	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 256 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 256 prescaler
+		tccr |= (1 << CS12) | (0 << CS11) | (0 << CS10);
+	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 1024 )) < 65535) {
+		// Set CS12, CS11 and CS10 bits for 1024 prescaler
+		tccr |= (1 << CS12) | (0 << CS11) | (1 << CS10);
+	} else {
+		// tempo not achiavable
+		return;
+	}
+
+	ATOMIC(
+		TCCR1B = 0;
+		OCR1A = ocr-1;
+		TCCR1B |= (1 << WGM12);
+		TCCR1B |= tccr;
+	)
+#endif
+}
+
 void uClockClass::setTempo(float bpm) 
 {
 	if (mode == EXTERNAL_CLOCK) {
@@ -205,13 +201,15 @@ void uClockClass::setTempo(float bpm)
 		return;
 	}
 
-	tempo = bpm;
+	setTimerTempo(bpm);
 
-	ATOMIC(
-		//interval = (freq_resolution / (tempo * 24 / 60)) - drift;
-		//interval = 62500 / (tempo * 24 / 60) - drift;
-		interval = (uint16_t)((156250.0 / tempo) - drift);
-	)
+	tempo = bpm;
+}
+
+float inline uClockClass::freqToBpm(uint32_t freq)
+{
+	float usecs = 1/((float)freq/1000000.0);
+	return (float)((float)(usecs/24.0) * 60.0);
 }
 
 float uClockClass::getTempo() 
@@ -222,54 +220,10 @@ float uClockClass::getTempo()
 			acc += ext_interval_buffer[i];
 		}
 		if (acc != 0) {
-			// get average interval, because MIDI sync world is a wild place...
-			//tempo = (((float)freq_resolution/24) * 60) / (float)(acc / EXT_INTERVAL_BUFFER_SIZE);
-			// derivated one time calc value = ( freq_resolution / 24 ) * 60
-			tempo = (float)(156250.0 / (acc / EXT_INTERVAL_BUFFER_SIZE));
+			return freqToBpm(acc / EXT_INTERVAL_BUFFER_SIZE);
 		}
 	}
 	return tempo;
-}
-
-void uClockClass::setDrift(uint8_t value)
-{
-	ATOMIC(drift = value)
-	// force set tempo to update runtime interval
-	setTempo(tempo);
-}
-
-void uClockClass::setSlaveDrift(uint8_t value)
-{
-	ATOMIC(slave_drift = value)
-}
-
-uint8_t uClockClass::getDrift()
-{
-	return drift;
-}
-
-// each interval is 16us
-// this method is usefull for debug
-uint16_t uClockClass::getInterval()
-{
-	return interval;
-}
-
-// Main poolling tick call
-uint8_t uClockClass::getTick(uint32_t * tick)
-{
-	ATOMIC(
-		uint32_t last_tick = internal_tick;
-	)
-	if (*tick != last_tick) {
-		*tick = last_tick;
-		return 1;
-	}
-	if (last_tick - *tick > 1) {
-		*tick++;
-		return 1;
-	}
-	return 0;
 }
 
 void uClockClass::setMode(uint8_t tempo_mode) 
@@ -293,13 +247,14 @@ void uClockClass::clockMe()
 
 void uClockClass::resetCounters() 
 {
-	counter = 0;
-	last_clock = 0;
+	external_clock = 0;
 	internal_tick = 0;
 	external_tick = 0;
 	div32th_counter = 0;
 	div16th_counter = 0;
-	mod6_counter = 0;
+	mod6_counter = 0;	
+	indiv32th_counter = 0;
+	indiv16th_counter = 0;
 	inmod6_counter = 0;
 	ext_interval_idx = 0;
 }
@@ -318,11 +273,6 @@ void uClockClass::shuffle()
 
 void uClockClass::handleExternalClock() 
 {
-	last_interval = clock_diff(last_clock, _clock);
-	last_clock = _clock;
-
-	// slave tick me!
-	external_tick++;
 
 	switch (state) {
 		case PAUSED:
@@ -330,19 +280,42 @@ void uClockClass::handleExternalClock()
 
 		case STARTING:
 			state = STARTED;
+			external_clock = micros();
 			break;
 
 		case STARTED:
+
+			uint32_t u_timer = micros();
+			last_interval = clock_diff(external_clock, u_timer);
+			external_clock = u_timer;
+
+			if (inmod6_counter == 0) {
+				indiv16th_counter++;
+				indiv32th_counter++;
+			}
+
+			if (inmod6_counter == 3) {
+				indiv32th_counter++;
+			}
+
+			// slave tick me!
+			external_tick++;
+			inmod6_counter++;
+
+			if (inmod6_counter == 6) {
+				inmod6_counter = 0;
+			}
+
 			// accumulate interval incomming ticks data for getTempo() smooth reads on slave mode
 			if(++ext_interval_idx >= EXT_INTERVAL_BUFFER_SIZE) {
 				ext_interval_idx = 0;
 			}
 			ext_interval_buffer[ext_interval_idx] = last_interval;
-			
+
 			if (external_tick == 1) {
 				interval = last_interval;
 			} else {
-				interval = (((uint32_t)interval * (uint32_t)pll_x) + (uint32_t)(256 - pll_x) * (uint32_t)last_interval) >> 8;
+				interval = (((uint32_t)interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
 			}
 			break;
 	}
@@ -350,59 +323,67 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::handleTimerInt()  
 {
-	if (counter == 0) {
-		// update internal clock base counter
-		counter = interval;
-
-		// need a callback?
-		// please, use the polling method with getTick() instead...
-		if (onClock96PPQNCallback) {
-			onClock96PPQNCallback(&internal_tick);
+	if (mode == EXTERNAL_CLOCK) {
+		// sync tick position with external tick clock
+		if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
+			internal_tick = external_tick;
+			div32th_counter = indiv32th_counter;
+			div16th_counter = indiv16th_counter;
+			mod6_counter = inmod6_counter;
 		}
 
-		if (mod6_counter == 0) {
-			if (onClock32PPQNCallback) {
-				onClock32PPQNCallback(&div32th_counter);
+		uint32_t counter = interval;
+		uint32_t u_timer = micros();
+		sync_interval = clock_diff(external_clock, u_timer);
+
+		if (internal_tick <= external_tick) {
+			counter -= phase_mult(sync_interval);
+		} else {
+			if (counter > sync_interval) {
+				counter += phase_mult(counter - sync_interval);
 			}
-			if (onClock16PPQNCallback) {
-				onClock16PPQNCallback(&div16th_counter);
-			}
-			div16th_counter++;
-			div32th_counter++;
 		}
 
-		if (mod6_counter == 3) {
-			if (onClock32PPQNCallback) {
-				onClock32PPQNCallback(&div32th_counter);
-			}
-			div32th_counter++;
-		}
-
-		// tick me!
-		internal_tick++;
-		mod6_counter++;
-
-		if (mode == EXTERNAL_CLOCK) {
-			sync_interval = clock_diff(last_clock, _clock);
-			if ((internal_tick < external_tick) || (internal_tick > (external_tick + 1))) {
-				internal_tick = external_tick;
-			}
-			if (internal_tick <= external_tick) {
-				counter -= phase_mult(sync_interval);
-			} else {
-				if (counter > sync_interval) {
-					counter += phase_mult(counter - sync_interval);
-				}
+		// update internal clock timer frequency
+		float bpm = freqToBpm(counter);
+		if (bpm != tempo) {
+			if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
+				tempo = bpm;
+				setTimerTempo(tempo);
 			}
 		}
-		
-		if (mod6_counter == 6) {
-			mod6_counter = 0;
-		}
-
-	} else {
-		counter--;
 	}
+
+	if (onClock96PPQNCallback) {
+		onClock96PPQNCallback(&internal_tick);
+	}
+
+	if (mod6_counter == 0) {
+		if (onClock32PPQNCallback) {
+			onClock32PPQNCallback(&div32th_counter);
+		}
+		if (onClock16PPQNCallback) {
+			onClock16PPQNCallback(&div16th_counter);
+		}
+		div16th_counter++;
+		div32th_counter++;
+	}
+
+	if (mod6_counter == 3) {
+		if (onClock32PPQNCallback) {
+			onClock32PPQNCallback(&div32th_counter);
+		}
+		div32th_counter++;
+	}
+
+	// tick me!
+	internal_tick++;
+	mod6_counter++;
+
+	if (mod6_counter == 6) {
+		mod6_counter = 0;
+	}
+	
 }
 
 // elapsed time support
@@ -452,32 +433,22 @@ uint32_t uClockClass::getPlayTime()
 
 umodular::clock::uClockClass uClock;
 
-volatile uint16_t _clock = 0;
 volatile uint32_t _timer = 0;
 
 //
 // TIMER INTERRUPT HANDLER 
-// Clocked at: 62.5kHz/16usec
+// 
 //
 #if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
 void uclockISR() 
 #else
-#if defined(AVR_TIMER_0)
-ISR(TIMER0_COMPA_vect) 
-#endif
-#if defined(AVR_TIMER_1)
 ISR(TIMER1_COMPA_vect) 
-#endif
-#if defined(AVR_TIMER_2)
-ISR(TIMER2_COMPA_vect) 
-#endif
 #endif
 {
 	// global timer counter
 	_timer = millis();
 	
 	if (uClock.state == uClock.STARTED) {
-		_clock++;
 		uClock.handleTimerInt();
 	}
 }

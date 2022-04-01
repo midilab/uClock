@@ -1,11 +1,10 @@
 /*!
- *  @file       uClock.cpp
+ *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
- *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.10.6
+ *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560 and Teensy LC.
+ *  @version    1.0.0
  *  @author     Romulo Silva
- *  @date       13/03/2022
+ *  @date       01/04/2022
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -35,8 +34,16 @@
 
 namespace umodular { namespace clock {
 
+#define AVR_CLOCK_FREQ	16000000
+
 #define PHASE_FACTOR 16
 
+#define PLL_X 220
+
+// for smooth slave tempo calculate display you should raise this value 
+// in between 64 to 128.
+// note: this doesn't impact on sync time, only display time getTempo()
+// if you dont want to use it, set it to 1 for memory save
 #define EXT_INTERVAL_BUFFER_SIZE 24
 
 #define SECS_PER_MIN  (60UL)
@@ -52,35 +59,39 @@ class uClockClass {
 
 	private:
 		
+		void setTimerTempo(float bpm);
+		float inline freqToBpm(uint32_t freq);
+
 		void (*onClock96PPQNCallback)(uint32_t * tick);
 		void (*onClock32PPQNCallback)(uint32_t * tick);
 		void (*onClock16PPQNCallback)(uint32_t * tick);
 		void (*onClockStartCallback)();
 		void (*onClockStopCallback)();
 
+		// internal clock control
 		volatile uint32_t internal_tick;
-		volatile uint32_t external_tick;
-		volatile uint16_t interval;
-		volatile uint16_t last_clock;
-		volatile uint8_t inmod6_counter;
-		uint32_t div32th_counter;
-		uint32_t div16th_counter;
-		uint8_t mod6_counter;
-		uint16_t counter;
-		uint16_t pll_x;
+		volatile uint32_t div32th_counter;
+		volatile uint32_t div16th_counter;
+		volatile uint8_t mod6_counter;
 
-		uint32_t last_tick;
-		uint8_t drift;
-		uint8_t slave_drift;
+		// external clock control
+		volatile uint32_t external_clock;
+		volatile uint32_t external_tick;
+		volatile uint32_t indiv32th_counter;
+		volatile uint32_t indiv16th_counter;
+		volatile uint8_t inmod6_counter;
+		volatile uint32_t interval;
+		volatile uint32_t last_interval;
+		uint32_t sync_interval;
+
+		uint32_t tick_us_interval;
+		float tick_hertz_interval;
+
 		float tempo;
 		uint32_t start_timer;
 		uint8_t mode;
 	
-		uint16_t last_interval;
-		uint16_t sync_interval;
-
-		uint16_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
-		uint32_t ext_interval_acc;
+		volatile uint32_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
 		uint16_t ext_interval_idx;
 
 	public:
@@ -131,11 +142,6 @@ class uClockClass {
 		void pause();
 		void setTempo(float bpm);
 		float getTempo();
-		void setDrift(uint8_t value);
-		uint8_t getDrift();
-		void setSlaveDrift(uint8_t value);
-		uint16_t getInterval();
-		uint8_t getTick(uint32_t *_tick);
 
 		// external timming control
 		void setMode(uint8_t tempo_mode);
@@ -153,7 +159,6 @@ class uClockClass {
 		uint8_t getNumberOfDays(uint32_t time);
 		uint32_t getNowTimer();
 		uint32_t getPlayTime();
-
 };
 
 } } // end namespace umodular::clock
