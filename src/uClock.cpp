@@ -1,10 +1,10 @@
 /*!
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
- *  @version    0.10.6
+ *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560 and Teensy LC.
+ *  @version    1.0.0
  *  @author     Romulo Silva
- *  @date       13/03/2022
+ *  @date       01/04/2022
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a

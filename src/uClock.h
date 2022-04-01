@@ -1,11 +1,10 @@
 /*!
- *  @file       uClock.cpp
+ *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware timer1 interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560.
- *              Derived work from mididuino MidiClock class. (c) 2008 - 2011 - Manuel Odendahl - wesen@ruinwesen.com
- *  @version    0.10.6
+ *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560 and Teensy LC.
+ *  @version    1.0.0
  *  @author     Romulo Silva
- *  @date       13/03/2022
+ *  @date       01/04/2022
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -44,6 +43,7 @@ namespace umodular { namespace clock {
 // for smooth slave tempo calculate display you should raise this value 
 // in between 64 to 128.
 // note: this doesn't impact on sync time, only display time getTempo()
+// if you dont want to use it, set it to 1 for memory save
 #define EXT_INTERVAL_BUFFER_SIZE 24
 
 #define SECS_PER_MIN  (60UL)

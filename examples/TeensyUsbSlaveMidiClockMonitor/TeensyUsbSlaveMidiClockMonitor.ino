@@ -11,11 +11,6 @@
  * - u8g2
  * - uClock
  *
- * This example make use of drift values (6, 1) 
- * respectively for internal and external drift reference.
- * This example was tested on a macbook 
- * running ableton live 9 as master clock
- *
  * This example code is in the public domain.
  */
  
@@ -111,8 +106,6 @@ void setup() {
   // uClock Setup
   //
   // Setup our clock system
-  // drift for USB Teensy
-  uClock.setDrift(1);
   uClock.init();
   uClock.setClock96PPQNOutput(ClockOut96PPQN);
   // For MIDI Sync Start and Stop
