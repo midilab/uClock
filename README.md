@@ -169,8 +169,7 @@ uint16_t _step_length = STEP_MAX_SIZE;
 
 // make sure all above sequencer data are modified atomicly only
 // eg. ATOMIC(_sequencer[0].accent = true); ATOMIC(_step_length = 7);
-uint8_t _tmpSREG;
-#define ATOMIC(X) _tmpSREG = SREG; cli(); X; SREG = _tmpSREG;
+#define ATOMIC(X) noInterrupts(); X; interrupts();
 
 // shared data to be used for user interface feedback
 bool _playing = false;
