@@ -1,8 +1,8 @@
 # uClock
 
-**BPM clock generator for Arduino and Teensy** is a library to implement BPM clock tick calls using **hardware interruption** for tight and solid timming clock ticks. Tested on ATmega168/328, ATmega16u4/32u4, ATmega2560 and Teensy LC.
+**BPM clock generator for Arduino and Teensy** is a library to implement BPM clock tick calls using **hardware interruption** for tight and solid timing clock ticks. Tested on ATmega168/328, ATmega16u4/32u4, ATmega2560 and Teensy LC.
 
-Generate your self tight BPM clock for music, audio/video productions, performances or instalations. You can clock your MIDI setup or sync different protocols as you wish.
+Generate your self tight BPM clock for music, audio/video productions, performances or installations. You can clock your MIDI setup or sync different protocols as you wish.
 
 ## Interface
 Clock library interfaces via attached callback function running on a hardware interrupt and is able to process the following resolutions:
@@ -13,7 +13,7 @@ Clock library interfaces via attached callback function running on a hardware in
 
 To generate a MIDI sync signal to sync external MIDI devices for example, you need to work with the resolution of 96PPQN to follow the standards of MIDI protocol that handles the clock based on 24PPQN.
 
-For a simple old felling step sequencer a 16PPQN resolution is a good way to start coding your own step sequencer.
+For a simple old feeling step sequencer a 16PPQN resolution is a good way to start coding your own step sequencer.
 
 You can also use all the 3 resolutions at the same time for whatever reason you think you should.
 
@@ -23,7 +23,7 @@ Here a few examples on the usage of Clock library for MIDI devices, keep in mind
 If you dont want to build a MIDI interface and you are going to use your arduino only with your PC, you can use a Serial-to-Midi bridge and connects your arduino via USB cable to your conputer to use it as a MIDI tool [like this one](http://projectgus.github.io/hairless-midiserial/).
 
 ### A Simple MIDI Sync Box sketch example
-Here is a example on how to create a simple MIDI Sync Box on Arduino boards
+Here is an example on how to create a simple MIDI Sync Box on Arduino boards
 
 ```c++
 #include <uClock.h>
@@ -75,7 +75,7 @@ void loop() {
 }
 ```
 
-A example on how to create a simple MIDI Sync Box on Teensy boards and USB Midi setup. Select "MIDI" from the Tools->USB Type menu for Teensy to becomes a USB MIDI first.
+An example on how to create a simple MIDI Sync Box on Teensy boards and USB Midi setup. Select "MIDI" from the Tools->USB Type menu for Teensy to becomes a USB MIDI first.
 
 ```c++
 #include <uClock.h>
@@ -118,7 +118,7 @@ void loop() {
 
 ### Acid Step Sequencer
 
-A clone of Roland TB303 step sequencer main engine, here is a example with no user interface for interaction. If you're looking for a user interactable TB303 sequencer engine clone with user interface please take a look here https://github.com/midilab/uClock/tree/master/examples/AcidStepSequencer.
+A clone of Roland TB303 step sequencer main engine, here is an example with no user interface for interaction. If you're looking for a user interactable TB303 sequencer engine clone with user interface please take a look here https://github.com/midilab/uClock/tree/master/examples/AcidStepSequencer.
 
 ```c++
 // Roland TB303 Step Sequencer engine clone.
