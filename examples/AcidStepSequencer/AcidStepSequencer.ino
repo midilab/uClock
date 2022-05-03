@@ -64,13 +64,13 @@ void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 }
 
 // The callback function wich will be called by uClock each Pulse of 16PPQN clock resolution. Each call represents exactly one step.
-void ClockOut16PPQN(uint32_t * tick) 
+void ClockOut16PPQN(uint32_t tick) 
 {
   uint16_t step;
   uint16_t length = NOTE_LENGTH;
   
   // get actual step.
-  _step = *tick % _step_length;
+  _step = tick % _step_length;
   
   // send note on only if this step are not in rest mode
   if ( _sequencer[_step].rest == false ) {
@@ -102,7 +102,7 @@ void ClockOut16PPQN(uint32_t * tick)
 }
 
 // The callback function wich will be called by uClock each Pulse of 96PPQN clock resolution.
-void ClockOut96PPQN(uint32_t * tick) 
+void ClockOut96PPQN(uint32_t tick) 
 {
   // Send MIDI_CLOCK to external hardware
   Serial.write(MIDI_CLOCK);

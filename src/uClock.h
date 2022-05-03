@@ -62,17 +62,17 @@ class uClockClass {
 		void setTimerTempo(float bpm);
 		float inline freqToBpm(uint32_t freq);
 
-		void (*onClock96PPQNCallback)(uint32_t * tick);
-		void (*onClock32PPQNCallback)(uint32_t * tick);
-		void (*onClock16PPQNCallback)(uint32_t * tick);
+		void (*onClock96PPQNCallback)(uint32_t tick);
+		void (*onClock32PPQNCallback)(uint32_t tick);
+		void (*onClock16PPQNCallback)(uint32_t tick);
 		void (*onClockStartCallback)();
 		void (*onClockStopCallback)();
 
 		// internal clock control
-		volatile uint32_t internal_tick;
-		volatile uint32_t div32th_counter;
-		volatile uint32_t div16th_counter;
-		volatile uint8_t mod6_counter;
+		uint32_t internal_tick;
+		uint32_t div32th_counter;
+		uint32_t div16th_counter;
+		uint8_t mod6_counter;
 
 		// external clock control
 		volatile uint32_t external_clock;
@@ -81,7 +81,7 @@ class uClockClass {
 		volatile uint32_t indiv16th_counter;
 		volatile uint8_t inmod6_counter;
 		volatile uint32_t interval;
-		volatile uint32_t last_interval;
+		uint32_t last_interval;
 		uint32_t sync_interval;
 
 		uint32_t tick_us_interval;
@@ -111,15 +111,15 @@ class uClockClass {
 		
 		uClockClass();
 
-		void setClock96PPQNOutput(void (*callback)(uint32_t * tick)) {
+		void setClock96PPQNOutput(void (*callback)(uint32_t tick)) {
 			onClock96PPQNCallback = callback;
 		}
 		
-		void setClock32PPQNOutput(void (*callback)(uint32_t * tick)) {
+		void setClock32PPQNOutput(void (*callback)(uint32_t tick)) {
 			onClock32PPQNCallback = callback;
 		}
 
-		void setClock16PPQNOutput(void (*callback)(uint32_t * tick)) {
+		void setClock16PPQNOutput(void (*callback)(uint32_t tick)) {
 			onClock16PPQNCallback = callback;
 		}
 
