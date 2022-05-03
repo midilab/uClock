@@ -202,7 +202,6 @@ void uClockClass::setTimerTempo(float bpm)
 		TCCR1B |= tccr;
 	)
 #else
-	ATOMIC(
 	#if defined(TEENSYDUINO)
 		_uclockTimer.update(tick_us_interval);
 	#endif
@@ -210,7 +209,6 @@ void uClockClass::setTimerTempo(float bpm)
 	#if defined(SEEED_XIAO_M0)
 		_uclockTimer.setPeriod(tick_us_interval);
 	#endif
-	)
 #endif
 }
 
