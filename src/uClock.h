@@ -1,10 +1,10 @@
 /*!
  *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560 and Teensy LC.
- *  @version    1.0.0
+ *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4, ATmega2560, Teensy ARM boards and Seedstudio XIAO M0
+ *  @version    1.1.0
  *  @author     Romulo Silva
- *  @date       01/04/2022
+ *  @date       04/03/2022
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -34,24 +34,24 @@
 
 namespace umodular { namespace clock {
 
-#define AVR_CLOCK_FREQ	16000000
-
-#define PHASE_FACTOR 16
-
-#define PLL_X 220
-
 // for smooth slave tempo calculate display you should raise this value 
 // in between 64 to 128.
 // note: this doesn't impact on sync time, only display time getTempo()
 // if you dont want to use it, set it to 1 for memory save
 #define EXT_INTERVAL_BUFFER_SIZE 24
 
+#define MIN_BPM	1
+#define MAX_BPM	300
+
+// want a different avr clock support?
+#define AVR_CLOCK_FREQ	16000000
+
+#define PHASE_FACTOR 16
+#define PLL_X 220
+
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
-
-#define MIN_BPM	1
-#define MAX_BPM	300
 
 #define ATOMIC(X) noInterrupts(); X; interrupts();
 

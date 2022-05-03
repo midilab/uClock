@@ -1,10 +1,10 @@
 /*!
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560 and Teensy LC.
- *  @version    1.0.0
+ *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4, ATmega2560, Teensy ARM boards and Seedstudio XIAO M0
+ *  @version    1.1.0
  *  @author     Romulo Silva
- *  @date       01/04/2022
+ *  @date       04/03/2022
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -45,7 +45,7 @@ TimerTCC0 _uclockTimer;
 void uclockInitTimer()
 {
 	ATOMIC(
-		// Timer1 init
+		// 16bits Timer1 init
 		// begin at 120bpm (48.0007680122882 Hz)
 		TCCR1A = 0; // set entire TCCR1A register to 0
 		TCCR1B = 0; // same for TCCR1B
@@ -66,23 +66,23 @@ void uclockInitTimer()
 {
 	// begin at 120bpm (20833us)
 	const uint16_t init_clock = 20833;
-#if defined(TEENSYDUINO)
-	_uclockTimer.begin(uclockISR, init_clock); 
+	#if defined(TEENSYDUINO)
+		_uclockTimer.begin(uclockISR, init_clock); 
 
-	// Set the interrupt priority level, controlling which other interrupts
-	// this timer is allowed to interrupt. Lower numbers are higher priority, 
-	// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
-	// As a general guideline, interrupt routines that run longer should be given 
-	// lower priority (higher numerical values).
-	_uclockTimer.priority(0);
-#endif
+		// Set the interrupt priority level, controlling which other interrupts
+		// this timer is allowed to interrupt. Lower numbers are higher priority, 
+		// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
+		// As a general guideline, interrupt routines that run longer should be given 
+		// lower priority (higher numerical values).
+		_uclockTimer.priority(0);
+	#endif
 
-#if defined(SEEED_XIAO_M0)
-	_uclockTimer.initialize(init_clock);
+	#if defined(SEEED_XIAO_M0)
+		_uclockTimer.initialize(init_clock);
 
-	// attach to generic uclock ISR
-	_uclockTimer.attachInterrupt(uclockISR);
-#endif
+		// attach to generic uclock ISR
+		_uclockTimer.attachInterrupt(uclockISR);
+	#endif
 }
 #endif
 
