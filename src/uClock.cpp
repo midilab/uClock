@@ -166,8 +166,8 @@ void uClockClass::pause()
 void uClockClass::setTimerTempo(float bpm) 
 {
 	// 96 ppqn resolution
-	tick_us_interval = (60000000 / 24 / bpm);
-	tick_hertz_interval = 1/((float)tick_us_interval/1000000);
+	uint32_t tick_us_interval = (60000000 / 24 / bpm);
+	float tick_hertz_interval = 1/((float)tick_us_interval/1000000);
 
 #if defined(ARDUINO_ARCH_AVR)
 	uint32_t ocr;
@@ -221,9 +221,12 @@ void uClockClass::setTempo(float bpm)
 		return;
 	}
 
-	setTimerTempo(bpm);
+	ATOMIC(
+		tempo = bpm
+	)
 
-	tempo = bpm;
+	setTimerTempo(tempo);
+	
 }
 
 float inline uClockClass::freqToBpm(uint32_t freq)

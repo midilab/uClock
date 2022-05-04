@@ -84,9 +84,6 @@ class uClockClass {
 		uint32_t last_interval;
 		uint32_t sync_interval;
 
-		uint32_t tick_us_interval;
-		float tick_hertz_interval;
-
 		float tempo;
 		uint32_t start_timer;
 		uint8_t mode;
