@@ -226,7 +226,7 @@ void uClockClass::setTempo(float bpm)
 		tempo = bpm
 	)
 
-	setTimerTempo(tempo);
+	setTimerTempo(bpm);
 	
 }
 
@@ -373,7 +373,7 @@ void uClockClass::handleTimerInt()
 		if (bpm != tempo) {
 			if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
 				tempo = bpm;
-				setTimerTempo(tempo);
+				setTimerTempo(bpm);
 			}
 		}
 	}
