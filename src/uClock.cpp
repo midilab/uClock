@@ -167,9 +167,10 @@ void uClockClass::setTimerTempo(float bpm)
 {
 	// 96 ppqn resolution
 	uint32_t tick_us_interval = (60000000 / 24 / bpm);
-	float tick_hertz_interval = 1/((float)tick_us_interval/1000000);
 
 #if defined(ARDUINO_ARCH_AVR)
+	float tick_hertz_interval = 1/((float)tick_us_interval/1000000);
+
 	uint32_t ocr;
 	uint8_t tccr = 0;
 
