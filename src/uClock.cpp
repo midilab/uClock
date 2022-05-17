@@ -37,7 +37,10 @@ IntervalTimer _uclockTimer;
 #endif
 // Seedstudio XIAO M0 port
 #if defined(SEEED_XIAO_M0)
-#include <TimerTCC0.h>
+#include <TimerTC3.h>
+#define _uclockTimer TimerTc3
+//#include <TimerTCC0.h>
+//#define _uclockTimer TimerTcc0
 #endif
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -77,10 +80,10 @@ void uclockInitTimer()
 	#endif
 
 	#if defined(SEEED_XIAO_M0)
-		TimerTcc0.initialize(init_clock);
+		_uclockTimer.initialize(init_clock);
 
 		// attach to generic uclock ISR
-		TimerTcc0.attachInterrupt(uclockISR);
+		_uclockTimer.attachInterrupt(uclockISR);
 	#endif
 }
 #endif
@@ -207,7 +210,7 @@ void uClockClass::setTimerTempo(float bpm)
 	#endif
 
 	#if defined(SEEED_XIAO_M0)
-		TimerTcc0.setPeriod(tick_us_interval);
+		_uclockTimer.setPeriod(tick_us_interval);
 	#endif
 #endif
 }
