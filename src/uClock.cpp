@@ -37,10 +37,12 @@ IntervalTimer _uclockTimer;
 #endif
 // Seedstudio XIAO M0 port
 #if defined(SEEED_XIAO_M0)
-#include <TimerTC3.h>
-#define _uclockTimer TimerTc3
-//#include <TimerTCC0.h>
-//#define _uclockTimer TimerTcc0
+// 24 bits timer
+#include <TimerTCC0.h>
+#define _uclockTimer TimerTcc0
+// 16 bits timer
+//#include <TimerTC3.h>
+//#define _uclockTimer TimerTc3
 #endif
 
 #if defined(ARDUINO_ARCH_AVR)
