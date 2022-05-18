@@ -1,10 +1,10 @@
 /*!
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4 and ATmega2560 and Teensy LC.
- *  @version    1.0.0
+ *  @brief      A Library to implement BPM clock tick calls using hardware timer interruption. Tested on ATmega168/328, ATmega16u4/32u4, ATmega2560, Teensy ARM boards and Seedstudio XIAO M0
+ *  @version    1.1.0
  *  @author     Romulo Silva
- *  @date       01/04/2022
+ *  @date       04/03/2022
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -30,29 +30,26 @@
 // 
 // Timer setup for work clock
 //
-#if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
+// all non-avr timmers setup
+// Teensyduino port
+#if defined(TEENSYDUINO)
 IntervalTimer _uclockTimer;
-void uclockISR();
+#endif
+// Seedstudio XIAO M0 port
+#if defined(SEEED_XIAO_M0)
+// 24 bits timer
+#include <TimerTCC0.h>
+#define _uclockTimer TimerTcc0
+// 16 bits timer
+//#include <TimerTC3.h>
+//#define _uclockTimer TimerTc3
+#endif
+
+#if defined(ARDUINO_ARCH_AVR)
 void uclockInitTimer()
 {
 	ATOMIC(
-
-	// begin at 120bpm (20833us)
-	_uclockTimer.begin(uclockISR, 20833); 
-
-	// Set the interrupt priority level, controlling which other interrupts
-	// this timer is allowed to interrupt. Lower numbers are higher priority, 
-	// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
-	// As a general guideline, interrupt routines that run longer should be given 
-	// lower priority (higher numerical values).
-	_uclockTimer.priority(0);
-	)
-}
-#else
-void uclockInitTimer()
-{
-	ATOMIC(
-		// Timer1 init
+		// 16bits Timer1 init
 		// begin at 120bpm (48.0007680122882 Hz)
 		TCCR1A = 0; // set entire TCCR1A register to 0
 		TCCR1B = 0; // same for TCCR1B
@@ -66,6 +63,30 @@ void uclockInitTimer()
 		// enable timer compare interrupt
 		TIMSK1 |= (1 << OCIE1A);
 	)
+}
+#else
+void uclockISR();
+void uclockInitTimer()
+{
+	// begin at 120bpm (20833us)
+	const uint16_t init_clock = 20833;
+	#if defined(TEENSYDUINO)
+		_uclockTimer.begin(uclockISR, init_clock); 
+
+		// Set the interrupt priority level, controlling which other interrupts
+		// this timer is allowed to interrupt. Lower numbers are higher priority, 
+		// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
+		// As a general guideline, interrupt routines that run longer should be given 
+		// lower priority (higher numerical values).
+		_uclockTimer.priority(0);
+	#endif
+
+	#if defined(SEEED_XIAO_M0)
+		_uclockTimer.initialize(init_clock);
+
+		// attach to generic uclock ISR
+		_uclockTimer.attachInterrupt(uclockISR);
+	#endif
 }
 #endif
 
@@ -150,14 +171,11 @@ void uClockClass::pause()
 void uClockClass::setTimerTempo(float bpm) 
 {
 	// 96 ppqn resolution
-	tick_us_interval = (60000000 / 24 / bpm);
-	tick_hertz_interval = 1/((float)tick_us_interval/1000000);
+	uint32_t tick_us_interval = (60000000 / 24 / bpm);
 
-#if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
-	ATOMIC(
-		_uclockTimer.update(tick_us_interval);
-	)
-#else
+#if defined(ARDUINO_ARCH_AVR)
+	float tick_hertz_interval = 1/((float)tick_us_interval/1000000);
+
 	uint32_t ocr;
 	uint8_t tccr = 0;
 
@@ -188,6 +206,14 @@ void uClockClass::setTimerTempo(float bpm)
 		TCCR1B |= (1 << WGM12);
 		TCCR1B |= tccr;
 	)
+#else
+	#if defined(TEENSYDUINO)
+		_uclockTimer.update(tick_us_interval);
+	#endif
+
+	#if defined(SEEED_XIAO_M0)
+		_uclockTimer.setPeriod(tick_us_interval);
+	#endif
 #endif
 }
 
@@ -201,9 +227,12 @@ void uClockClass::setTempo(float bpm)
 		return;
 	}
 
-	setTimerTempo(bpm);
+	ATOMIC(
+		tempo = bpm
+	)
 
-	tempo = bpm;
+	setTimerTempo(bpm);
+	
 }
 
 float inline uClockClass::freqToBpm(uint32_t freq)
@@ -349,21 +378,21 @@ void uClockClass::handleTimerInt()
 		if (bpm != tempo) {
 			if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
 				tempo = bpm;
-				setTimerTempo(tempo);
+				setTimerTempo(bpm);
 			}
 		}
 	}
 
 	if (onClock96PPQNCallback) {
-		onClock96PPQNCallback(&internal_tick);
+		onClock96PPQNCallback(internal_tick);
 	}
 
 	if (mod6_counter == 0) {
 		if (onClock32PPQNCallback) {
-			onClock32PPQNCallback(&div32th_counter);
+			onClock32PPQNCallback(div32th_counter);
 		}
 		if (onClock16PPQNCallback) {
-			onClock16PPQNCallback(&div16th_counter);
+			onClock16PPQNCallback(div16th_counter);
 		}
 		div16th_counter++;
 		div32th_counter++;
@@ -371,7 +400,7 @@ void uClockClass::handleTimerInt()
 
 	if (mod6_counter == 3) {
 		if (onClock32PPQNCallback) {
-			onClock32PPQNCallback(&div32th_counter);
+			onClock32PPQNCallback(div32th_counter);
 		}
 		div32th_counter++;
 	}
@@ -439,10 +468,10 @@ volatile uint32_t _timer = 0;
 // TIMER INTERRUPT HANDLER 
 // 
 //
-#if defined(TEENSYDUINO) && !defined(__AVR_ATmega32U4__)
-void uclockISR() 
+#if defined(ARDUINO_ARCH_AVR)
+ISR(TIMER1_COMPA_vect)
 #else
-ISR(TIMER1_COMPA_vect) 
+void uclockISR() 
 #endif
 {
 	// global timer counter

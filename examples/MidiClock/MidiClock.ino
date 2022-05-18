@@ -7,7 +7,7 @@
 #define MIDI_STOP  0xFC
 
 // The callback function wich will be called by Clock each Pulse of 96PPQN clock resolution.
-void ClockOut96PPQN(uint32_t * tick) 
+void ClockOut96PPQN(uint32_t tick) 
 {
   // Send MIDI_CLOCK to external gears
   Serial.write(MIDI_CLOCK);

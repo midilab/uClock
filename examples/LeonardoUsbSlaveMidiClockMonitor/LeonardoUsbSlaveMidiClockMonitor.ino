@@ -34,22 +34,22 @@ uint8_t bpm_blink_timer = 1;
 uint8_t clock_state = 1;
 uint8_t clock_mode = 0;
 
-void handle_bpm_led(uint32_t * tick)
+void handle_bpm_led(uint32_t tick)
 {
   // BPM led indicator
-  if ( !(*tick % (96)) || (*tick == 1) ) {  // first compass step will flash longer
+  if ( !(tick % (96)) || (tick == 1) ) {  // first compass step will flash longer
     bpm_blink_timer = 8;
     TXLED1;
-  } else if ( !(*tick % (24)) ) {   // each quarter led on
+  } else if ( !(tick % (24)) ) {   // each quarter led on
     TXLED1;
-  } else if ( !(*tick % bpm_blink_timer) ) { // get led off
+  } else if ( !(tick % bpm_blink_timer) ) { // get led off
     TXLED0;
     bpm_blink_timer = 1;
   }
 }
 
 // Internal clock handlers
-void ClockOut96PPQN(uint32_t * tick) {
+void ClockOut96PPQN(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
   MIDI.sendRealTime(MIDI_CLOCK);
   handle_bpm_led(tick);

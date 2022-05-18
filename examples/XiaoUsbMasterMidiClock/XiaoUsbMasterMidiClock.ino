@@ -13,13 +13,17 @@
  * cached info.  (TODO: wanted... can anyone contribute
  * instructions for these systems)
  * 
- * You must select MIDI from the "Tools > USB Type" menu
- * 
  * This example code is in the public domain.
  */
+#include <Adafruit_TinyUSB.h>
+#include <MIDI.h>
+
+Adafruit_USBD_MIDI usb_midi;
+MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
 
 #include <uClock.h>
 
+/*
 uint8_t bpm_blink_timer = 1;
 void handle_bpm_led(uint32_t tick)
 {
@@ -34,25 +38,28 @@ void handle_bpm_led(uint32_t tick)
     bpm_blink_timer = 1;
   }
 }
+*/
 
 // Internal clock handlers
 void ClockOut96PPQN(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
-  usbMIDI.sendRealTime(usbMIDI.Clock);
-  handle_bpm_led(tick);
+  //MIDI.sendRealTime(MIDI.Clock);
+  //handle_bpm_led(tick);
 }
 
 void onClockStart() {
-  usbMIDI.sendRealTime(usbMIDI.Start);
+  //MIDI.sendRealTime(MIDI.Start);
 }
 
 void onClockStop() {
-  usbMIDI.sendRealTime(usbMIDI.Stop);
+  //MIDI.sendRealTime(MIDI.Stop);
 }
 
 void setup() {
+  MIDI.begin(MIDI_CHANNEL_OMNI);
+
   // A led to count bpms
-  pinMode(LED_BUILTIN, OUTPUT);
+  //pinMode(LED_BUILTIN, OUTPUT);
   
   // Setup our clock system
   // Inits the clock
