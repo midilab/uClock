@@ -1,10 +1,7 @@
 /* USB MIDI Sync Box
  *  
  * This example demonstrates how to change the USB MIDI 
- * device name on Teensy LC and 3.x.  When creating more
- * that one MIDI device, custom names are much easier to
- * use when selecting each device in MIDI software on
- * your PC or Mac.  The custom name is in the "name.c" tab.
+ * device name on Seeedstudio XIAO M0. 
  *
  * Windows and Macintosh systems often cache USB info.
  * After changing the name, you may need to test on a
@@ -43,16 +40,16 @@ void handle_bpm_led(uint32_t tick)
 // Internal clock handlers
 void ClockOut96PPQN(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
-  //MIDI.sendRealTime(MIDI.Clock);
+  MIDI.sendRealTime(MIDI.Clock);
   //handle_bpm_led(tick);
 }
 
 void onClockStart() {
-  //MIDI.sendRealTime(MIDI.Start);
+  MIDI.sendRealTime(MIDI.Start);
 }
 
 void onClockStop() {
-  //MIDI.sendRealTime(MIDI.Stop);
+  MIDI.sendRealTime(MIDI.Stop);
 }
 
 void setup() {
