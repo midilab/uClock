@@ -121,14 +121,13 @@ uClockClass::uClockClass()
 	onClock16PPQNCallback = NULL;
 	onClockStartCallback = NULL;
 	onClockStopCallback = NULL;
-
-	// first interval calculus
-	setTempo(tempo);
 }
 
 void uClockClass::init() 
 {
 	uclockInitTimer();
+	// first interval calculus
+	setTempo(tempo);
 }
 
 void uClockClass::start() 

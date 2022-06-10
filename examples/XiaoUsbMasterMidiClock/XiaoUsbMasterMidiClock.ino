@@ -2,13 +2,6 @@
  *  
  * This example demonstrates how to change the USB MIDI 
  * device name on Seeedstudio XIAO M0. 
- *
- * Windows and Macintosh systems often cache USB info.
- * After changing the name, you may need to test on a
- * different computer to observe the new name, or take
- * steps to get your operating system to "forget" the
- * cached info.  (TODO: wanted... can anyone contribute
- * instructions for these systems)
  * 
  * This example code is in the public domain.
  */
@@ -16,47 +9,46 @@
 #include <MIDI.h>
 
 Adafruit_USBD_MIDI usb_midi;
-MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
+MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI_USB);
 
+//MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #include <uClock.h>
 
-/*
 uint8_t bpm_blink_timer = 1;
 void handle_bpm_led(uint32_t tick)
 {
   // BPM led indicator
   if ( !(tick % (96)) || (tick == 1) ) {  // first compass step will flash longer
-    bpm_blink_timer = 8;
+    bpm_blink_timer = 4;
     digitalWrite(LED_BUILTIN, HIGH);
   } else if ( !(tick % (24)) ) {   // each quarter led on
+    bpm_blink_timer = 1;
     digitalWrite(LED_BUILTIN, HIGH);
   } else if ( !(tick % bpm_blink_timer) ) { // get led off
     digitalWrite(LED_BUILTIN, LOW);
-    bpm_blink_timer = 1;
   }
 }
-*/
 
 // Internal clock handlers
 void ClockOut96PPQN(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
-  MIDI.sendRealTime(MIDI.Clock);
-  //handle_bpm_led(tick);
+  MIDI_USB.sendRealTime(midi::Clock);
+  handle_bpm_led(tick);
 }
 
 void onClockStart() {
-  MIDI.sendRealTime(MIDI.Start);
+  MIDI_USB.sendRealTime(midi::Start);
 }
 
 void onClockStop() {
-  MIDI.sendRealTime(MIDI.Stop);
+  MIDI_USB.sendRealTime(midi::Stop);
 }
 
 void setup() {
-  MIDI.begin(MIDI_CHANNEL_OMNI);
+  MIDI_USB.begin(MIDI_CHANNEL_OMNI);
 
   // A led to count bpms
-  //pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
   
   // Setup our clock system
   // Inits the clock
