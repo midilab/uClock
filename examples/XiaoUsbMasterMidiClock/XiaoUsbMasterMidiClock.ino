@@ -4,6 +4,9 @@
  * device name on Seeedstudio XIAO M0. 
  * 
  * This example code is in the public domain.
+ * 
+ * Tested with Adafruit TinyUSB version 0.10.5
+ * 
  */
 #include <Adafruit_TinyUSB.h>
 #include <MIDI.h>
@@ -19,13 +22,13 @@ void handle_bpm_led(uint32_t tick)
 {
   // BPM led indicator
   if ( !(tick % (96)) || (tick == 1) ) {  // first compass step will flash longer
-    bpm_blink_timer = 4;
-    digitalWrite(LED_BUILTIN, HIGH);
+    bpm_blink_timer = 8;
+    digitalWrite(LED_BUILTIN, LOW);
   } else if ( !(tick % (24)) ) {   // each quarter led on
     bpm_blink_timer = 1;
-    digitalWrite(LED_BUILTIN, HIGH);
-  } else if ( !(tick % bpm_blink_timer) ) { // get led off
     digitalWrite(LED_BUILTIN, LOW);
+  } else if ( !(tick % bpm_blink_timer) ) { // get led off
+    digitalWrite(LED_BUILTIN, HIGH);
   }
 }
 
