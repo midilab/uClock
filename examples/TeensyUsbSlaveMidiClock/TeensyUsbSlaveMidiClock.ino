@@ -21,7 +21,7 @@
 #include <uClock.h>
 
 uint8_t bpm_blink_timer = 1;
-void handle_bpm_led(uint32_t * tick)
+void handle_bpm_led(uint32_t tick)
 {
   // BPM led indicator
   if ( !(tick % (96)) || (tick == 1) ) {  // first compass step will flash longer
