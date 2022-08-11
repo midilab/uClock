@@ -129,7 +129,7 @@ void printBpm(float _bpm, uint8_t col, uint8_t line) {
     if (b > 99) {
       u8x8->drawUTF8(col, line, bpm_str);
     } else {
-      bpm_str[2] = "\0";
+      bpm_str[2] = '\0';
       u8x8->drawUTF8(col, line, " ");
       u8x8->drawUTF8(col+1, line, bpm_str);
     }
