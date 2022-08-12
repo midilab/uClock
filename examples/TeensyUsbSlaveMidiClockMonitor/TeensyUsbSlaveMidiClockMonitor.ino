@@ -34,7 +34,7 @@ float bpm = 126;
 uint8_t bpm_blink_timer = 1;
 uint8_t clock_state = 1;
 
-void handle_bpm_led(uint32_t * tick)
+void handle_bpm_led(uint32_t tick)
 {
   // BPM led indicator
   if ( !(tick % (96)) || (tick == 1) ) {  // first compass step will flash longer
@@ -129,7 +129,7 @@ void printBpm(float _bpm, uint8_t col, uint8_t line) {
     if (b > 99) {
       u8x8->drawUTF8(col, line, bpm_str);
     } else {
-      bpm_str[2] = "\0";
+      bpm_str[2] = '\0';
       u8x8->drawUTF8(col, line, " ");
       u8x8->drawUTF8(col+1, line, bpm_str);
     }
