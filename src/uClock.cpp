@@ -289,6 +289,9 @@ void uClockClass::resetCounters()
 	indiv16th_counter = 0;
 	inmod6_counter = 0;
 	ext_interval_idx = 0;
+	for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
+		ext_interval_buffer[i] = 0;
+	}
 }
 
 // TODO: Tap stuff
