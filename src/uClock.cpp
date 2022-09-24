@@ -244,6 +244,10 @@ float uClockClass::getTempo()
 {
 	if (mode == EXTERNAL_CLOCK) {
 		uint32_t acc = 0;
+		// wait the buffer get full
+		if (ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE-1] == 0) {
+			return tempo;
+		}
 		for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
 			acc += ext_interval_buffer[i];
 		}
