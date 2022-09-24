@@ -123,33 +123,32 @@ void handleMidiInput() {
 }
 
 void printBpm(float _bpm, uint8_t col, uint8_t line) {
-    int b = (int)_bpm;
-    int c = (int)((_bpm-b)*10);
-    itoa(b, bpm_str, 10);
-    if (b > 99) {
-      u8x8->drawUTF8(col, line, bpm_str);
-    } else {
-      bpm_str[2] = '\0';
-      u8x8->drawUTF8(col, line, " ");
-      u8x8->drawUTF8(col+1, line, bpm_str);
-    }
-    u8x8->drawUTF8(col+3, line, ".");
-    itoa(c, bpm_str, 10);
-    u8x8->drawUTF8(col+4, line, bpm_str);
-    u8x8->drawUTF8(col+5, line, "bpm"); 
+  uint8_t str_idx = 6;
+  // clear bpm buffer
+  memset(bpm_str, ' ', 8);  
+  // min width=3, precision=2
+  dtostrf(_bpm, 3, 2, bpm_str);
+  bpm_str[6] = '\0';
+  u8x8->drawUTF8(col, line, bpm_str);
+  u8x8->drawUTF8(col+7, line, "bpm");
+  // clear display ghost number for 2 digit
+  // coming from 3 digit bpm changes
+  if (_bpm < 100) {
+    u8x8->drawUTF8(col+5, line, " ");
+  }
 }
 
 void loop() {
   if (bpm != uClock.getTempo()) {
     bpm = uClock.getTempo();
-    printBpm(bpm, 8, 7);
+    printBpm(bpm, 6, 7);
   }
   if (clock_state != uClock.state) { 
     clock_state = uClock.state;
     if (clock_state >= 1) {
-      u8x8->drawUTF8(0, 7, "playing"); 
+      u8x8->drawUTF8(0, 7, "play"); 
     } else { 
-      u8x8->drawUTF8(0, 7, "stoped "); 
+      u8x8->drawUTF8(0, 7, "stop"); 
     }
   }
 }
