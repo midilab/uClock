@@ -28,7 +28,7 @@ U8X8 * u8x8;
 #define MIDI_START 0xFA
 #define MIDI_STOP  0xFC
 
-char bpm_str[4];
+char bpm_str[8];
 float bpm = 126.0;
 uint8_t bpm_blink_timer = 1;
 uint8_t clock_state = 1;
