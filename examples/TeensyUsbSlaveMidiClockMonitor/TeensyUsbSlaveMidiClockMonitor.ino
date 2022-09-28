@@ -29,7 +29,6 @@ IntervalTimer teensyTimer;
 #define MIDI_START 0xFA
 #define MIDI_STOP  0xFC
 
-char bpm_str[8];
 float bpm = 126;
 uint8_t bpm_blink_timer = 1;
 uint8_t clock_state = 1;
@@ -122,25 +121,16 @@ void handleMidiInput() {
   }
 }
 
-void printBpm(float _bpm, uint8_t col, uint8_t line) {
-  // clear bpm buffer
-  memset(bpm_str, ' ', 7);  
-  // min width=3, precision=2
-  dtostrf(_bpm, 3, 1, bpm_str);
-  bpm_str[5] = '\0';
-  u8x8->drawUTF8(col, line, bpm_str);
-  u8x8->drawUTF8(col+5, line, "bpm");
-  // clear display ghost number for 2 digit
-  // coming from 3 digit bpm changes
-  if (_bpm < 100) {
-    u8x8->drawUTF8(col+4, line, " ");
-  }
-}
-
 void loop() {
   if (bpm != uClock.getTempo()) {
     bpm = uClock.getTempo();
-    printBpm(bpm, 8, 7);
+    u8x8->drawUTF8(8, 7, String(bpm, 1).c_str());
+    u8x8->drawUTF8(8+5, 7, "bpm");
+    // clear display ghost number for 2 digit
+    // coming from 3 digit bpm changes
+    if (bpm < 100) {
+      u8x8->drawUTF8(8+4, 7, " ");
+    }
   }
   if (clock_state != uClock.state) { 
     clock_state = uClock.state;
