@@ -1,6 +1,6 @@
 # uClock
 
-**BPM clock generator for Arduino and Teensy** is a library to implement BPM clock tick calls using **hardware interruption** for tight and solid timing clock ticks. Tested on ATmega168/328, ATmega16u4/32u4, ATmega2560, Teensy ARM boards and Seedstudio XIAO M0.
+**BPM clock generator for Arduino platform** is a library to implement BPM clock tick calls using **hardware interruption** for tight and solid timing clock ticks. Supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, ATmega2560)** and some **ARM boards (Teensy and Seedstudio XIAO M0)**.
 
 Generate your self tight BPM clock for music, audio/video productions, performances or installations. You can clock your MIDI setup or sync different protocols as you wish.
 
