@@ -1,8 +1,8 @@
 /*!
  *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy and Seedstudio XIAO M0)
- *  @version    1.1.4
+ *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy, Seedstudio XIAO M0 and ESP32)
+ *  @version    1.2.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
@@ -44,6 +44,7 @@ namespace umodular { namespace clock {
 #define MAX_BPM	300
 
 // want a different avr clock support?
+// TODO: we should do this using macro guards for avrs different clocks
 #define AVR_CLOCK_FREQ	16000000
 
 #define PHASE_FACTOR 16

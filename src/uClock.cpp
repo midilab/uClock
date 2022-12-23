@@ -1,8 +1,8 @@
 /*!
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy and Seedstudio XIAO M0)
- *  @version    1.1.4
+ *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy, Seedstudio XIAO M0 and ESP32)
+ *  @version    1.2.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
@@ -43,6 +43,10 @@ IntervalTimer _uclockTimer;
 // 16 bits timer
 //#include <TimerTC3.h>
 // uses TimerTc3
+#endif
+// ESP32 family
+#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+hw_timer_t * _uclockTimer = NULL;
 #endif
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -86,6 +90,19 @@ void uclockInitTimer()
 
 		// attach to generic uclock ISR
 		TimerTcc0.attachInterrupt(uclockISR);
+	#endif
+
+	#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+		_uclockTimer = timerBegin(0, 80, true);
+
+		// attach to generic uclock ISR
+		timerAttachInterrupt(_uclockTimer, &uclockISR, true);
+
+		// init clock tick time
+		timerAlarmWrite(_uclockTimer, init_clock, true); 
+
+		// activate it!
+		timerAlarmEnable(_uclockTimer);
 	#endif
 }
 #endif
@@ -212,6 +229,10 @@ void uClockClass::setTimerTempo(float bpm)
 
 	#if defined(SEEED_XIAO_M0)
 		TimerTcc0.setPeriod(tick_us_interval);
+	#endif
+
+	#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+		timerAlarmWrite(_uclockTimer, tick_us_interval, true); 
 	#endif
 #endif
 }
