@@ -1,6 +1,6 @@
-/* USB MIDI Sync Box
+/* Uart MIDI Sync Box
  *  
- * This example demonstrates how to change the USB MIDI 
+ * This example demonstrates how to change the Uart MIDI 
  * device name on ESP32 family. 
  * 
  * This example code is in the public domain.
@@ -8,17 +8,15 @@
  * ...
  * 
  */
-//#include <Adafruit_TinyUSB.h>
-//#include <MIDI.h>
-
-//Adafruit_USBD_MIDI usb_midi;
-//MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI_USB);
-
-//MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #include <uClock.h>
 
+// MIDI clock, start and stop byte definitions - based on MIDI 1.0 Standards.
+#define MIDI_CLOCK 0xF8
+#define MIDI_START 0xFA
+#define MIDI_STOP  0xFC
+
 // the blue led
-int LED_BUILTIN = 2;
+#define LED_BUILTIN    2
 
 uint8_t bpm_blink_timer = 1;
 void handle_bpm_led(uint32_t tick)
@@ -38,20 +36,21 @@ void handle_bpm_led(uint32_t tick)
 // Internal clock handlers
 void ClockOut96PPQN(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
-  //MIDI_USB.sendRealTime(midi::Clock);
+  //Serial.write(MIDI_CLOCK);
   handle_bpm_led(tick);
 }
 
 void onClockStart() {
-  //MIDI_USB.sendRealTime(midi::Start);
+  Serial.write(MIDI_START);
 }
 
 void onClockStop() {
-  //MIDI_USB.sendRealTime(midi::Stop);
+  Serial.write(MIDI_STOP);
 }
 
 void setup() {
-  //MIDI_USB.begin(MIDI_CHANNEL_OMNI);
+  // Initialize serial communication at 31250 bits per second, the default MIDI serial speed communication:
+  Serial.begin(31250);
 
   // A led to count bpms
   pinMode(LED_BUILTIN, OUTPUT);

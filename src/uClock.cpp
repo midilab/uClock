@@ -27,26 +27,30 @@
  */
 #include "uClock.h"
 
-// 
 // Timer setup for work clock
 //
-// all non-avr timmers setup
 // Teensyduino port
+//
 #if defined(TEENSYDUINO)
-IntervalTimer _uclockTimer;
+	IntervalTimer _uclockTimer;
 #endif
+//
 // Seedstudio XIAO M0 port
+//
 #if defined(SEEED_XIAO_M0)
-// 24 bits timer
-#include <TimerTCC0.h>
-// uses TimerTcc0
-// 16 bits timer
-//#include <TimerTC3.h>
-// uses TimerTc3
+	// 24 bits timer
+	#include <TimerTCC0.h>
+	// uses TimerTcc0
+	// 16 bits timer
+	//#include <TimerTC3.h>
+	// uses TimerTc3
 #endif
+//
 // ESP32 family
+//
 #if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-hw_timer_t * _uclockTimer = NULL;
+	hw_timer_t * _uclockTimer = NULL;
+	#define TIMER_ID	0
 #endif
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -93,7 +97,7 @@ void uclockInitTimer()
 	#endif
 
 	#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-		_uclockTimer = timerBegin(0, 80, true);
+		_uclockTimer = timerBegin(TIMER_ID, 80, true);
 
 		// attach to generic uclock ISR
 		timerAttachInterrupt(_uclockTimer, &uclockISR, true);
