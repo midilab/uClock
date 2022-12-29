@@ -50,7 +50,20 @@
 //
 #if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
 	hw_timer_t * _uclockTimer = NULL;
+	portMUX_TYPE _uclockTimerMux = portMUX_INITIALIZER_UNLOCKED;
 	#define TIMER_ID	0
+#endif
+
+//
+// multicore archs
+//
+#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+	#define ATOMIC(X) portENTER_CRITICAL_ISR(&_uclockTimerMux); X; portEXIT_CRITICAL_ISR(&_uclockTimerMux);
+//
+// singlecore archs
+//
+#else
+	#define ATOMIC(X) noInterrupts(); X; interrupts();
 #endif
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -73,7 +86,14 @@ void uclockInitTimer()
 	)
 }
 #else
-void uclockISR();
+
+	// forward declaration of ISR
+	#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+		void ARDUINO_ISR_ATTR uclockISR();
+	#else
+		void uclockISR();
+	#endif
+
 void uclockInitTimer()
 {
 	// begin at 120bpm (20833us)
@@ -501,6 +521,8 @@ volatile uint32_t _timer = 0;
 //
 #if defined(ARDUINO_ARCH_AVR)
 ISR(TIMER1_COMPA_vect)
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+void ARDUINO_ISR_ATTR uclockISR()
 #else
 void uclockISR() 
 #endif

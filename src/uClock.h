@@ -54,8 +54,6 @@ namespace umodular { namespace clock {
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
 
-#define ATOMIC(X) noInterrupts(); X; interrupts();
-
 class uClockClass {
 
 	private:
