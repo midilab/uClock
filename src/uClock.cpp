@@ -28,6 +28,12 @@
 #include "uClock.h"
 
 //
+// General Arduino AVRs port
+//
+#if defined(ARDUINO_ARCH_AVR)
+	#include "platforms/avr.h"
+#endif
+//
 // Teensyduino port
 //
 #if defined(TEENSYDUINO)
