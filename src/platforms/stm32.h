@@ -1,16 +1,13 @@
 #include <Arduino.h>
 
-static TIM_HandleTypeDef s_TimerInstance = {0};
-
-typedef void (*timer_callback_t)(void);
-timer_callback_t timer_callback = NULL;
+static TIM_HandleTypeDef _uclockTimer = {0};
 
 #define ATOMIC(X) noInterrupts(); X; interrupts();
 
 // forward declaration of ISR
 void uclockISR();
 
-void timer_attachInterrupt(TIM_TypeDef *tim, uint32_t microseconds, timer_callback_t callback)
+void timer_attachInterrupt(TIM_TypeDef *tim, uint32_t us_interval)
 {
   // Enable timer clock
   if (tim == TIM2) __HAL_RCC_TIM2_CLK_ENABLE();
@@ -21,36 +18,33 @@ void timer_attachInterrupt(TIM_TypeDef *tim, uint32_t microseconds, timer_callba
   uint32_t prescaler = (SystemCoreClock / 1000000UL) - 1;
 
   // Calculate the period value
-  uint32_t period = (microseconds * 2UL) - 1UL;
+  uint32_t period = (us_interval * 2UL) - 1UL;
 
   // Set up the timer instance
-  s_TimerInstance.Instance = tim;
-  s_TimerInstance.Init.Prescaler = prescaler;
-  s_TimerInstance.Init.CounterMode = TIM_COUNTERMODE_UP;
-  s_TimerInstance.Init.Period = period;
-  s_TimerInstance.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  _uclockTimer.Instance = tim;
+  _uclockTimer.Init.Prescaler = prescaler;
+  _uclockTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
+  _uclockTimer.Init.Period = period;
+  _uclockTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 
   // Configure the timer instance
-  HAL_TIM_Base_Init(&s_TimerInstance);
-  HAL_TIM_Base_Start_IT(&s_TimerInstance);
-
-  // Save the callback function
-  timer_callback = callback;
+  HAL_TIM_Base_Init(&_uclockTimer);
+  HAL_TIM_Base_Start_IT(&_uclockTimer);
 }
 
 void TIM2_IRQHandler()
 {
-  // Call the callback function
-  timer_callback();
+  // Call the uClock ISR handler
+  uclockISR();
 
   // Clear the interrupt flag
-  __HAL_TIM_CLEAR_FLAG(&s_TimerInstance, TIM_FLAG_UPDATE);
+  __HAL_TIM_CLEAR_FLAG(&_uclockTimer, TIM_FLAG_UPDATE);
 }
 
 void initTimer(uint32_t us_interval)
 {
   // Set up the timer to call the callback function every us_interval microseconds
-  timer_attachInterrupt(TIM2, us_interval, uclockISR);
+  timer_attachInterrupt(TIM2, us_interval);
 }
 
 void setTimer(uint32_t us_interval)
@@ -59,7 +53,7 @@ void setTimer(uint32_t us_interval)
   uint32_t period = (us_interval * 2UL) - 1UL;
 
   // Update the timer instance with the new period value
-  s_TimerInstance.Init.Period = period;
-  HAL_TIM_Base_Init(&s_TimerInstance);
+  _uclockTimer.Init.Period = period;
+  HAL_TIM_Base_Init(&_uclockTimer);
 }
 

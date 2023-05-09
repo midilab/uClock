@@ -34,7 +34,7 @@
 	#include "platforms/avr.h"
 #endif
 //
-// Teensyduino port
+// Teensyduino ARMs port
 //
 #if defined(TEENSYDUINO)
 	#include "platforms/teensy.h"
@@ -52,7 +52,7 @@
 	#include "platforms/esp32.h"
 #endif
 //
-// STM32XX family?
+// STM32XX family
 //
 #if defined(ARDUINO_ARCH_STM32)
 	#include "platforms/stm32.h"

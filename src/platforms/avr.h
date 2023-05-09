@@ -3,7 +3,7 @@
 #define ATOMIC(X) noInterrupts(); X; interrupts();
 
 // want a different avr clock support?
-// TODO: we should do this using macro guards for avrs different clocks
+// TODO: we should do this using macro guards for avrs different clocks freqeuncy setup at compile time
 #define AVR_CLOCK_FREQ	16000000
 
 void initTimer(uint32_t init_clock)
