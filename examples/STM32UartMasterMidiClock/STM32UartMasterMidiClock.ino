@@ -36,21 +36,21 @@ void handle_bpm_led(uint32_t tick)
 // Internal clock handlers
 void ClockOut96PPQN(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
-  Serial.write(MIDI_CLOCK);
+  //Serial.write(MIDI_CLOCK);
   handle_bpm_led(tick);
 }
 
 void onClockStart() {
-  Serial.write(MIDI_START);
+  //Serial.write(MIDI_START);
 }
 
 void onClockStop() {
-  Serial.write(MIDI_STOP);
+  //Serial.write(MIDI_STOP);
 }
 
 void setup() {
   // Initialize serial communication at 31250 bits per second, the default MIDI serial speed communication:
-  Serial.begin(31250);
+  //Serial.begin(31250);
 
   // A led to count bpms
   pinMode(LED_BUILTIN, OUTPUT);
