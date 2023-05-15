@@ -2,7 +2,7 @@
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    1.2.0
+ *  @version    1.3.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2022 - Romulo Silva - contact@midilab.co
@@ -27,109 +27,55 @@
  */
 #include "uClock.h"
 
-// Timer setup for work clock
 //
-// Teensyduino port
+// General Arduino AVRs port
+//
+#if defined(ARDUINO_ARCH_AVR)
+	#include "platforms/avr.h"
+#endif
+//
+// Teensyduino ARMs port
 //
 #if defined(TEENSYDUINO)
-	IntervalTimer _uclockTimer;
+	#include "platforms/teensy.h"
 #endif
 //
 // Seedstudio XIAO M0 port
 //
 #if defined(SEEED_XIAO_M0)
-	// 24 bits timer
-	#include <TimerTCC0.h>
-	// uses TimerTcc0
-	// 16 bits timer
-	//#include <TimerTC3.h>
-	// uses TimerTc3
+	#include "platforms/samd.h"
 #endif
 //
 // ESP32 family
 //
 #if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-	hw_timer_t * _uclockTimer = NULL;
-	#define TIMER_ID	0
+	#include "platforms/esp32.h"
+#endif
+//
+// STM32XX family
+//
+#if defined(ARDUINO_ARCH_STM32)
+	#include "platforms/stm32.h"
 #endif
 
 //
-// multicore archs
+// Platform specific timer setup/control
 //
-#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-	portMUX_TYPE _uclockTimerMux = portMUX_INITIALIZER_UNLOCKED;
-	#define ATOMIC(X) portENTER_CRITICAL_ISR(&_uclockTimerMux); X; portEXIT_CRITICAL_ISR(&_uclockTimerMux);
-//
-// singlecore archs
-//
-#else
-	#define ATOMIC(X) noInterrupts(); X; interrupts();
-#endif
-
-#if defined(ARDUINO_ARCH_AVR)
-void uclockInitTimer()
-{
-	ATOMIC(
-		// 16bits Timer1 init
-		// begin at 120bpm (48.0007680122882 Hz)
-		TCCR1A = 0; // set entire TCCR1A register to 0
-		TCCR1B = 0; // same for TCCR1B
-		TCNT1  = 0; // initialize counter value to 0
-		// set compare match register for 48.0007680122882 Hz increments
-		OCR1A = 41665; // = 16000000 / (8 * 48.0007680122882) - 1 (must be <65536)
-		// turn on CTC mode
-		TCCR1B |= (1 << WGM12);
-		// Set CS12, CS11 and CS10 bits for 8 prescaler
-		TCCR1B |= (0 << CS12) | (1 << CS11) | (0 << CS10);
-		// enable timer compare interrupt
-		TIMSK1 |= (1 << OCIE1A);
-	)
-}
-#else
-
-	// forward declaration of ISR
-	#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-		void ARDUINO_ISR_ATTR uclockISR();
-	#else
-		void uclockISR();
-	#endif
-
+// initTimer(uint32_t us_interval) and setTimer(uint32_t us_interval)
+// are called from architecture specific module included at the
+// header of this file
 void uclockInitTimer()
 {
 	// begin at 120bpm (20833us)
-	const uint16_t init_clock = 20833;
-	#if defined(TEENSYDUINO)
-		_uclockTimer.begin(uclockISR, init_clock); 
-
-		// Set the interrupt priority level, controlling which other interrupts
-		// this timer is allowed to interrupt. Lower numbers are higher priority, 
-		// with 0 the highest and 255 the lowest. Most other interrupts default to 128. 
-		// As a general guideline, interrupt routines that run longer should be given 
-		// lower priority (higher numerical values).
-		_uclockTimer.priority(0);
-	#endif
-
-	#if defined(SEEED_XIAO_M0)
-		TimerTcc0.initialize(init_clock);
-
-		// attach to generic uclock ISR
-		TimerTcc0.attachInterrupt(uclockISR);
-	#endif
-
-	#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-		_uclockTimer = timerBegin(TIMER_ID, 80, true);
-
-		// attach to generic uclock ISR
-		timerAttachInterrupt(_uclockTimer, &uclockISR, true);
-
-		// init clock tick time
-		timerAlarmWrite(_uclockTimer, init_clock, true); 
-
-		// activate it!
-		timerAlarmEnable(_uclockTimer);
-	#endif
+	initTimer(20833);
 }
-#endif
+
+void setTimerTempo(float bpm) 
+{
+	// convert bpm float into 96 ppqn resolution microseconds interval
+	uint32_t us_interval = (60000000 / 24 / bpm);
+	setTimer(us_interval);
+}
 
 namespace umodular { namespace clock {
 
@@ -206,59 +152,6 @@ void uClockClass::pause()
 			stop();
 		}
 	}
-}
-
-void uClockClass::setTimerTempo(float bpm) 
-{
-	// 96 ppqn resolution
-	uint32_t tick_us_interval = (60000000 / 24 / bpm);
-
-#if defined(ARDUINO_ARCH_AVR)
-	float tick_hertz_interval = 1/((float)tick_us_interval/1000000);
-
-	uint32_t ocr;
-	uint8_t tccr = 0;
-
-	// 16bits avr timer setup
-	if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 1 )) < 65535) {
-		// Set CS12, CS11 and CS10 bits for 1 prescaler
-		tccr |= (0 << CS12) | (0 << CS11) | (1 << CS10);
-	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 8 )) < 65535) {
-		// Set CS12, CS11 and CS10 bits for 8 prescaler
-		tccr |= (0 << CS12) | (1 << CS11) | (0 << CS10);
-	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 64 )) < 65535) {
-		// Set CS12, CS11 and CS10 bits for 64 prescaler
-		tccr |= (0 << CS12) | (1 << CS11) | (1 << CS10);
-	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 256 )) < 65535) {
-		// Set CS12, CS11 and CS10 bits for 256 prescaler
-		tccr |= (1 << CS12) | (0 << CS11) | (0 << CS10);
-	} else if ((ocr = AVR_CLOCK_FREQ / ( tick_hertz_interval * 1024 )) < 65535) {
-		// Set CS12, CS11 and CS10 bits for 1024 prescaler
-		tccr |= (1 << CS12) | (0 << CS11) | (1 << CS10);
-	} else {
-		// tempo not achiavable
-		return;
-	}
-
-	ATOMIC(
-		TCCR1B = 0;
-		OCR1A = ocr-1;
-		TCCR1B |= (1 << WGM12);
-		TCCR1B |= tccr;
-	)
-#else
-	#if defined(TEENSYDUINO)
-		_uclockTimer.update(tick_us_interval);
-	#endif
-
-	#if defined(SEEED_XIAO_M0)
-		TimerTcc0.setPeriod(tick_us_interval);
-	#endif
-
-	#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-		timerAlarmWrite(_uclockTimer, tick_us_interval, true); 
-	#endif
-#endif
 }
 
 void uClockClass::setTempo(float bpm) 

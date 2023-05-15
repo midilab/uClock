@@ -43,10 +43,6 @@ namespace umodular { namespace clock {
 #define MIN_BPM	1
 #define MAX_BPM	300
 
-// want a different avr clock support?
-// TODO: we should do this using macro guards for avrs different clocks
-#define AVR_CLOCK_FREQ	16000000
-
 #define PHASE_FACTOR 16
 #define PLL_X 220
 
@@ -58,7 +54,6 @@ class uClockClass {
 
 	private:
 		
-		void setTimerTempo(float bpm);
 		float inline freqToBpm(uint32_t freq);
 
 		void (*onClock96PPQNCallback)(uint32_t tick);
