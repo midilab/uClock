@@ -58,20 +58,23 @@
 	#include "platforms/stm32.h"
 #endif
 
+//
+// Platform specific timer setup/control
+//
+// initTimer(uint32_t us_interval) and setTimer(uint32_t us_interval)
+// are called from architecture specific module included at the
+// header of this file
 void uclockInitTimer()
 {
 	// begin at 120bpm (20833us)
-	const uint32_t init_clock = 20833;
-	// called from architecture specific module
-	initTimer(init_clock);
+	initTimer(20833);
 }
 
 void setTimerTempo(float bpm) 
 {
 	// convert bpm float into 96 ppqn resolution microseconds interval
-	uint32_t tick_us_interval = (60000000 / 24 / bpm);
-	// called from architecture specific module
-	setTimer(tick_us_interval);
+	uint32_t us_interval = (60000000 / 24 / bpm);
+	setTimer(us_interval);
 }
 
 namespace umodular { namespace clock {

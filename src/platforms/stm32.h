@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 #if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
-  #error "Due to API change, this library is compatible with STM32_CORE_VERSION >= 0x01090000. Please update your stm32duino core."
+  #error "Due to API change, this library is compatible with STM32_CORE_VERSION >= 0x01090000. Please update/install stm32duino core."
 #endif
 
 #if defined(TIM1)
@@ -10,7 +10,7 @@
   TIM_TypeDef * TimerInstance = TIM2;
 #endif
 
-// Instantiate HardwareTimer object. Thanks to 'new' instanciation, HardwareTimer is not destructed when setup() function is finished.
+// instantiate HardwareTimer object
 HardwareTimer * _uclockTimer = new HardwareTimer(TimerInstance);
 
 #define ATOMIC(X) noInterrupts(); X; interrupts();
