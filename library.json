@@ -19,7 +19,8 @@
   ],
   "license": "MIT",
   "homepage": "https://midilab.co/umodular/",
+  "headers": "uClock.h",
   "dependencies": {},
-  "frameworks": "*",
-  "platforms": "avr,arm,samd,stm32,esp32"
+  "frameworks": "Arduino",
+  "platforms": "atmelavr,atmelmegaavr,espressif32,ststm32,teensy"
 }
