@@ -22,5 +22,5 @@
   "headers": "uClock.h",
   "dependencies": {},
   "frameworks": "Arduino",
-  "platforms": "atmelavr,atmelmegaavr,espressif32,ststm32,teensy"
+  "platforms": "atmelavr,atmelmegaavr,espressif32,ststm32,teensy,atmelsam"
 }
