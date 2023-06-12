@@ -23,5 +23,5 @@ void initTimer(uint32_t init_clock)
 
 void setTimer(uint32_t us_interval)
 {
-	TimerTcc0.setPeriod(us_interval);
+    TimerTcc0.setPeriod(us_interval);
 }

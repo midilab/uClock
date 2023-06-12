@@ -52,104 +52,104 @@ namespace umodular { namespace clock {
 
 class uClockClass {
 
-	private:
-		
-		float inline freqToBpm(uint32_t freq);
+    private:
+        
+        float inline freqToBpm(uint32_t freq);
 
-		void (*onClock96PPQNCallback)(uint32_t tick);
-		void (*onClock32PPQNCallback)(uint32_t tick);
-		void (*onClock16PPQNCallback)(uint32_t tick);
-		void (*onClockStartCallback)();
-		void (*onClockStopCallback)();
+        void (*onClock96PPQNCallback)(uint32_t tick);
+        void (*onClock32PPQNCallback)(uint32_t tick);
+        void (*onClock16PPQNCallback)(uint32_t tick);
+        void (*onClockStartCallback)();
+        void (*onClockStopCallback)();
 
-		// internal clock control
-		uint32_t internal_tick;
-		uint32_t div32th_counter;
-		uint32_t div16th_counter;
-		uint8_t mod6_counter;
+        // internal clock control
+        uint32_t internal_tick;
+        uint32_t div32th_counter;
+        uint32_t div16th_counter;
+        uint8_t mod6_counter;
 
-		// external clock control
-		volatile uint32_t external_clock;
-		volatile uint32_t external_tick;
-		volatile uint32_t indiv32th_counter;
-		volatile uint32_t indiv16th_counter;
-		volatile uint8_t inmod6_counter;
-		volatile uint32_t interval;
-		uint32_t last_interval;
-		uint32_t sync_interval;
+        // external clock control
+        volatile uint32_t external_clock;
+        volatile uint32_t external_tick;
+        volatile uint32_t indiv32th_counter;
+        volatile uint32_t indiv16th_counter;
+        volatile uint8_t inmod6_counter;
+        volatile uint32_t interval;
+        uint32_t last_interval;
+        uint32_t sync_interval;
 
-		float tempo;
-		uint32_t start_timer;
-		uint8_t mode;
-	
-		volatile uint32_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
-		uint16_t ext_interval_idx;
+        float tempo;
+        uint32_t start_timer;
+        uint8_t mode;
+    
+        volatile uint32_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
+        uint16_t ext_interval_idx;
 
-	public:
+    public:
 
-		enum {
-			INTERNAL_CLOCK = 0,
-			EXTERNAL_CLOCK
-		};
+        enum {
+            INTERNAL_CLOCK = 0,
+            EXTERNAL_CLOCK
+        };
 
-		enum {
-			PAUSED = 0,
-			STARTING,
-			STARTED
-		};
+        enum {
+            PAUSED = 0,
+            STARTING,
+            STARTED
+        };
 
-		uint8_t state;
-		
-		uClockClass();
+        uint8_t state;
+        
+        uClockClass();
 
-		void setClock96PPQNOutput(void (*callback)(uint32_t tick)) {
-			onClock96PPQNCallback = callback;
-		}
-		
-		void setClock32PPQNOutput(void (*callback)(uint32_t tick)) {
-			onClock32PPQNCallback = callback;
-		}
+        void setClock96PPQNOutput(void (*callback)(uint32_t tick)) {
+            onClock96PPQNCallback = callback;
+        }
+        
+        void setClock32PPQNOutput(void (*callback)(uint32_t tick)) {
+            onClock32PPQNCallback = callback;
+        }
 
-		void setClock16PPQNOutput(void (*callback)(uint32_t tick)) {
-			onClock16PPQNCallback = callback;
-		}
+        void setClock16PPQNOutput(void (*callback)(uint32_t tick)) {
+            onClock16PPQNCallback = callback;
+        }
 
-		void setOnClockStartOutput(void (*callback)()) {
-			onClockStartCallback = callback;
-		}
+        void setOnClockStartOutput(void (*callback)()) {
+            onClockStartCallback = callback;
+        }
 
-		void setOnClockStopOutput(void (*callback)()) {
-			onClockStopCallback = callback;
-		}
+        void setOnClockStopOutput(void (*callback)()) {
+            onClockStopCallback = callback;
+        }
 
-		void init();
-		void handleTimerInt();
-		void handleExternalClock();
-		void resetCounters();
-		
-		// external class control
-		void start();
-		void stop();
-		void pause();
-		void setTempo(float bpm);
-		float getTempo();
+        void init();
+        void handleTimerInt();
+        void handleExternalClock();
+        void resetCounters();
+        
+        // external class control
+        void start();
+        void stop();
+        void pause();
+        void setTempo(float bpm);
+        float getTempo();
 
-		// external timming control
-		void setMode(uint8_t tempo_mode);
-		uint8_t getMode();
-		void clockMe();
-		
-		// todo!
-		void shuffle();
-		void tap();
-		
-		// elapsed time support
-		uint8_t getNumberOfSeconds(uint32_t time);
-		uint8_t getNumberOfMinutes(uint32_t time);
-		uint8_t getNumberOfHours(uint32_t time);
-		uint8_t getNumberOfDays(uint32_t time);
-		uint32_t getNowTimer();
-		uint32_t getPlayTime();
+        // external timming control
+        void setMode(uint8_t tempo_mode);
+        uint8_t getMode();
+        void clockMe();
+        
+        // todo!
+        void shuffle();
+        void tap();
+        
+        // elapsed time support
+        uint8_t getNumberOfSeconds(uint32_t time);
+        uint8_t getNumberOfMinutes(uint32_t time);
+        uint8_t getNumberOfHours(uint32_t time);
+        uint8_t getNumberOfDays(uint32_t time);
+        uint32_t getNowTimer();
+        uint32_t getPlayTime();
 };
 
 } } // end namespace umodular::clock
@@ -157,8 +157,8 @@ class uClockClass {
 extern umodular::clock::uClockClass uClock;
 
 extern "C" {
-	extern volatile uint16_t _clock;
-	extern volatile uint32_t _timer;
+    extern volatile uint16_t _clock;
+    extern volatile uint32_t _timer;
 }
 
 #endif /* __U_CLOCK_H__ */

@@ -21,5 +21,5 @@ void initTimer(uint32_t init_clock)
 
 void setTimer(uint32_t us_interval)
 {
-	_uclockTimer.update(us_interval);
+    _uclockTimer.update(us_interval);
 }

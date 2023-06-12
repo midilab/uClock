@@ -25,5 +25,5 @@ void initTimer(uint32_t init_clock)
 
 void setTimer(uint32_t us_interval)
 {
-	timerAlarmWrite(_uclockTimer, us_interval, true); 
+    timerAlarmWrite(_uclockTimer, us_interval, true); 
 }
