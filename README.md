@@ -1,21 +1,25 @@
 # uClock
 
-**BPM clock generator for Arduino platform** is a library to implement BPM clock tick calls using **hardware interruption** for tight and solid timing clock ticks. Supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4 and ATmega2560)** and some **ARM boards (Teensy and Seedstudio XIAO M0)**.
+The **uClock BPM Generator library** is designed to implement precise and reliable BPM clock tick calls using the microcontroller's timer hardware interruption. It is designed to be multi-architecture, portable, and easy to use within the Opensource community universe. 
 
-Generate your self tight BPM clock for music, audio/video productions, performances or installations. You can clock your MIDI setup or sync different protocols as you wish.
+We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, and Seedstudio XIAO M0)**.
+
+The absence of real-time features necessary for creating professional-level embedded devices for music and video on Opensource community-based platforms like Arduino led to the development of uClock. By leveraging the use of timer hardware interruptions, the library can schedule and manage real-time-like processing with safe shared resource access through its API.
+
+With uClock, you gain the ability to create professional-grade sequencers, sync boxes, or generate a precise BPM clock for external devices in the realms of music, audio/video productions, performances, or tech art installations. The library offers an external synchronization schema that enables you to generate an internal clock based on an external clock source, allowing you to master your entire MIDI setup or any other protocols according to your specific preferences and requirements.
 
 ## Interface
-Clock library interfaces via attached callback function running on a hardware interrupt and is able to process the following resolutions:
+The uClock library interfaces through an attached callback function that runs on a hardware interrupt and provides support for the following resolutions:
 
 1. **16PPQN** 16 Pulses Per Quarter Note
 2. **32PPQN** 32 Pulses Per Quarter Note
 3. **96PPQN** 96 Pulses Per Quarter Note
 
-To generate a MIDI sync signal to sync external MIDI devices for example, you need to work with the resolution of 96PPQN to follow the standards of MIDI protocol that handles the clock based on 24PPQN.
+To generate a MIDI sync signal and synchronize external MIDI devices, you can start working with the resolution of 96PPQN, which aligns with the clocking standards of modern MIDI-syncable devices commonly available in the market. This resolution is based on the 24PPQN (24 multiplied by 4 equals 96). By sending a sync signal every 96PPQN interval, you can ensure effective synchronization among your MIDI devices.
 
-For a simple old feeling step sequencer a 16PPQN resolution is a good way to start coding your own step sequencer.
+If you are working on the development of a vintage-style step sequencer, utilizing a resolution of 16PPQN is a fitting option to initiate the coding process. This resolution ensures that each 16PPQN call corresponds to a step played note or event.
 
-You can also use all the 3 resolutions at the same time for whatever reason you think you should.
+Furthermore, it is possible to utilize all three resolutions simultaneously, allowing for flexibility based on your specific requirements and preferences.
 
 ## Examples
 Here a few examples on the usage of Clock library for MIDI devices, keep in mind the need to make your own MIDI interface, more details will be avaliable soon but until that, you can find good material over the net about the subject.
