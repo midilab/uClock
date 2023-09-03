@@ -14,7 +14,7 @@ void initTimer(uint32_t init_clock)
     _uclockTimer = timerBegin(TIMER_ID, 80, true);
 
     // attach to generic uclock ISR
-    timerAttachInterrupt(_uclockTimer, &uclockISR, true);
+    timerAttachInterrupt(_uclockTimer, &uclockISR, false);
 
     // init clock tick time
     timerAlarmWrite(_uclockTimer, init_clock, true); 
