@@ -14,12 +14,7 @@ TaskHandle_t taskHandle;
 // mutex to protect the shared resource
 SemaphoreHandle_t _mutex;
 // mutex control for task
-#define ATOMIC(X)     \
-    do {              \
-        xSemaphoreTake(_mutex, portMAX_DELAY); \
-        X;            \
-        xSemaphoreGive(_mutex); \
-    } while (0);
+#define ATOMIC(X) xSemaphoreTake(_mutex, portMAX_DELAY); X; xSemaphoreGive(_mutex);
 
 // forward declaration of uClockHandler
 void uClockHandler();
@@ -45,6 +40,12 @@ void clockTask(void *pvParameters)
 
 void initTimer(uint32_t init_clock)
 {
+    // initialize the mutex for shared resource access
+    _mutex = xSemaphoreCreateMutex();
+
+    // create the clockTask
+    xTaskCreate(clockTask, "clockTask", CLOCK_STACK_SIZE, NULL, 1, &taskHandle);
+
     _uclockTimer = timerBegin(TIMER_ID, 80, true);
 
     // attach to generic uclock ISR
@@ -55,12 +56,6 @@ void initTimer(uint32_t init_clock)
 
     // activate it!
     timerAlarmEnable(_uclockTimer);
-
-    // initialize the mutex for shared resource access
-    _mutex = xSemaphoreCreateMutex();
-
-    // create the clockTask
-    xTaskCreate(clockTask, "clockTask", CLOCK_STACK_SIZE, NULL, 1, &taskHandle);
 }
 
 void setTimer(uint32_t us_interval)
