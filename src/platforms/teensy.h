@@ -5,11 +5,11 @@
 IntervalTimer _uclockTimer;
 
 // forward declaration of ISR
-void uclockISR();
+void uClockHandler();
 
 void initTimer(uint32_t init_clock)
 {
-    _uclockTimer.begin(uclockISR, init_clock); 
+    _uclockTimer.begin(uClockHandler, init_clock); 
 
     // Set the interrupt priority level, controlling which other interrupts
     // this timer is allowed to interrupt. Lower numbers are higher priority, 

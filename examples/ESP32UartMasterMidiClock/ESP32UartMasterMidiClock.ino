@@ -18,8 +18,6 @@
 // the blue led
 #define LED_BUILTIN    2
 
-volatile bool _midi_clk_income = false;
-
 uint8_t bpm_blink_timer = 1;
 void handle_bpm_led(uint32_t tick)
 {
@@ -38,8 +36,7 @@ void handle_bpm_led(uint32_t tick)
 // Internal clock handlers
 void ClockOut96PPQN(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
-  //Serial.write(MIDI_CLOCK);
-  _midi_clk_income = true;
+  Serial.write(MIDI_CLOCK);
   handle_bpm_led(tick);
 }
 
@@ -74,11 +71,5 @@ void setup() {
 
 // Do it whatever to interface with Clock.stop(), Clock.start(), Clock.setTempo() and integrate your environment...
 void loop() {
-  // watch for income signal from uClock to fire the clock over midi
-  if (_midi_clk_income) {
-    Serial.write(MIDI_CLOCK);
-    noInterrupts();
-    _midi_clk_income = false;
-    interrupts();
-  }
+  
 }

@@ -16,12 +16,12 @@ HardwareTimer * _uclockTimer = new HardwareTimer(TimerInstance);
 #define ATOMIC(X) noInterrupts(); X; interrupts();
 
 // forward declaration of ISR
-void uclockISR();
+void uClockHandler();
 
 void initTimer(uint32_t us_interval)
 {
   _uclockTimer->setOverflow(us_interval, MICROSEC_FORMAT);
-  _uclockTimer->attachInterrupt(uclockISR);
+  _uclockTimer->attachInterrupt(uClockHandler);
   _uclockTimer->resume();
 }
 

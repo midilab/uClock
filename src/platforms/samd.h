@@ -11,14 +11,14 @@
 IntervalTimer _uclockTimer;
 
 // forward declaration of ISR
-void uclockISR();
+void uClockHandler();
 
 void initTimer(uint32_t init_clock)
 {
     TimerTcc0.initialize(init_clock);
 
     // attach to generic uclock ISR
-    TimerTcc0.attachInterrupt(uclockISR);
+    TimerTcc0.attachInterrupt(uClockHandler);
 }
 
 void setTimer(uint32_t us_interval)
