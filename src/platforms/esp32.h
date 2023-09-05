@@ -10,8 +10,7 @@ hw_timer_t * _uclockTimer = NULL;
 
 // FreeRTOS main clock task size in bytes
 #define CLOCK_STACK_SIZE    2048
-// semaphore to signal the task from the ISR
-SemaphoreHandle_t _semaphore;
+TaskHandle_t taskHandle;
 // mutex to protect the shared resource
 SemaphoreHandle_t _mutex;
 // mutex control for task
@@ -28,21 +27,20 @@ void uClockHandler();
 // ISR handler
 void ARDUINO_ISR_ATTR handlerISR(void)
 {
-    // notify the clockTask using the semaphore
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xSemaphoreGiveFromISR(_semaphore, &xHigherPriorityTaskWoken);
-
-    // context switch is required? request it
-    if (xHigherPriorityTaskWoken == pdTRUE)
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    // Send a notification to task1
+    vTaskNotifyGiveFromISR(taskHandle, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 // task for user clock process
 void clockTask(void *pvParameters)
 {
-    while (1)
-        if (xSemaphoreTake(_semaphore, portMAX_DELAY) == pdTRUE)
-            uClockHandler();
+    while (1) {
+        // wait for a notification from ISR
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        uClockHandler();
+    }
 }
 
 void initTimer(uint32_t init_clock)
@@ -58,14 +56,11 @@ void initTimer(uint32_t init_clock)
     // activate it!
     timerAlarmEnable(_uclockTimer);
 
-    // initialize the semaphore
-    _semaphore = xSemaphoreCreateBinary();
-
     // initialize the mutex for shared resource access
     _mutex = xSemaphoreCreateMutex();
 
     // create the clockTask
-    xTaskCreate(clockTask, "clockTask", CLOCK_STACK_SIZE, NULL, 1, NULL);
+    xTaskCreate(clockTask, "clockTask", CLOCK_STACK_SIZE, NULL, 1, &taskHandle);
 }
 
 void setTimer(uint32_t us_interval)
