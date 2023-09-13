@@ -120,7 +120,7 @@ void loop() {
   if (bpm != uClock.getTempo()) {
     bpm = uClock.getTempo();
     u8x8->drawUTF8(8, 7, String(bpm, 1).c_str());
-    u8x8->drawUTF8(8+5, 7, "bpm");
+    u8x8->drawUTF8(8+5, 7, "BPM");
     // clear display ghost number for 2 digit
     // coming from 3 digit bpm changes
     if (bpm < 100) {
