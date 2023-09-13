@@ -102,7 +102,7 @@ void setup() {
   u8x8->begin();
   u8x8->setFont(u8x8_font_pressstart2p_r); 
   u8x8->clear();
-  //u8x8->setFlipMode(true);
+  u8x8->setFlipMode(true);
   u8x8->drawUTF8(0, 0, "uClock"); 
 
   //
@@ -129,7 +129,7 @@ void loop() {
   if (bpm != uClock.getTempo()) {
     bpm = uClock.getTempo();
     u8x8->drawUTF8(8, 7, String(bpm, 1).c_str());
-    u8x8->drawUTF8(8+5, 7, "bpm");
+    u8x8->drawUTF8(8+5, 7, "BPM");
     // clear display ghost number for 2 digit
     // coming from 3 digit bpm changes
     if (bpm < 100) {
