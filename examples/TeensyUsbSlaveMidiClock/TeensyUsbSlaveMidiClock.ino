@@ -1,7 +1,7 @@
 /* USB MIDI Sync Slave Box
  *  
  * This example demonstrates how to change the USB MIDI 
- * device name on Teensy LC and 3.x.  When creating more
+ * device name on Teensy LC, 3.x and 4.x.  When creating more
  * that one MIDI device, custom names are much easier to
  * use when selecting each device in MIDI software on
  * your PC or Mac.  The custom name is in the "name.c" tab.
