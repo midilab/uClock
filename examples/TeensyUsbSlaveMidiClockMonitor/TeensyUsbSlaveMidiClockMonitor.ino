@@ -135,9 +135,17 @@ void loop() {
   if (clock_state != uClock.state) { 
     clock_state = uClock.state;
     if (clock_state >= 1) {
-      u8x8->drawUTF8(0, 7, "playing"); 
+      u8x8->drawUTF8(0, 7, "Playing"); 
     } else { 
-      u8x8->drawUTF8(0, 7, "stoped "); 
+      u8x8->drawUTF8(0, 7, "Stopped"); 
+    }
+  }
+  if (clock_mode != uClock.getMode()) {
+    clock_mode = uClock.getMode();
+    if (clock_mode == uClock.EXTERNAL_CLOCK) {
+      u8x8->drawUTF8(10, 0, "Slave "); 
+    } else { 
+      u8x8->drawUTF8(10, 0, "Master"); 
     }
   }
 }
