@@ -1,7 +1,8 @@
 /* USB MIDI Sync Slave Box Monitor
  *  
  * This example demonstrates how to create a
- * MIDI hid compilant slave clock box with 
+ * MIDI hid compilant slave clock box using
+ * Teensy LC, 3.x and 4.x with  
  * monitor support using oled displays
  *
  * Making use of a 250 usceconds timer to
@@ -32,6 +33,7 @@ IntervalTimer teensyTimer;
 float bpm = 126;
 uint8_t bpm_blink_timer = 1;
 uint8_t clock_state = 1;
+uint8_t clock_mode = 0;
 
 void handle_bpm_led(uint32_t tick)
 {
@@ -95,10 +97,12 @@ void setup() {
   // OLED setup
   // Please check you oled model to correctly init him
   //
-  u8x8 = new U8X8_SH1106_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
+  //u8x8 = new U8X8_SH1106_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
+  u8x8 = new U8X8_SSD1306_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
   u8x8->begin();
   u8x8->setFont(u8x8_font_pressstart2p_r); 
   u8x8->clear();
+  //u8x8->setFlipMode(true);
   u8x8->drawUTF8(0, 0, "uClock"); 
 
   //
