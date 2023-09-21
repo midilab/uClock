@@ -238,10 +238,43 @@ void uClockClass::tap()
     // tap me
 }
 
-// TODO: Shuffle stuff
-void uClockClass::shuffle() 
+void uClockClass::setShuffle(bool active)
 {
-    // shuffle me
+    ATOMIC(shuffle.active = active)
+}
+
+bool uClockClass::isShuffled()
+{
+    return shuffle.active;
+}
+
+void uClockClass::setShuffleSize(uint8_t size)
+{
+    if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
+        size = MAX_SHUFFLE_TEMPLATE_SIZE;
+    ATOMIC(shuffle.size = size)
+}
+
+void uClockClass::setShuffleData(uint8_t step, int8_t tick)
+{
+    if (step >= MAX_SHUFFLE_TEMPLATE_SIZE)
+        return;
+    ATOMIC(shuffle.step[step] = tick)
+}
+
+void uClockClass::setShuffleTemplate(int8_t * shuff, uint8_t size)
+{
+    if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
+        size = MAX_SHUFFLE_TEMPLATE_SIZE;
+    setShuffleSize(size);
+    for (uint8_t i=0; i < size; i++) {
+        setShuffleData(i, shuff[i]);
+    }
+}
+
+int8_t uClockClass::getShuffleLength()
+{
+    return shuffle_length_ctrl;
 }
 
 void uClockClass::handleExternalClock() 
@@ -331,18 +364,17 @@ void uClockClass::handleTimerInt()
         onClock96PPQNCallback(internal_tick);
     }
 
-    if (mod6_counter == 0) {
-        if (onClock32PPQNCallback) {
-            onClock32PPQNCallback(div32th_counter);
-        }
+    // 16PPQN call and shuffle processing if enabled
+    if (processShuffle() == 0) {
         if (onClock16PPQNCallback) {
             onClock16PPQNCallback(div16th_counter);
         }
         div16th_counter++;
-        div32th_counter++;
+        shuffle_shoot_ctrl = false;
     }
 
-    if (mod6_counter == 3) {
+    // 32PPQN call. does anyone uses it?
+    if (mod6_counter == 3 || mod6_counter == 6) {
         if (onClock32PPQNCallback) {
             onClock32PPQNCallback(div32th_counter);
         }
@@ -356,7 +388,35 @@ void uClockClass::handleTimerInt()
     if (mod6_counter == 6) {
         mod6_counter = 0;
     }
-    
+}
+
+uint8_t inline uClockClass::processShuffle()
+{
+    uint8_t mod6_shuffle_counter;
+    if (!shuffle.active) {
+        mod6_shuffle_counter = mod6_counter;
+    } else {
+        // apply shuffle template to step
+        int8_t shff = shuffle.step[div16th_counter%shuffle.size];
+        // keep track of next note shuffle for current note lenght control
+        shuffle_length_ctrl = shuffle.step[(div16th_counter+1)%shuffle.size];
+        // prepare the next mod6 quantize to be called
+        if (shff == 0) {
+            mod6_shuffle_counter = mod6_counter;
+            shuffle_length_ctrl += shff;
+        } else if (shff > 0) {
+            if (shuffle_shoot_ctrl == false && mod6_counter > shff) 
+                shuffle_shoot_ctrl = true;
+            mod6_shuffle_counter = shuffle_shoot_ctrl ? mod6_counter - shff : 1;
+            shuffle_length_ctrl -= shff;
+        } else if (shff < 0) {
+            if (shuffle_shoot_ctrl == false && mod6_counter == 0) 
+                shuffle_shoot_ctrl = true;
+            mod6_shuffle_counter = shff - mod6_counter == -6 ? shuffle_shoot_ctrl ? 0 : 1 : 1;
+            shuffle_length_ctrl += shff;
+        }
+    }
+    return mod6_shuffle_counter;
 }
 
 // elapsed time support
