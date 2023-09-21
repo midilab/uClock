@@ -39,7 +39,7 @@ namespace umodular { namespace clock {
 // step adjust goes min: -5, max: 5
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
 typedef struct {
-    bool active;
+    bool active = false;
     uint8_t size = MAX_SHUFFLE_TEMPLATE_SIZE;
     int8_t step[MAX_SHUFFLE_TEMPLATE_SIZE] = {0};
 } SHUFFLE_TEMPLATE;
