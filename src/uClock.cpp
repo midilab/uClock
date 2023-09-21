@@ -262,11 +262,12 @@ void uClockClass::setShuffleData(uint8_t step, int8_t tick)
     ATOMIC(shuffle.step[step] = tick)
 }
 
-void uClockClass::setShuffleTemplate(int8_t * shuff, uint8_t size)
+void uClockClass::setShuffleTemplate(int8_t * shuff)
 {
+    uint8_t size = sizeof(shuff) / sizeof(shuff[0]);
     if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
         size = MAX_SHUFFLE_TEMPLATE_SIZE;
-    setShuffleSize(size);
+    ATOMIC(shuffle.size = size)
     for (uint8_t i=0; i < size; i++) {
         setShuffleData(i, shuff[i]);
     }

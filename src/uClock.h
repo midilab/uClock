@@ -161,7 +161,7 @@ public:
     bool isShuffled();
     void setShuffleSize(uint8_t size);
     void setShuffleData(uint8_t step, int8_t tick);
-    void setShuffleTemplate(int8_t * shuff, uint8_t size);
+    void setShuffleTemplate(int8_t * shuff);
     // use this to know how many positive or negative ticks to add to current note length
     int8_t getShuffleLength();
     
