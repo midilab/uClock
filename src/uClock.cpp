@@ -296,15 +296,17 @@ int8_t inline uClockClass::processShuffle()
                 shuffle_shoot_ctrl = true;
             mod6_shuffle_counter = shuffle_shoot_ctrl ? mod6_counter - shff : 1;
             shuffle_length_ctrl -= shff;
+            if (shuffle_length_ctrl == 0)
+                shuffle_length_ctrl = 1;
         } else if (shff < 0) {
             if (shuffle_shoot_ctrl == false && mod6_counter == 0) 
                 shuffle_shoot_ctrl = true;
             mod6_shuffle_counter = shff - mod6_counter == -6 ? shuffle_shoot_ctrl ? 0 : 1 : 1;
             shuffle_length_ctrl += shff;
+            if (shuffle_length_ctrl == 0)
+                shuffle_length_ctrl = -1;
         }
     }
-    if (shuffle_length_ctrl == 0)
-        shuffle_length_ctrl = 1;
     return mod6_shuffle_counter;
 }
 
