@@ -278,6 +278,36 @@ int8_t uClockClass::getShuffleLength()
     return shuffle_length_ctrl;
 }
 
+int8_t inline uClockClass::processShuffle()
+{
+    int8_t mod6_shuffle_counter;
+    if (!shuffle.active) {
+        mod6_shuffle_counter = mod6_counter;
+    } else {
+        // apply shuffle template to step
+        int8_t shff = shuffle.step[div16th_counter%shuffle.size];
+        // keep track of next note shuffle for current note lenght control
+        shuffle_length_ctrl = shuffle.step[(div16th_counter+1)%shuffle.size];
+        // prepare the next mod6 quantize to be called
+        if (shff == 0) {
+            mod6_shuffle_counter = mod6_counter;
+        } else if (shff > 0) {
+            if (shuffle_shoot_ctrl == false && mod6_counter > shff || (shff == 5 && mod6_counter == 0)) 
+                shuffle_shoot_ctrl = true;
+            mod6_shuffle_counter = shuffle_shoot_ctrl ? mod6_counter - shff : 1;
+            shuffle_length_ctrl -= shff;
+        } else if (shff < 0) {
+            if (shuffle_shoot_ctrl == false && mod6_counter == 0) 
+                shuffle_shoot_ctrl = true;
+            mod6_shuffle_counter = shff - mod6_counter == -6 ? shuffle_shoot_ctrl ? 0 : 1 : 1;
+            shuffle_length_ctrl += shff;
+        }
+    }
+    if (shuffle_length_ctrl == 0)
+        shuffle_length_ctrl = 1;
+    return mod6_shuffle_counter;
+}
+
 void uClockClass::handleExternalClock() 
 {
 
@@ -389,35 +419,6 @@ void uClockClass::handleTimerInt()
     if (mod6_counter == 6) {
         mod6_counter = 0;
     }
-}
-
-uint8_t inline uClockClass::processShuffle()
-{
-    uint8_t mod6_shuffle_counter;
-    if (!shuffle.active) {
-        mod6_shuffle_counter = mod6_counter;
-    } else {
-        // apply shuffle template to step
-        int8_t shff = shuffle.step[div16th_counter%shuffle.size];
-        // keep track of next note shuffle for current note lenght control
-        shuffle_length_ctrl = shuffle.step[(div16th_counter+1)%shuffle.size];
-        // prepare the next mod6 quantize to be called
-        if (shff == 0) {
-            mod6_shuffle_counter = mod6_counter;
-            shuffle_length_ctrl += shff;
-        } else if (shff > 0) {
-            if (shuffle_shoot_ctrl == false && mod6_counter > shff) 
-                shuffle_shoot_ctrl = true;
-            mod6_shuffle_counter = shuffle_shoot_ctrl ? mod6_counter - shff : 1;
-            shuffle_length_ctrl -= shff;
-        } else if (shff < 0) {
-            if (shuffle_shoot_ctrl == false && mod6_counter == 0) 
-                shuffle_shoot_ctrl = true;
-            mod6_shuffle_counter = shff - mod6_counter == -6 ? shuffle_shoot_ctrl ? 0 : 1 : 1;
-            shuffle_length_ctrl += shff;
-        }
-    }
-    return mod6_shuffle_counter;
 }
 
 // elapsed time support

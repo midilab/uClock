@@ -66,7 +66,7 @@ private:
     float inline freqToBpm(uint32_t freq);
 
     // shuffle
-    uint8_t inline processShuffle();
+    int8_t inline processShuffle();
 
     void (*onClock96PPQNCallback)(uint32_t tick);
     void (*onClock32PPQNCallback)(uint32_t tick);
