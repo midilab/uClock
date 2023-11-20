@@ -8,8 +8,6 @@
 // uses TimerTc3
 #define ATOMIC(X) noInterrupts(); X; interrupts();
 
-IntervalTimer _uclockTimer;
-
 // forward declaration of ISR
 void uClockHandler();
 
