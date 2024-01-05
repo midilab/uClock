@@ -367,7 +367,7 @@ void uClockClass::handleTimerInt()
 {
     // External sync is handled here... test if clock check on each tick instead when 
     // mod24_counter kicks in will help or worst slave timing sync quality
-    if (mod24_counter == mod24_ref) {
+    if (mod24_counter == 0) {
         if (mode == EXTERNAL_CLOCK) {
             // sync tick position with external tick clock
             if ((int_clock_tick < ext_clock_tick) || (int_clock_tick > (ext_clock_tick + 1))) {
@@ -399,18 +399,18 @@ void uClockClass::handleTimerInt()
         if (onSync24Callback) {
             onSync24Callback(int_clock_tick);
         }
-        // reset counter
-        mod24_counter = 0;
+        // reset counter reference
+        mod24_counter = mod24_ref;
         // internal clock tick me! sync24 tick too
         ++int_clock_tick;
     }
 
     // sync signals first please...
     if (onSync48Callback) {
-        if (mod48_counter == mod48_ref) {
+        if (mod48_counter == 0) {
             onSync48Callback(sync48_tick);
-            // reset counter
-            mod48_counter = 0;
+            // reset counter reference
+            mod48_counter = mod48_ref;
             // sync48 tick me!
             ++sync48_tick;
         }
@@ -424,10 +424,10 @@ void uClockClass::handleTimerInt()
     if (onStepCallback) {
         // we can add a time signature here for call setup based on mod_step_ref
         // basic will be 16ths, but let the option to handle unusual sequences
-        if (mod_step_counter == mod_step_ref) {
+        if (mod_step_counter == 0) {
             onStepCallback(step_counter);
-            // reset counter
-            mod_step_counter = 0;
+            // reset counter reference
+            mod_step_counter = mod_step_ref;
             // going forward to the next step call
             ++step_counter;
         }
@@ -444,10 +444,10 @@ void uClockClass::handleTimerInt()
 
     // tick me!
     ++tick;
-    // increment mod counters
-    ++mod24_counter;
-    ++mod48_counter;
-    ++mod_step_counter;
+    // decrement mod counters
+    --mod24_counter;
+    --mod48_counter;
+    --mod_step_counter;
 }
 
 // elapsed time support

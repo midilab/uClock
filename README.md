@@ -15,25 +15,29 @@ The uClock library API operates through attached callback functions mechanism:
 2. **onStepCallback(uint32_t step)** good way to code old style step sequencer based on 16th note schema(not dependent on PPQN resolution)
 3. **onSync24Callback(uint32_t tick)** good way to code a clock machine, or keep your gears synced with your device
 4. **onSync48Callback(uint32_t tick)** there are some 48ppqn based sync devices out there
-5. **onClockStartCallback()** there are some 48ppqn based sync devices out there
-6. **onClockStopCallback()** there are some 48ppqn based sync devices out there
+5. **onClockStartCallback()** on uClock Start event
+6. **onClockStopCallback()** on uClock Stop event
 
 ```c++
-// avaliable resolutions
-// [ uClock.PPQN_24, uClock.PPQN_48, uClock.PPQN_96, uClock.PPQN_384, uClock.PPQN_480, uClock.PPQN_960 ]
-// not mandatory to call, the default is 96PPQN if not set
-uClock.setPPQN(uClock.PPQN_96);
+#include <uClock.h>
 
-// you need to use at least one!
-uClock.setOnPPQN(onPPQNCallback);
-uClock.setOnStep(onStepCallback);
-uClock.setOnSync24(onSync24Callback);
-uClock.setOnSync48(onSync48Callback);
+void setup() {
+  // avaliable resolutions
+  // [ uClock.PPQN_24, uClock.PPQN_48, uClock.PPQN_96, uClock.PPQN_384, uClock.PPQN_480, uClock.PPQN_960 ]
+  // not mandatory to call, the default is 96PPQN if not set
+  uClock.setPPQN(uClock.PPQN_96);
 
-uClock.setOnClockStart(onClockStartCallback);
-uClock.setOnClockStop(onClockStopCallback);
+  // you need to use at least one!
+  uClock.setOnPPQN(onPPQNCallback);
+  uClock.setOnStep(onStepCallback);
+  uClock.setOnSync24(onSync24Callback);
+  uClock.setOnSync48(onSync48Callback);
 
-uClock.init();
+  uClock.setOnClockStart(onClockStartCallback);
+  uClock.setOnClockStop(onClockStopCallback);
+
+  uClock.init();
+}
 ```
 
 Resolutions: set youw own resolution for your clock needs
