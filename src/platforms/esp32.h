@@ -9,7 +9,7 @@ hw_timer_t * _uclockTimer = NULL;
 //#define ATOMIC(X) portENTER_CRITICAL_ISR(&_uclockTimerMux); X; portEXIT_CRITICAL_ISR(&_uclockTimerMux);
 
 // FreeRTOS main clock task size in bytes
-#define CLOCK_STACK_SIZE    5012 // adjust for your needs, a sequencer with heavy serial handling should be large in size
+#define CLOCK_STACK_SIZE    5*1024 // adjust for your needs, a sequencer with heavy serial handling should be large in size
 TaskHandle_t taskHandle;
 // mutex to protect the shared resource
 SemaphoreHandle_t _mutex;
