@@ -311,12 +311,35 @@ bool inline uClockClass::processShuffle()
     if (shuffle_shoot_ctrl == false && mod_counter == 0)
         shuffle_shoot_ctrl = true; 
 
+    //if (mod_counter == mod_step_ref-1)
+
     if (shff >= 0) {
         mod_shuffle = mod_counter - shff;
+        // any late shuffle? we should skip next mod_counter == 0
+        if (last_shff < 0 && mod_counter != 1)
+            return false; 
     } else if (shff < 0) {
         mod_shuffle = mod_counter - (mod_step_ref + shff);
+        //if (last_shff < 0 && mod_counter != 1)
+        //    return false; 
+        shuffle_shoot_ctrl = true;
     }
     
+    //Serial.println("-----------------");
+    //Serial.print("shff: ");
+    //Serial.println(shff);
+    //Serial.print("mod_counter: ");
+    //Serial.println(mod_counter);
+    //Serial.print("mod_shuffle: ");
+    //Serial.println(mod_shuffle);
+    //Serial.print("shuffle_shoot_ctrl: ");
+    //Serial.println(shuffle_shoot_ctrl);
+    //Serial.print("last_shff: ");
+    //Serial.println(last_shff);
+
+    last_shff = shff;
+
+    // shuffle_shoot_ctrl helps keep track if we have shoot or not a note for the step space of ppqn/4 pulses
     if (mod_shuffle == 0 && shuffle_shoot_ctrl == true) {
         // keep track of next note shuffle for current note lenght control
         shuffle_length_ctrl = shuffle.step[(step_counter+1)%shuffle.size];

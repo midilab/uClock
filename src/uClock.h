@@ -44,9 +44,8 @@ namespace umodular { namespace clock {
 // 48 PPQN (12 pulses per step)
 // 96 PPQN (24 pulses per step)
 
-// min: 2 step, max: 16 steps  
-// adjust the size of you template if more than 16 needed
-// step adjust goes min: -5, max: 5
+// min: -(ppqn/4)-1 step, max: (ppqn/4)-1 steps  
+// adjust the size of you template if more than 16 shuffle step info needed
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
 typedef struct {
     bool active = false;
@@ -198,13 +197,14 @@ class uClockClass {
 
         float tempo;
         uint32_t start_timer;
-        uint8_t mode;
+        SyncMode mode;
 
         volatile uint32_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
         uint16_t ext_interval_idx;
 
-        // shuffle implementation that applies to 16PPQN callback
+        // shuffle implementation
         volatile SHUFFLE_TEMPLATE shuffle;
+        int8_t last_shff = 0;
         bool shuffle_shoot_ctrl = true;
         volatile int8_t shuffle_length_ctrl = 0;
 };
