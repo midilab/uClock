@@ -279,9 +279,9 @@ void uClockClass::setShuffleData(uint8_t step, int8_t tick)
     ATOMIC(shuffle.step[step] = tick)
 }
 
-void uClockClass::setShuffleTemplate(int8_t * shuff)
+void uClockClass::setShuffleTemplate(int8_t * shuff, uint8_t size)
 {
-    uint8_t size = sizeof(shuff) / sizeof(shuff[0]);
+    //uint8_t size = sizeof(shuff) / sizeof(shuff[0]);
     if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
         size = MAX_SHUFFLE_TEMPLATE_SIZE;
     ATOMIC(shuffle.size = size)
@@ -294,40 +294,43 @@ int8_t uClockClass::getShuffleLength()
 {
     return shuffle_length_ctrl;
 }
-/* 
-int8_t inline uClockClass::processShuffle()
+
+bool inline uClockClass::processShuffle()
 {
-    // mod6_counter will become mod_step_counter
-    int8_t mod6_shuffle_counter;
     if (!shuffle.active) {
-        mod6_shuffle_counter = mod6_counter;
-    } else {
-        // apply shuffle template to step
-        int8_t shff = shuffle.step[div16th_counter%shuffle.size];
-        // keep track of next note shuffle for current note lenght control
-        shuffle_length_ctrl = shuffle.step[(div16th_counter+1)%shuffle.size];
-        // prepare the next mod6 quantize to be called
-        if (shff == 0) {
-            mod6_shuffle_counter = mod6_counter;
-        } else if (shff > 0) {
-            if (shuffle_shoot_ctrl == false && mod6_counter > shff || (shff == 5 && mod6_counter == 0)) 
-                shuffle_shoot_ctrl = true;
-            mod6_shuffle_counter = shuffle_shoot_ctrl ? mod6_counter - shff : 1;
-            shuffle_length_ctrl -= shff;
-            if (shuffle_length_ctrl == 0)
-                shuffle_length_ctrl = 1;
-        } else if (shff < 0) {
-            if (shuffle_shoot_ctrl == false && mod6_counter == 0) 
-                shuffle_shoot_ctrl = true;
-            mod6_shuffle_counter = shff - mod6_counter == -6 ? shuffle_shoot_ctrl ? 0 : 1 : 1;
-            shuffle_length_ctrl += shff;
-            if (shuffle_length_ctrl == 0)
-                shuffle_length_ctrl = -1;
-        }
+        return mod_step_counter == 0;
     }
-    return mod6_shuffle_counter;
+
+    // internal reference for mod_counter
+    uint8_t mod_counter = mod_step_ref - (mod_step_counter == 0 ? mod_step_ref : mod_step_counter);
+    int8_t mod_shuffle = 0;
+
+    // check shuffle template to step
+    int8_t shff = shuffle.step[step_counter%shuffle.size];
+
+    if (shuffle_shoot_ctrl == false && mod_counter == 0)
+        shuffle_shoot_ctrl = true; 
+
+    if (shff >= 0) {
+        mod_shuffle = mod_counter - shff;
+    } else if (shff < 0) {
+        mod_shuffle = mod_counter - (mod_step_ref + shff);
+    }
+    
+    if (mod_shuffle == 0 && shuffle_shoot_ctrl == true) {
+        // keep track of next note shuffle for current note lenght control
+        shuffle_length_ctrl = shuffle.step[(step_counter+1)%shuffle.size];
+        if (shff > 0)
+            shuffle_length_ctrl -= shff;
+        if (shff < 0)
+            shuffle_length_ctrl += shff;
+        shuffle_shoot_ctrl = false;
+        return true;
+    }
+
+    return false;
 }
- */
+
 // it is expected to be called in 24PPQN 
 void uClockClass::handleExternalClock() 
 {
@@ -421,26 +424,21 @@ void uClockClass::handleTimerInt()
         onPPQNCallback(tick);
     }
     
+    // step callback to support 16th old school style sequencers
+    // with builtin shuffle for this callback only
     if (onStepCallback) {
-        // we can add a time signature here for call setup based on mod_step_ref
-        // basic will be 16ths, but let the option to handle unusual sequences
-        if (mod_step_counter == 0) {
+        // processShufle make use of mod_step_counter
+        if (processShuffle()) {        
             onStepCallback(step_counter);
-            // reset counter reference
-            mod_step_counter = mod_step_ref;
             // going forward to the next step call
             ++step_counter;
         }
-    }
-
-    /* // TODO: port it from 24PPQN to ppqn set
-    if (processShuffle() == 0) {        
-        //if (mod_step_counter == signature) {
-        if (onStepCallback) {
-            onStepCallback(mod_step_counter);
+        // keep track of mod_step_counter
+        if (mod_step_counter == 0) {
+            // reset counter reference
+            mod_step_counter = mod_step_ref;
         }
-        shuffle_shoot_ctrl = false;
-    } */
+    }
 
     // tick me!
     ++tick;
