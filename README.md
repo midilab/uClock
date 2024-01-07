@@ -31,7 +31,6 @@ void setup() {
   uClock.setOnPPQN(onPPQNCallback);
   uClock.setOnStep(onStepCallback);
   uClock.setOnSync24(onSync24Callback);
-  uClock.setOnSync48(onSync48Callback);
 
   uClock.setOnClockStart(onClockStartCallback);
   uClock.setOnClockStop(onClockStopCallback);

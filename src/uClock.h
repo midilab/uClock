@@ -92,7 +92,7 @@ class uClockClass {
             PPQN_960 = 960
         };
 
-        uint8_t state;
+        ClockState state;
         
         uClockClass();
 
@@ -106,10 +106,6 @@ class uClockClass {
         
         void setOnSync24(void (*callback)(uint32_t tick)) {
             onSync24Callback = callback;
-        }
-
-        void setOnSync48(void (*callback)(uint32_t tick)) {
-            onSync48Callback = callback;
         }
 
         void setOnClockStart(void (*callback)()) {
@@ -170,7 +166,6 @@ class uClockClass {
         void (*onPPQNCallback)(uint32_t tick);
         void (*onStepCallback)(uint32_t step);
         void (*onSync24Callback)(uint32_t tick);
-        void (*onSync48Callback)(uint32_t tick);
         void (*onClockStartCallback)();
         void (*onClockStopCallback)();
 
@@ -179,11 +174,8 @@ class uClockClass {
         PPQNResolution ppqn = PPQN_96;
         uint32_t tick;
         uint32_t int_clock_tick;
-        uint32_t sync48_tick;
         uint8_t mod24_counter;
         uint8_t mod24_ref;
-        uint8_t mod48_counter;
-        uint8_t mod48_ref;
         uint8_t mod_step_counter;
         uint8_t mod_step_ref;
         uint32_t step_counter; // should we go uint16_t?
