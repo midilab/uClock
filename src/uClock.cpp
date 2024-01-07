@@ -217,7 +217,7 @@ void uClockClass::setMode(SyncMode tempo_mode)
     mode = tempo_mode;
 }
 
-uint8_t uClockClass::getMode() 
+uClockClass::SyncMode uClockClass::getMode() 
 {
     return mode;
 }
