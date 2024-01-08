@@ -241,9 +241,6 @@ void uClockClass::resetCounters()
     ext_clock_tick = 0;
     ext_clock_us = 0;
     ext_interval_idx = 0;
-    //ext_mod24_counter = 0;
-    //ext_mod_step_counter = 0;
-    //ext_step_counter = 0;
     
     for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
         ext_interval_buffer[i] = 0;
@@ -378,45 +375,44 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::handleTimerInt()  
 {
-    // do we put a limit here to check external sync phase?
-    // try on at max PPQN
-    if (mode == EXTERNAL_CLOCK) {
-        // sync tick position with external tick clock
-        if ((int_clock_tick < ext_clock_tick) || (int_clock_tick > (ext_clock_tick + 1))) {
-            int_clock_tick = ext_clock_tick;
-            tick = int_clock_tick * mod24_ref;
-            mod24_counter = int_clock_tick % mod24_ref;
-            mod_step_counter = int_clock_tick % mod_step_ref;
-        }
-
-        uint32_t counter = ext_interval;
-        uint32_t now_clock_us = micros();
-        sync_interval = clock_diff(ext_clock_us, now_clock_us);
-
-        if (int_clock_tick <= ext_clock_tick) {
-            counter -= phase_mult(sync_interval);
-        } else {
-            if (counter > sync_interval) {
-                counter += phase_mult(counter - sync_interval);
-            }
-        }
-
-        // update internal clock timer frequency
-        float bpm = freqToBpm(counter);
-        if (bpm != tempo) {
-            if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
-                tempo = bpm;
-                setTimerTempo(bpm);
-            }
-        }
-    }
-
     // reset mod24 counter reference ?
     if (mod24_counter == mod24_ref)
         mod24_counter = 0;
 
-    // sync signals first please...
+    // process sync signals first please...
     if (mod24_counter == 0) {
+
+        if (mode == EXTERNAL_CLOCK) {
+            // sync tick position with external tick clock
+            if ((int_clock_tick < ext_clock_tick) || (int_clock_tick > (ext_clock_tick + 1))) {
+                int_clock_tick = ext_clock_tick;
+                tick = int_clock_tick * mod24_ref;
+                mod24_counter = tick % mod24_ref;
+                mod_step_counter = tick % mod_step_ref;
+            }
+
+            uint32_t counter = ext_interval;
+            uint32_t now_clock_us = micros();
+            sync_interval = clock_diff(ext_clock_us, now_clock_us);
+
+            if (int_clock_tick <= ext_clock_tick) {
+                counter -= phase_mult(sync_interval);
+            } else {
+                if (counter > sync_interval) {
+                    counter += phase_mult(counter - sync_interval);
+                }
+            }
+
+            // update internal clock timer frequency
+            float bpm = freqToBpm(counter);
+            if (bpm != tempo) {
+                if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
+                    tempo = bpm;
+                    setTimerTempo(bpm);
+                }
+            }
+        }
+
         if (onSync24Callback) {
             onSync24Callback(int_clock_tick);
         }
