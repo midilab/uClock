@@ -6,7 +6,7 @@
 
 // Sequencer config
 #define STEP_MAX_SIZE      16
-#define NOTE_LENGTH        4 // min: 1 max: 5 DO NOT EDIT BEYOND!!!
+#define NOTE_LENGTH        12 // min: 1 max: 23 DO NOT EDIT BEYOND!!! 12 = 50% on 96ppqn, same as original tb303. 62.5% for triplets time signature
 #define NOTE_VELOCITY      90
 #define ACCENT_VELOCITY    127
 
@@ -47,8 +47,7 @@ uint16_t _step_length = STEP_MAX_SIZE;
 
 // make sure all above sequencer data are modified atomicly only
 // eg. ATOMIC(_sequencer[0].accent = true); ATOMIC(_step_length = 7);
-uint8_t _tmpSREG;
-#define ATOMIC(X) _tmpSREG = SREG; cli(); X; SREG = _tmpSREG;
+#define ATOMIC(X) noInterrupts(); X; interrupts();
 
 // shared data to be used for user interface feedback
 bool _playing = false;
@@ -63,8 +62,8 @@ void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
   Serial.write(byte2);
 }
 
-// The callback function wich will be called by uClock each Pulse of 16PPQN clock resolution. Each call represents exactly one step.
-void ClockOut16PPQN(uint32_t tick) 
+// Each call represents exactly one step.
+void onStepCallback(uint32_t tick) 
 {
   uint16_t step;
   uint16_t length = NOTE_LENGTH;
@@ -102,11 +101,8 @@ void ClockOut16PPQN(uint32_t tick)
 }
 
 // The callback function wich will be called by uClock each Pulse of 96PPQN clock resolution.
-void ClockOut96PPQN(uint32_t tick) 
+void onPPQNCallback(uint32_t tick) 
 {
-  // Send MIDI_CLOCK to external hardware
-  Serial.write(MIDI_CLOCK);
-
   // handle note on stack
   for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {
     if ( _note_stack[i].length != -1 ) {
@@ -120,6 +116,11 @@ void ClockOut96PPQN(uint32_t tick)
 
   // user feedback about sequence time events
   tempoInterface(tick);
+}
+
+void onSync24Callback(uint32_t tick) {
+  // Send MIDI_CLOCK to external gears
+  Serial.write(MIDI_CLOCK);
 }
 
 // The callback function wich will be called when clock starts by using Clock.start() method.
@@ -157,14 +158,17 @@ void setup()
   uClock.init();
   
   // Set the callback function for the clock output to send MIDI Sync message.
-  uClock.setClock96PPQNOutput(ClockOut96PPQN);
-  
+  uClock.setOnPPQN(onPPQNCallback);
+
+  // for MIDI sync
+  uClock.setOnSync24(onSync24Callback);
+
   // Set the callback function for the step sequencer on 16ppqn
-  uClock.setClock16PPQNOutput(ClockOut16PPQN);  
+  uClock.setOnStep(onStepCallback);  
   
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStartOutput(onClockStart);  
-  uClock.setOnClockStopOutput(onClockStop);
+  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStop(onClockStop);
   
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);

@@ -51,7 +51,7 @@ void handle_bpm_led(uint32_t tick) {
 }
 
 // Internal clock handlers
-void ClockOut96PPQN(uint32_t tick) {
+void onSync24Callback(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
   MIDI.sendRealTime(MIDI_CLOCK);
   handle_bpm_led(tick);
@@ -87,7 +87,7 @@ void setup() {
   // Initiate MIDI communications, listen to all channels, disable soft MIDI thru
   MIDI.begin();
   MIDI.turnThruOff();
-MIDI.setHandleClock(onExternalClock);
+  MIDI.setHandleClock(onExternalClock);
   MIDI.setHandleStart(onExternalStart);
   MIDI.setHandleStop(onExternalStop);
 
@@ -98,7 +98,7 @@ MIDI.setHandleClock(onExternalClock);
   //
   // OLED setup
   // Please check you oled model to correctly init him
-// The complete list is available here: https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
+  // The complete list is available here: https://github.com/olikraus/u8g2/wiki/u8g2setupcpp
   //
   //u8x8 = new U8X8_SH1106_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
   u8x8 = new U8X8_SSD1306_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
@@ -112,10 +112,10 @@ MIDI.setHandleClock(onExternalClock);
   // uClock Setup
   //
   uClock.init();
-  uClock.setClock96PPQNOutput(ClockOut96PPQN);
+  uClock.setOnSync24(onSync24Callback);
   // For MIDI Sync Start and Stop
-  uClock.setOnClockStartOutput(onClockStart);
-  uClock.setOnClockStopOutput(onClockStop);
+  uClock.setOnClockStart(onClockStart);
+  uClock.setOnClockStop(onClockStop);
   uClock.setMode(uClock.EXTERNAL_CLOCK);
   //uClock.setTempo(136.5);
   //uClock.start();

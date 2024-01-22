@@ -50,7 +50,7 @@ void handle_bpm_led(uint32_t tick)
 }
 
 // Internal clock handlers
-void ClockOut96PPQN(uint32_t tick) {
+void onSync24Callback(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
   usbMIDI.sendRealTime(MIDI_CLOCK);
   handle_bpm_led(tick);
@@ -110,10 +110,10 @@ void setup() {
   //
   // Setup our clock system
   uClock.init();
-  uClock.setClock96PPQNOutput(ClockOut96PPQN);
+  uClock.setOnSync24(onSync24Callback);
   // For MIDI Sync Start and Stop
-  uClock.setOnClockStartOutput(onClockStart);
-  uClock.setOnClockStopOutput(onClockStop);
+  uClock.setOnClockStart(onClockStart);
+  uClock.setOnClockStop(onClockStop);
   uClock.setMode(uClock.EXTERNAL_CLOCK);
   // make use of 250us timer to handle midi input sync
   teensyTimer.begin(handleMidiInput, 250); 

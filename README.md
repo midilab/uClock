@@ -18,6 +18,27 @@ The uClock library API operates through attached callback functions mechanism:
 5. **onClockStartCallback()** on uClock Start event
 6. **onClockStopCallback()** on uClock Stop event
 
+## uClock v2.0 Breakchanges
+
+If you are comming from uClock version < 2.0 versions keep attention to the breakchanges so you can update your code to the new API interface changes:
+
+#### setCallback functions name changing:  
+**setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now setOnPPQN(onPPQNCallback) and his clock depends on the PPQN setup using setPPQN  (clockPPQNResolution). For clock setup you now use a separeted callback via setOnSync24(onSync48Callback) or setOnSync24(onSync48Callback)  
+**setOnClockStartOutput(onClockStartCallback)** is now setOnClockStart(onClockStartCallback)  
+**setOnClockStopOutput(onClockStopCallback)** is now setOnClockStop(onClockStopCallback)  
+**setOnClockStartOutput(onClockStartCallback)** is now setOnClockStart(onClockStartCallback)  
+**setClock16PPQNOutput(ClockOut16PPQN)** is now setOnStep(onStepCall) and its not dependent on clock PPQN resolution  
+
+#### Tick resolution and sequencers
+
+If you have write a sequencer using setClock16PPQNOutput only its ok to just change the API call to setOnStep, but if you were dependent on setClock96PPQNOutput you migth need to review you tick counting system depending on wich PPQN clock resolution you choose.
+
+
+## Examples
+
+You will find more complete examples on examples/ folder:  
+
+
 ```c++
 #include <uClock.h>
 
@@ -71,7 +92,7 @@ Here is an example on how to create a simple MIDI Sync Box on Arduino boards
 #define MIDI_START 0xFA
 #define MIDI_STOP  0xFC
 
-// The callback function wich will be called by Clock each Pulse of 96PPQN clock resolution.
+// The callback function wich will be called by Clock each Pulse of 24PPQN clock resolution.
 void onSync24Callback(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
   Serial.write(MIDI_CLOCK);
@@ -168,7 +189,7 @@ A clone of Roland TB303 step sequencer main engine, here is an example with no u
 
 // Sequencer config
 #define STEP_MAX_SIZE      16
-#define NOTE_LENGTH        4 // min: 1 max: 5 DO NOT EDIT BEYOND!!!
+#define NOTE_LENGTH        12 // min: 1 max: 23 DO NOT EDIT BEYOND!!! 12 = 50% on 96ppqn, same as original tb303. 62.5% for triplets time signature
 #define NOTE_VELOCITY      90
 #define ACCENT_VELOCITY    127
 
@@ -223,7 +244,7 @@ void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 }
 
 // The callback function wich will be called by uClock each Pulse of 16PPQN clock resolution. Each call represents exactly one step.
-void ClockOut16PPQN(uint32_t tick) 
+void onStepCallback(uint32_t tick) 
 {
   uint16_t step;
   uint16_t length = NOTE_LENGTH;
@@ -240,7 +261,7 @@ void ClockOut16PPQN(uint32_t tick)
       ++step;
       step = step % _step_length;
       if ( _sequencer[step].glide == true && _sequencer[step].rest == false ) {
-        length = NOTE_LENGTH + (i * 6);
+        length = NOTE_LENGTH + (i * 24);
         break;
       } else if ( _sequencer[step].rest == false ) {
         break;
@@ -261,7 +282,7 @@ void ClockOut16PPQN(uint32_t tick)
 }
 
 // The callback function wich will be called by uClock each Pulse of 96PPQN clock resolution.
-void ClockOut96PPQN(uint32_t tick) 
+void onPPQNCallback(uint32_t tick) 
 {
   // Send MIDI_CLOCK to external hardware
   Serial.write(MIDI_CLOCK);
@@ -307,14 +328,14 @@ void setup()
   uClock.init();
   
   // Set the callback function for the clock output to send MIDI Sync message.
-  uClock.setClock96PPQNOutput(ClockOut96PPQN);
+  uClock.setOnPPQN(onPPQNCallback);
   
   // Set the callback function for the step sequencer on 16ppqn
-  uClock.setClock16PPQNOutput(ClockOut16PPQN);  
+  uClock.setOnStep(onStepCallback);  
   
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStartOutput(onClockStart);  
-  uClock.setOnClockStopOutput(onClockStop);
+  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStop(onClockStop);
   
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);

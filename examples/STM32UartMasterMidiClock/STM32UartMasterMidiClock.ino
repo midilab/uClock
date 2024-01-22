@@ -40,7 +40,7 @@ void handle_bpm_led(uint32_t tick)
 }
 
 // Internal clock handlers
-void ClockOut96PPQN(uint32_t tick) {
+void onSync24Callback(uint32_t tick) {
   // Send MIDI_CLOCK to external gear
   Serial1.write(MIDI_CLOCK);
   handle_bpm_led(tick);
@@ -67,10 +67,10 @@ void setup() {
   // Inits the clock
   uClock.init();
   // Set the callback function for the clock output to send MIDI Sync message.
-  uClock.setClock96PPQNOutput(ClockOut96PPQN);
+  uClock.setOnSync24(onSync24Callback);
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStartOutput(onClockStart);  
-  uClock.setOnClockStopOutput(onClockStop);
+  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStop(onClockStop);
   // Set the clock BPM to 126 BPM
   uClock.setTempo(120);
   // Starts the clock, tick-tac-tick-tac...
