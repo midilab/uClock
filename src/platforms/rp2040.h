@@ -1,13 +1,11 @@
 #include <Arduino.h>
-#include <freertos/task.h>
-#include <freertos/semphr.h>
+#include "FreeRTOS.h"
+#include <task.h>
+#include <semphr.h>
+#include "pico/sync.h"
 
-// esp32-specific timer
-#define TIMER_ID	0
-hw_timer_t * _uclockTimer = NULL;
-// mutex control for ISR
-//portMUX_TYPE _uclockTimerMux = portMUX_INITIALIZER_UNLOCKED;
-//#define ATOMIC(X) portENTER_CRITICAL_ISR(&_uclockTimerMux); X; portEXIT_CRITICAL_ISR(&_uclockTimerMux);
+// RPi-specific timer
+struct repeating_timer timer;
 
 // FreeRTOS main clock task size in bytes
 #define CLOCK_STACK_SIZE    5*1024 // adjust for your needs, a sequencer with heavy serial handling should be large in size
@@ -20,13 +18,15 @@ SemaphoreHandle_t _mutex;
 // forward declaration of uClockHandler
 void uClockHandler();
 
-// ISR handler
-void ARDUINO_ISR_ATTR handlerISR(void)
+// ISR handler -- called when tick happens
+bool handlerISR(repeating_timer *timer)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     // Send a notification to task1
     vTaskNotifyGiveFromISR(taskHandle, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+
+    return true;
 }
 
 // task for user clock process
@@ -47,19 +47,11 @@ void initTimer(uint32_t init_clock)
     // create the clockTask
     xTaskCreate(clockTask, "clockTask", CLOCK_STACK_SIZE, NULL, 1, &taskHandle);
 
-    _uclockTimer = timerBegin(TIMER_ID, 80, true);
-
-    // attach to generic uclock ISR
-    timerAttachInterrupt(_uclockTimer, &handlerISR, false);
-
-    // init clock tick time
-    timerAlarmWrite(_uclockTimer, init_clock, true); 
-
-    // activate it!
-    timerAlarmEnable(_uclockTimer);
+    // set up RPi interrupt timer
+    add_repeating_timer_us(init_clock, &handlerISR, NULL, &timer);
 }
 
-void setTimer(uint32_t us_interval)
-{
-    timerAlarmWrite(_uclockTimer, us_interval, true); 
+void setTimer(uint32_t us_interval) {
+    cancel_repeating_timer(&timer);
+	add_repeating_timer_us(us_interval, &handlerISR, NULL, &timer);
 }
