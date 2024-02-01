@@ -9,11 +9,16 @@
 
 Adafruit_USBD_MIDI usb_midi;
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI_USB);
-
-//#define LED_BUILTIN PIN_LED_B
-
 //MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
+
 #include <uClock.h>
+
+#define ATOMIC(X) { uint32_t __interrupt_mask = save_and_disable_interrupts(); X; restore_interrupts(__interrupt_mask); }
+//#define LED_BUILTIN PIN_LED_B
+//#define WAIT_FOR_SERIAL
+#define ENABLE_MULTICORE    
+
+volatile uint32_t count = 0;
 
 uint8_t bpm_blink_timer = 1;
 void handle_bpm_led(uint32_t tick)
@@ -36,6 +41,8 @@ void onSync24Callback(uint32_t tick) {
   // Send MIDI_CLOCK to external gears
   MIDI_USB.sendRealTime(midi::Clock);
   handle_bpm_led(tick);
+
+  Serial.printf("ticked with %u\n", tick);
 }
 
 void onClockStart() {
@@ -45,6 +52,16 @@ void onClockStart() {
 void onClockStop() {
   MIDI_USB.sendRealTime(midi::Stop);
 }
+
+#ifdef ENABLE_MULTICORE
+  void setup1() {
+  }
+
+  void loop1() {
+    if (count%1000==0)
+      ATOMIC(Serial.println("loop1()!"); Serial.flush());
+  }
+#endif
 
 void setup() {
 #if defined(ARDUINO_ARCH_MBED) && defined(ARDUINO_ARCH_RP2040)
@@ -58,8 +75,10 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   
   Serial.begin(115200);
-  while (!Serial)
-    delay(1);
+  #ifdef WAIT_FOR_SERIAL
+    while (!Serial)
+      delay(1);
+  #endif
   
   // wait until device mounted
   /*while( !TinyUSBDevice.mounted() ) {
@@ -78,19 +97,18 @@ void setup() {
   uClock.setOnClockStart(onClockStart);  
   uClock.setOnClockStop(onClockStop);
   // Set the clock BPM to 126 BPM
-  uClock.setTempo(126);
+  uClock.setTempo(60);
   // Starts the clock, tick-tac-tick-tac..
   Serial.println("about to uClock.start()..."); Serial.flush();
   uClock.start();
-  Serial.println("uClock.start()ed!"); Serial.flush();
+  ATOMIC(Serial.println("uClock.start()ed!"); Serial.flush();)
 }
 
-uint32_t count = 0;
 
 // Do it whatever to interface with Clock.stop(), Clock.start(), Clock.setTempo() and integrate your environment...
 void loop() {
   MIDI_USB.read();
   count++;
   if (millis()%1000==0)
-    Serial.println("looped!!!");
+    ATOMIC(Serial.println("loop()!"); Serial.flush(););
 }

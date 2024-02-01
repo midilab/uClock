@@ -11,6 +11,8 @@
 
 #include <uClock.h>
 
+#define ATOMIC(X) { uint32_t __interrupt_mask = save_and_disable_interrupts(); X; restore_interrupts(__interrupt_mask); }
+
 uint8_t bpm_blink_timer = 1;
 void handle_bpm_led(uint32_t tick)
 {
@@ -50,14 +52,14 @@ void setup() {
 
   // A led to count bpms
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
+  /*digitalWrite(LED_BUILTIN, HIGH);
   delay(500);
   digitalWrite(LED_BUILTIN, LOW);
   delay(500);
   digitalWrite(LED_BUILTIN, HIGH);
   delay(500);
   digitalWrite(LED_BUILTIN, LOW);
-  delay(500);
+  delay(500);*/
 
   
   Serial.begin(115200);
@@ -88,5 +90,5 @@ void loop() {
   //MIDI_USB.read();
   //count++;
   //if (millis()%1000==0)
-  //  Serial.println("looped!");
+  //  ATOMIC(Serial.println("looped!"));
 }
