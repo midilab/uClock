@@ -10,8 +10,6 @@
 Adafruit_USBD_MIDI usb_midi;
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI_USB);
 
-//#define LED_BUILTIN PIN_LED_B
-
 //MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #include <uClock.h>
 
@@ -62,11 +60,11 @@ void setup() {
     delay(1);
   
   // wait until device mounted
-  /*while( !TinyUSBDevice.mounted() ) {
+  while( !TinyUSBDevice.mounted() ) {
     Serial.println("waiting for usb..");
     Serial.flush();
     delay(1);
-  }*/
+  }
 
   // Setup our clock system
   // Inits the clock
@@ -85,12 +83,6 @@ void setup() {
   Serial.println("uClock.start()ed!"); Serial.flush();
 }
 
-uint32_t count = 0;
-
 // Do it whatever to interface with Clock.stop(), Clock.start(), Clock.setTempo() and integrate your environment...
 void loop() {
-  MIDI_USB.read();
-  count++;
-  if (millis()%1000==0)
-    Serial.println("looped!!!");
 }
