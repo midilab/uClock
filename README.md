@@ -378,6 +378,7 @@ void loop()
 
 ### RP2040 support
 
+- Uses the [earlephilhower core](https://github.com/earlephilhower/arduino-pico)
 - Doing a 'soft reboot' (eg from reflashing) seems to crash on startup, but starting from cold and powering on works fine.
 - Using FreeRTOS multithreading fails if the second core is used (via setup1() and loop1()) - using the 'interrupts-based' version of the RP2040 uClock support seems to solve this.
 - Tick ticking may be off due to repeating_timer following from the end of previous tick, rather than following the start of the previous tick.  
