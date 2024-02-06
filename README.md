@@ -24,7 +24,7 @@ If you are coming from uClock version < 2.0 versions pay attention to the breaki
 
 ### setCallback function name changes
 
-- **setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now _setOnPPQN(onPPQNCallback)_ and his clock depends on the PPQN setup using _setPPQN (clockPPQNResolution)_. For clock setup you now use a separated callback via _setOnSync24(onSync48Callback)_ or _setOnSync24(onSync48Callback)_
+- **setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now _setOnPPQN(onPPQNCallback)_ and his clock depends on the PPQN setup using _setPPQN(clockPPQNResolution)_. For clock setup you now use a separated callback via _setOnSync24(onSync24Callback)_ or _setOnSync48(onSync48Callback)_
 - **setClock16PPQNOutput(ClockOut16PPQN)** is now _setOnStep(onStepCall)_ and it's not dependent on clock PPQN resolution  
 - **setOnClockStartOutput(onClockStartCallback)** is now _setOnClockStart(onClockStartCallback)_
 - **setOnClockStopOutput(onClockStopCallback)** is now _setOnClockStop(onClockStopCallback)_
