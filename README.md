@@ -14,9 +14,8 @@ The uClock library API operates through attached callback functions mechanism:
 1. **setOnPPQN(onPPQNCallback) > onPPQNCallback(uint32_t tick)** calls on each new pulse based on selected PPQN resolution (if no PPQN set, the default is 96PPQN)
 2. **setOnStep(onStepCallback) > onStepCallback(uint32_t step)** good way to code old style step sequencer based on 16th note schema (not dependent on PPQN resolution)
 3. **setOnSync24(onSync24Callback) > onSync24Callback(uint32_t tick)** good way to code a clock machine, or keep your devices synced with your device
-4. **setOnSync48(onSync48Callback) > onSync48Callback(uint32_t tick)** there are some 48ppqn based sync devices out there
-5. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** on uClock Start event
-6. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** on uClock Stop event
+4. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** on uClock Start event
+5. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** on uClock Stop event
 
 ## uClock v2.0 Breaking Changes
 
@@ -24,7 +23,7 @@ If you are coming from uClock version < 2.0 versions pay attention to the breaki
 
 ### setCallback function name changes
 
-- **setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now _setOnPPQN(onPPQNCallback)_ and his clock depends on the PPQN setup using _setPPQN(clockPPQNResolution)_. For clock setup you now use a separated callback via _setOnSync24(onSync24Callback)_ or _setOnSync48(onSync48Callback)_
+- **setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now _setOnPPQN(onPPQNCallback)_ and this clock depends on the PPQN setup using _setPPQN(clockPPQNResolution)_. For clock setup you now use a separated callback via _setOnSync24(onSync24Callback)_
 - **setClock16PPQNOutput(ClockOut16PPQN)** is now _setOnStep(onStepCall)_ and it's not dependent on clock PPQN resolution  
 - **setOnClockStartOutput(onClockStartCallback)** is now _setOnClockStart(onClockStartCallback)_
 - **setOnClockStopOutput(onClockStopCallback)** is now _setOnClockStop(onClockStopCallback)_
