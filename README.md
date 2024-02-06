@@ -18,14 +18,14 @@ The uClock library API operates through attached callback functions mechanism:
 5. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** on uClock Start event
 6. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** on uClock Stop event
 
-## uClock v2.0 Breakchanges
+## uClock v2.0 Breaking Changes
 
-If you are comming from uClock version < 2.0 versions keep attention to the breakchanges so you can update your code to the new API interface changes:
+If you are coming from uClock version < 2.0 versions pay attention to the breaking changes so you can update your code to reflect the new API interface:
 
-### setCallback functions name changing:
+### setCallback function name changes
 
-- **setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now _setOnPPQN(onPPQNCallback)_ and his clock depends on the PPQN setup using setPPQN (clockPPQNResolution). For clock setup you now use a separated callback via setOnSync24(onSync48Callback) or setOnSync24(onSync48Callback)
-- **setClock16PPQNOutput(ClockOut16PPQN)** is now _setOnStep(onStepCall)_ and its not dependent on clock PPQN resolution  
+- **setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now _setOnPPQN(onPPQNCallback)_ and his clock depends on the PPQN setup using _setPPQN (clockPPQNResolution)_. For clock setup you now use a separated callback via _setOnSync24(onSync48Callback)_ or _setOnSync24(onSync48Callback)_
+- **setClock16PPQNOutput(ClockOut16PPQN)** is now _setOnStep(onStepCall)_ and it's not dependent on clock PPQN resolution  
 - **setOnClockStartOutput(onClockStartCallback)** is now _setOnClockStart(onClockStartCallback)_
 - **setOnClockStopOutput(onClockStopCallback)** is now _setOnClockStop(onClockStopCallback)_
 
@@ -44,7 +44,7 @@ If created a device using setClock16PPQNOutput only you just change the API call
 
 To generate a MIDI sync signal and synchronize external MIDI devices, you can start working with the resolution of 24PPQN, which aligns with the clocking standards of modern MIDI-syncable devices commonly available in the market. By sending 24 pulses per quarter note interval, you can ensure effective synchronization among your MIDI devices.
 
-If you are working on the development of a vintage-style step sequencer, utilizing a resolution of 96PPQN is a fitting option to initiate the coding process. Then you can use onStepCallback call wich corresponds to a step played note or event.
+If you are working on the development of a vintage-style step sequencer, utilizing a resolution of 96PPQN is a fitting option to initiate the coding process. Then you can use onStepCallback call wich corresponds to a step played, note or event.
 
 Furthermore, it is possible to utilize all three resolutions simultaneously, allowing for flexibility based on your specific requirements and preferences.
 
