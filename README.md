@@ -44,7 +44,7 @@ If created a device using setClock16PPQNOutput only you just change the API call
 
 To generate a MIDI sync signal and synchronize external MIDI devices, you can start working with the resolution of 24PPQN, which aligns with the clocking standards of modern MIDI-syncable devices commonly available in the market. By sending 24 pulses per quarter note interval, you can ensure effective synchronization among your MIDI devices.
 
-If you are working on the development of a vintage-style step sequencer, utilizing a resolution of 96PPQN is a fitting option to initiate the coding process. Then you can use onStepCallback call wich corresponds to a step played, note or event.
+If you are working on the development of a vintage-style step sequencer, utilizing a resolution of 96PPQN is a fitting option to initiate the coding process. Then you can use onStepCallback call which corresponds to a step played, note or event.
 
 Furthermore, it is possible to utilize all three resolutions simultaneously, allowing for flexibility based on your specific requirements and preferences.
 
