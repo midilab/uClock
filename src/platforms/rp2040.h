@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "pico/sync.h"
 
+// todo: make this a build flag, so user can choose which method to use?
 #define MULTICORE
 
 #ifdef MULTICORE
@@ -22,8 +23,7 @@
         return true;
     }
 
-    void initTimer(uint32_t init_clock)
-    {
+    void initTimer(uint32_t init_clock) {
         // set up RPi interrupt timer
         // todo: actually should be -init_clock so that timer is set to start init_clock us after last tick, instead of init_clock us after finished processing last tick!
         add_repeating_timer_us(init_clock, &handlerISR, NULL, &timer);
