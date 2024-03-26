@@ -20,8 +20,8 @@ The uClock library API operates through attached callback functions mechanism:
 5. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** on uClock Start event
 6. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** on uClock Stop event
 
-### Generic mode - for unsupported boards (or avoiding usage of interrupts)
-If a supported board isn't detected during compilation then a generic fallback approach will be used that does not utilise any interrupts to ensure accurate timekeeping.  This can be useful to port projets to boards that do not have support in uClock yet, or to test if suspected bugs are related to interactions with interrupts or task handling.
+### (optional) Generic mode - for unsupported boards (or avoiding usage of interrupts)
+If a supported board isn't detected during compilation then a generic fallback approach will be used. This does not utilise any interrupts and so does not ensure accurate timekeeping.  This can be useful to port your projects to boards that do not have support in uClock yet, or to test if suspected bugs in your code are related to interactions with interrupts or task handling.
 
 You can force this non-interrupt "generic mode" even on supported boards by defining the build flag `USE_UCLOCK_GENERIC`.
 
@@ -29,7 +29,7 @@ In order for generic mode to work, you need to add a call to your `loop()` funct
 
 ```c++
 
-// prototype of 
+// pre-declare this function somewhere, so that compiler knows about it.
 void uClockCheckTime(uint32_t micros_time);
 
 void loop() {
@@ -55,12 +55,12 @@ If you are comming from uClock version < 2.0 versions keep attention to the brea
 
 #### Tick resolution and sequencers
 
-If you have write a sequencer using setClock16PPQNOutput only its ok to just change the API call to setOnStep, but if you were dependent on setClock96PPQNOutput you migth need to review you tick counting system depending on wich PPQN clock resolution you choose.
+If you have write a sequencer using setClock16PPQNOutput only its ok to just change the API call to setOnStep, but if you were dependent on setClock96PPQNOutput you might need to review your tick-counting system, depending on which PPQN clock resolution you choose.
 
 
 ## Examples
 
-You will find more complete examples on examples/ folder:  
+You will find more complete examples in `examples/` folder:  
 
 
 ```c++
@@ -84,7 +84,7 @@ void setup() {
 }
 ```
 
-Resolutions: set youw own resolution for your clock needs
+Resolutions: set your own resolution for your clock needs:
 
 1. **PPQN_24** 24 Pulses Per Quarter Note
 2. **PPQN_48** 48 Pulses Per Quarter Note
