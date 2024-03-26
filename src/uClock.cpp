@@ -88,7 +88,6 @@ void uclockInitTimer()
 
 void setTimerTempo(float bpm) 
 {
-    Serial.printf("setTimerTempo(%3.3f)..", bpm);
     setTimer(uClock.bpmToMicroSeconds(bpm));
 }
 
