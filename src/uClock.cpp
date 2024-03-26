@@ -28,35 +28,51 @@
 #include "uClock.h"
 
 //
-// General Arduino AVRs port
+// Generic, board-agnostic, not-accurate, no-interrupt, software-only port
 //
-#if defined(ARDUINO_ARCH_AVR)
-    #include "platforms/avr.h"
+#if !defined(USE_UCLOCK_GENERIC)
+    //
+    // General Arduino AVRs port
+    //
+    #if defined(ARDUINO_ARCH_AVR)
+        #include "platforms/avr.h"
+        #define UCLOCK_PLATFORM_FOUND
+    #endif
+    //
+    // Teensyduino ARMs port
+    //
+    #if defined(TEENSYDUINO)
+        #include "platforms/teensy.h"
+        #define UCLOCK_PLATFORM_FOUND
+    #endif
+    //
+    // Seedstudio XIAO M0 port
+    //
+    #if defined(SEEED_XIAO_M0)
+        #include "platforms/samd.h"
+        #define UCLOCK_PLATFORM_FOUND
+    #endif
+    //
+    // ESP32 family
+    //
+    #if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
+        #include "platforms/esp32.h"
+        #define UCLOCK_PLATFORM_FOUND
+    #endif
+    //
+    // STM32XX family
+    //
+    #if defined(ARDUINO_ARCH_STM32)
+        #include "platforms/stm32.h"
+        #define UCLOCK_PLATFORM_FOUND
+    #endif
 #endif
-//
-// Teensyduino ARMs port
-//
-#if defined(TEENSYDUINO)
-    #include "platforms/teensy.h"
+
+#if !defined(UCLOCK_PLATFORM_FOUND)
+    #pragma message ("NOTE: uClock is using the 'generic' approach instead of specific board support, because board is not supported or because of USE_UCLOCK_GENERIC build flag.")
+    #include "platforms/generic.h"
 #endif
-//
-// Seedstudio XIAO M0 port
-//
-#if defined(SEEED_XIAO_M0)
-    #include "platforms/samd.h"
-#endif
-//
-// ESP32 family
-//
-#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-    #include "platforms/esp32.h"
-#endif
-//
-// STM32XX family
-//
-#if defined(ARDUINO_ARCH_STM32)
-    #include "platforms/stm32.h"
-#endif
+
 
 //
 // Platform specific timer setup/control
@@ -72,6 +88,7 @@ void uclockInitTimer()
 
 void setTimerTempo(float bpm) 
 {
+    Serial.printf("setTimerTempo(%3.3f)..", bpm);
     setTimer(uClock.bpmToMicroSeconds(bpm));
 }
 
@@ -119,7 +136,7 @@ void uClockClass::init()
 
 uint32_t uClockClass::bpmToMicroSeconds(float bpm) 
 {
-    return (60000000 / ppqn / bpm);
+    return (60000000.0f / (float)ppqn / bpm);
 }
 
 void uClockClass::setPPQN(PPQNResolution resolution)
