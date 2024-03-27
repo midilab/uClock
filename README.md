@@ -2,7 +2,9 @@
 
 The **uClock BPM Generator library** is designed to implement precise and reliable BPM clock tick calls using the microcontroller's timer hardware interruption. It is designed to be multi-architecture, portable, and easy to use within the open source community universe. 
 
-We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, and Seedstudio XIAO M0)**.
+We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, and Seedstudio XIAO M0)**.  
+
+(See also the generic fallback mode)
 
 The absence of real-time features necessary for creating professional-level embedded devices for music and video on open source community-based platforms like Arduino led to the development of uClock. By leveraging the use of timer hardware interruptions, the library can schedule and manage real-time-like processing with safe shared resource access through its API.
 
@@ -17,9 +19,29 @@ The uClock library API operates through attached callback functions mechanism:
 4. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** on uClock Start event
 5. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** on uClock Stop event
 
+### (optional) Generic mode - for unsupported boards (or avoiding usage of interrupts)
+If a supported board isn't detected during compilation then a generic fallback approach will be used. This does not utilise any interrupts and so does not ensure accurate timekeeping.  This can be useful to port your projects to boards that do not have support in uClock yet, or to test if suspected bugs in your code are related to interactions with interrupts or task handling.
+
+You can force this non-interrupt "generic mode" even on supported boards by defining the build flag `USE_UCLOCK_GENERIC`.
+
+In order for generic mode to work, you need to add a call to your `loop()` function to process ticks. For example,
+
+```c++
+
+// pre-declare this function somewhere, so that compiler knows about it.
+void uClockCheckTime(uint32_t micros_time);
+
+void loop() {
+  uClockCheckTime(micros());
+  
+  // do anything else you need to do inside loop()...
+}
+```
+
+
 ## uClock v2.0 Breaking Changes
 
-If you are coming from uClock version < 2.0 versions pay attention to the breaking changes so you can update your code to reflect the new API interface:
+If you are coming from uClock version < 2.0 versions, pay attention to the breaking changes so you can update your code to reflect the new API interface:
 
 ### setCallback function name changes
 
@@ -49,7 +71,7 @@ Furthermore, it is possible to utilize all three resolutions simultaneously, all
 
 ### Example
 
-You will find more complete examples on examples/ folder:  
+You will find more complete examples on examples/ folder.  
 
 ```c++
 #include <uClock.h>
