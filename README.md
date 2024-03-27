@@ -32,9 +32,7 @@ In order for generic mode to work, you need to add a call to your `loop()` funct
 void uClockCheckTime(uint32_t micros_time);
 
 void loop() {
-  #ifdef USE_UCLOCK_GENERIC
-    uClockCheckTime(micros());
-  #endif
+  uClockCheckTime(micros());
   
   // do anything else you need to do inside loop()...
 }
@@ -43,7 +41,7 @@ void loop() {
 
 ## uClock v2.0 Breaking Changes
 
-If you are coming from uClock version < 2.0 versions pay attention to the breaking changes so you can update your code to reflect the new API interface:
+If you are coming from uClock version < 2.0 versions, pay attention to the breaking changes so you can update your code to reflect the new API interface:
 
 ### setCallback function name changes
 
