@@ -2,7 +2,7 @@
 
 The **uClock BPM Generator library** is designed to implement precise and reliable BPM clock tick calls using the microcontroller's timer hardware interruption. It is designed to be multi-architecture, portable, and easy to use within the open source community universe. 
 
-We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, and Seedstudio XIAO M0)**.  It has experimental support for **RP2040 boards (Raspberry Pico, Seeed XIAO RP2040)** (see notes).
+We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, and Seedstudio XIAO M0, Raspberry Pico, Seeed XIAO RP2040)**. 
 
 The absence of real-time features necessary for creating professional-level embedded devices for music and video on open source community-based platforms like Arduino led to the development of uClock. By leveraging the use of timer hardware interruptions, the library can schedule and manage real-time-like processing with safe shared resource access through its API.
 
@@ -371,12 +371,3 @@ void loop()
   //processYourPots();
 }
 ```
-
-## Known problems
-
-### RP2040 support
-
-- Uses the [earlephilhower core](https://github.com/earlephilhower/arduino-pico)
-- Doing a 'soft reboot' (eg from reflashing) seems to crash on startup, but starting from cold and powering on works fine.
-- Using FreeRTOS multithreading fails if the second core is used (via setup1() and loop1()) - using the 'interrupts-based' version of the RP2040 uClock support seems to solve this.
-- Tick ticking may be off due to repeating_timer following from the end of previous tick, rather than following the start of the previous tick.  
