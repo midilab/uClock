@@ -2,7 +2,7 @@
 
 The **uClock BPM Generator library** is designed to implement precise and reliable BPM clock tick calls using the microcontroller's timer hardware interruption. It is designed to be multi-architecture, portable, and easy to use within the open source community universe. 
 
-We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, and Seedstudio XIAO M0)**.
+We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, and Seedstudio XIAO M0, Raspberry Pico, Seeed XIAO RP2040)**. 
 
 The absence of real-time features necessary for creating professional-level embedded devices for music and video on open source community-based platforms like Arduino led to the development of uClock. By leveraging the use of timer hardware interruptions, the library can schedule and manage real-time-like processing with safe shared resource access through its API.
 
