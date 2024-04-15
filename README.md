@@ -82,6 +82,10 @@ void onClockStopCallback() {
 }
 
 void setup() {
+
+  // inits the clock library
+  uClock.init();
+
   // avaliable resolutions
   // [ uClock.PPQN_24, uClock.PPQN_48, uClock.PPQN_96, uClock.PPQN_384, uClock.PPQN_480, uClock.PPQN_960 ]
   // not mandatory to call, the default is 96PPQN if not set
@@ -100,7 +104,8 @@ void setup() {
     uClock.setMode(uClock.EXTERNAL_CLOCK);
   }
 
-  uClock.init();
+  // starts clock
+  uClock.start();
 }
 
 void loop() {
