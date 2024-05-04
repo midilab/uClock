@@ -80,7 +80,7 @@ void onStepCallback(uint32_t tick)
       ++step;
       step = step % _step_length;
       if ( _sequencer[step].glide == true && _sequencer[step].rest == false ) {
-        length = NOTE_LENGTH + (i * 6);
+        length = NOTE_LENGTH + (i * 24);
         break;
       } else if ( _sequencer[step].rest == false ) {
         break;

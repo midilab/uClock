@@ -1,7 +1,7 @@
 {
   "name": "uClock",
-  "version": "2.0.0",
-  "description": "A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy, Seedstudio XIAO M0. ESP32 and STM32)",
+  "version": "2.1.0",
+  "description": "A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy, STM32XX, ESP32, Raspberry Pico, Seedstudio XIAO M0 and RP2040)",
   "keywords": "bpm, clock, timing, tick, music, generator",
   "repository":
   {
@@ -22,5 +22,5 @@
   "headers": "uClock.h",
   "dependencies": {},
   "frameworks": "Arduino",
-  "platforms": "atmelavr,atmelmegaavr,espressif32,ststm32,teensy,atmelsam"
+  "platforms": "atmelavr,atmelmegaavr,espressif32,ststm32,teensy,atmelsam,raspberrypi"
 }

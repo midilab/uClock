@@ -2,6 +2,7 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
+// esp32-specific timer
 #define TIMER_ID	0
 hw_timer_t * _uclockTimer = NULL;
 // mutex control for ISR
