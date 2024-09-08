@@ -1,8 +1,8 @@
 /*!
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(RPI2040, Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    2.1.0
+ *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy, Seedstudio XIAO M0 and ESP32)
+ *  @version    2.0.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
@@ -57,12 +57,6 @@
 #if defined(ARDUINO_ARCH_STM32)
     #include "platforms/stm32.h"
 #endif
-//
-// RP2040 (Raspberry Pico) family
-//
-#if defined(ARDUINO_ARCH_RP2040)
-    #include "platforms/rp2040.h"
-#endif
 
 //
 // Platform specific timer setup/control
@@ -110,6 +104,7 @@ uClockClass::uClockClass()
     onPPQNCallback = nullptr;
     onSync24Callback = nullptr;
     onStepCallback = nullptr;
+    onTrackStepCallback = nullptr;
     onClockStartCallback = nullptr;
     onClockStopCallback = nullptr;
     // first ppqn references calculus
@@ -247,6 +242,10 @@ void uClockClass::resetCounters()
     ext_clock_tick = 0;
     ext_clock_us = 0;
     ext_interval_idx = 0;
+
+    for (uint32_t s=0; s < MAX_TRACKS; s++) {
+        track_step_counter[s] = 0;
+    }
     
     for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
         ext_interval_buffer[i] = 0;
@@ -264,9 +263,19 @@ void uClockClass::setShuffle(bool active)
     ATOMIC(shuffle.active = active)
 }
 
+void uClockClass::setTrackShuffle(uint8_t track, bool active)
+{
+    ATOMIC(track_shuffles[track].shuffle.active = active)
+}
+
 bool uClockClass::isShuffled()
 {
     return shuffle.active;
+}
+
+bool uClockClass::isTrackShuffled(uint8_t track)
+{
+    return track_shuffles[track].shuffle.active;
 }
 
 void uClockClass::setShuffleSize(uint8_t size)
@@ -276,11 +285,25 @@ void uClockClass::setShuffleSize(uint8_t size)
     ATOMIC(shuffle.size = size)
 }
 
+void uClockClass::setTrackShuffleSize(uint8_t track, uint8_t size)
+{
+    if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
+        size = MAX_SHUFFLE_TEMPLATE_SIZE;
+    ATOMIC(track_shuffles[track].shuffle.size = size)
+}
+
 void uClockClass::setShuffleData(uint8_t step, int8_t tick)
 {
     if (step >= MAX_SHUFFLE_TEMPLATE_SIZE)
         return;
     ATOMIC(shuffle.step[step] = tick)
+}
+
+void uClockClass::setTrackShuffleData(uint8_t track, uint8_t step, int8_t tick)
+{
+    if (step >= MAX_SHUFFLE_TEMPLATE_SIZE)
+        return;
+    ATOMIC(track_shuffles[track].shuffle.step[step] = tick)
 }
 
 void uClockClass::setShuffleTemplate(int8_t * shuff, uint8_t size)
@@ -294,9 +317,25 @@ void uClockClass::setShuffleTemplate(int8_t * shuff, uint8_t size)
     }
 }
 
+void uClockClass::setTrackShuffleTemplate(uint8_t track, int8_t * shuff, uint8_t size)
+{
+    //uint8_t size = sizeof(shuff) / sizeof(shuff[0]);
+    if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
+        size = MAX_SHUFFLE_TEMPLATE_SIZE;
+    ATOMIC(track_shuffles[track].shuffle.size = size)
+    for (uint8_t i=0; i < size; i++) {
+        setTrackShuffleData(track, i, shuff[i]);
+    }
+}
+
 int8_t uClockClass::getShuffleLength()
 {
     return shuffle_length_ctrl;
+}
+
+int8_t uClockClass::getTrackShuffleLength(uint8_t track)
+{
+    return track_shuffles[track].shuffle_length_ctrl;
 }
 
 bool inline uClockClass::processShuffle()
@@ -338,6 +377,51 @@ bool inline uClockClass::processShuffle()
         if (shff < 0)
             shuffle_length_ctrl += shff;
         shuffle_shoot_ctrl = false;
+        return true;
+    }
+
+    return false;
+}
+
+bool inline uClockClass::processTrackShuffle(uint8_t track)
+{
+    if (!track_shuffles[track].shuffle.active) {
+        return mod_step_counter == 0;
+    }
+
+    int8_t mod_shuffle = 0;
+
+    // check shuffle template of current
+    int8_t shff = track_shuffles[track].shuffle.step[step_counter%track_shuffles[track].shuffle.size];
+
+    if (track_shuffles[track].shuffle_shoot_ctrl == false && mod_step_counter == 0)
+        track_shuffles[track].shuffle_shoot_ctrl = true; 
+
+    //if (mod_step_counter == mod_step_ref-1)
+
+    if (shff >= 0) {
+        mod_shuffle = mod_step_counter - shff;
+        // any late shuffle? we should skip next mod_step_counter == 0
+        if (track_shuffles[track].last_shff < 0 && mod_step_counter != 1)
+            return false; 
+    } else if (shff < 0) {
+        mod_shuffle = mod_step_counter - (mod_step_ref + shff);
+        //if (last_shff < 0 && mod_step_counter != 1)
+        //    return false; 
+        track_shuffles[track].shuffle_shoot_ctrl = true;
+    }
+
+    track_shuffles[track].last_shff = shff;
+
+    // shuffle_shoot_ctrl helps keep track if we have shoot or not a note for the step space of ppqn/4 pulses
+    if (mod_shuffle == 0 && track_shuffles[track].shuffle_shoot_ctrl == true) {
+        // keep track of next note shuffle for current note lenght control
+        track_shuffles[track].shuffle_length_ctrl = track_shuffles[track].shuffle.step[(step_counter+1)%track_shuffles[track].shuffle.size];
+        if (shff > 0)
+            track_shuffles[track].shuffle_length_ctrl -= shff;
+        if (shff < 0)
+            track_shuffles[track].shuffle_length_ctrl += shff;
+        track_shuffles[track].shuffle_shoot_ctrl = false;
         return true;
     }
 
@@ -434,6 +518,17 @@ void uClockClass::handleTimerInt()
     // reset step mod counter reference ?
     if (mod_step_counter == mod_step_ref)
         mod_step_counter = 0;
+
+    if (onTrackStepCallback) {
+        for (uint8_t t = 0; t < MAX_TRACKS; t++)
+        {
+            if (processTrackShuffle(t)) {        
+                onTrackStepCallback(t, track_step_counter[t]);
+                // going forward to the next step call
+                ++track_step_counter[t];
+            }
+        }
+    }
     
     // step callback to support 16th old school style sequencers
     // with builtin shuffle for this callback only

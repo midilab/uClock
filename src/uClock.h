@@ -1,8 +1,8 @@
 /*!
  *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
- *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(RPI2040, Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    2.1.0
+ *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(Teensy, Seedstudio XIAO M0 and ESP32)
+ *  @version    2.0.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
@@ -44,6 +44,10 @@ namespace umodular { namespace clock {
 // 48 PPQN (12 pulses per step)
 // 96 PPQN (24 pulses per step)
 
+// For track-based sequencers, this controls how many tracks can be 
+// used with the onTrackStepCallback
+#define MAX_TRACKS 16
+
 // min: -(ppqn/4)-1 step, max: (ppqn/4)-1 steps  
 // adjust the size of you template if more than 16 shuffle step info needed
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
@@ -52,6 +56,13 @@ typedef struct {
     uint8_t size = MAX_SHUFFLE_TEMPLATE_SIZE;
     int8_t step[MAX_SHUFFLE_TEMPLATE_SIZE] = {0};
 } SHUFFLE_TEMPLATE;
+
+typedef struct {
+    volatile SHUFFLE_TEMPLATE shuffle;
+    int8_t last_shff = 0;
+    bool shuffle_shoot_ctrl = true;
+    volatile int8_t shuffle_length_ctrl = 0;
+} TRACK_SHUFFLE;
 
 // for smooth slave tempo calculate display you should raise this value 
 // in between 64 to 128.
@@ -103,6 +114,10 @@ class uClockClass {
         void setOnStep(void (*callback)(uint32_t step)) {
             onStepCallback = callback;
         }
+
+        void setTrackOnStep(void (*callback)(uint8_t track, uint32_t step)) {
+            onTrackStepCallback = callback;
+        }
         
         void setOnSync24(void (*callback)(uint32_t tick)) {
             onSync24Callback = callback;
@@ -141,8 +156,19 @@ class uClockClass {
         void setShuffleSize(uint8_t size);
         void setShuffleData(uint8_t step, int8_t tick);
         void setShuffleTemplate(int8_t * shuff, uint8_t size);
+
         // use this to know how many positive or negative ticks to add to current note length
         int8_t getShuffleLength();
+
+        // track shuffle
+        void setTrackShuffle(uint8_t track, bool active);
+        bool isTrackShuffled(uint8_t track);
+        void setTrackShuffleSize(uint8_t track, uint8_t size);
+        void setTrackShuffleData(uint8_t track, uint8_t step, int8_t tick);
+        void setTrackShuffleTemplate(uint8_t track, int8_t * shuff, uint8_t size);
+
+        // use this to know how many positive or negative ticks to add to current note length
+        int8_t getTrackShuffleLength(uint8_t track);
         
         // todo!
         void tap();
@@ -162,9 +188,11 @@ class uClockClass {
 
         // shuffle
         bool inline processShuffle();
+        bool inline processTrackShuffle(uint8_t track);
 
         void (*onPPQNCallback)(uint32_t tick);
         void (*onStepCallback)(uint32_t step);
+        void (*onTrackStepCallback)(uint8_t track, uint32_t step);
         void (*onSync24Callback)(uint32_t tick);
         void (*onClockStartCallback)();
         void (*onClockStopCallback)();
@@ -179,6 +207,7 @@ class uClockClass {
         uint8_t mod_step_counter;
         uint8_t mod_step_ref;
         uint32_t step_counter; // should we go uint16_t?
+        uint32_t track_step_counter[MAX_TRACKS];
 
         // external clock control
         volatile uint32_t ext_clock_us;
@@ -195,6 +224,8 @@ class uClockClass {
         uint16_t ext_interval_idx;
 
         // shuffle implementation
+        TRACK_SHUFFLE track_shuffles[MAX_TRACKS];
+
         volatile SHUFFLE_TEMPLATE shuffle;
         int8_t last_shff = 0;
         bool shuffle_shoot_ctrl = true;
