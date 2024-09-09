@@ -249,8 +249,9 @@ void uClockClass::resetCounters()
     ext_clock_us = 0;
     ext_interval_idx = 0;
 
-    for (uint32_t s=0; s < MAX_TRACKS; s++) {
-        track_step_counter[s] = 0;
+    for (uint32_t t=0; t < MAX_TRACKS; t++) {
+        mod_track_step_counter[t] = 0;
+        track_step_counter[t] = 0;
     }
     
     for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
@@ -392,27 +393,27 @@ bool inline uClockClass::processShuffle()
 bool inline uClockClass::processTrackShuffle(uint8_t track)
 {
     if (!track_shuffles[track].shuffle.active) {
-        return mod_step_counter == 0;
+        return mod_track_step_counter[track] == 0;
     }
 
     int8_t mod_shuffle = 0;
 
     // check shuffle template of current
-    int8_t shff = track_shuffles[track].shuffle.step[step_counter%track_shuffles[track].shuffle.size];
+    int8_t shff = track_shuffles[track].shuffle.step[track_step_counter[track]%track_shuffles[track].shuffle.size];
 
-    if (track_shuffles[track].shuffle_shoot_ctrl == false && mod_step_counter == 0)
+    if (track_shuffles[track].shuffle_shoot_ctrl == false && mod_track_step_counter[track] == 0)
         track_shuffles[track].shuffle_shoot_ctrl = true; 
 
-    //if (mod_step_counter == mod_step_ref-1)
+    //if (mod_track_step_counter[track] == mod_step_ref-1)
 
     if (shff >= 0) {
-        mod_shuffle = mod_step_counter - shff;
-        // any late shuffle? we should skip next mod_step_counter == 0
-        if (track_shuffles[track].last_shff < 0 && mod_step_counter != 1)
+        mod_shuffle = mod_track_step_counter[track] - shff;
+        // any late shuffle? we should skip next mod_track_step_counter == 0
+        if (track_shuffles[track].last_shff < 0 && mod_track_step_counter[track] != 1)
             return false; 
     } else if (shff < 0) {
-        mod_shuffle = mod_step_counter - (mod_step_ref + shff);
-        //if (last_shff < 0 && mod_step_counter != 1)
+        mod_shuffle = mod_track_step_counter[track] - (mod_step_ref + shff);
+        //if (last_shff < 0 && mod_track_step_counter[track] != 1)
         //    return false; 
         track_shuffles[track].shuffle_shoot_ctrl = true;
     }
@@ -422,7 +423,7 @@ bool inline uClockClass::processTrackShuffle(uint8_t track)
     // shuffle_shoot_ctrl helps keep track if we have shoot or not a note for the step space of ppqn/4 pulses
     if (mod_shuffle == 0 && track_shuffles[track].shuffle_shoot_ctrl == true) {
         // keep track of next note shuffle for current note lenght control
-        track_shuffles[track].shuffle_length_ctrl = track_shuffles[track].shuffle.step[(step_counter+1)%track_shuffles[track].shuffle.size];
+        track_shuffles[track].shuffle_length_ctrl = track_shuffles[track].shuffle.step[(track_step_counter[track]+1)%track_shuffles[track].shuffle.size];
         if (shff > 0)
             track_shuffles[track].shuffle_length_ctrl -= shff;
         if (shff < 0)
@@ -521,9 +522,12 @@ void uClockClass::handleTimerInt()
         onPPQNCallback(tick);
     }
 
-    // reset step mod counter reference ?
-    if (mod_step_counter == mod_step_ref)
-        mod_step_counter = 0;
+    for (uint8_t tm = 0; tm < MAX_TRACKS; tm++)
+    {
+        // reset track step mod counter reference ?
+        if (mod_track_step_counter[tm] == mod_step_ref)
+            mod_track_step_counter[tm] = 0;
+    }
 
     if (onTrackStepCallback) {
         for (uint8_t t = 0; t < MAX_TRACKS; t++)
@@ -535,6 +539,10 @@ void uClockClass::handleTimerInt()
             }
         }
     }
+
+    // reset step mod counter reference ?
+    if (mod_step_counter == mod_step_ref)
+        mod_step_counter = 0;
     
     // step callback to support 16th old school style sequencers
     // with builtin shuffle for this callback only
@@ -552,6 +560,11 @@ void uClockClass::handleTimerInt()
     // increment mod counters
     ++mod24_counter;
     ++mod_step_counter;
+
+    for (uint8_t tsm = 0; tsm < MAX_TRACKS; tsm++)
+    {
+        ++mod_track_step_counter[tsm];
+    }
 }
 
 // elapsed time support

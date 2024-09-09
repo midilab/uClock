@@ -205,6 +205,7 @@ class uClockClass {
         uint8_t mod24_counter;
         uint8_t mod24_ref;
         uint8_t mod_step_counter;
+        uint8_t mod_track_step_counter[MAX_TRACKS];
         uint8_t mod_step_ref;
         uint32_t step_counter; // should we go uint16_t?
         uint32_t track_step_counter[MAX_TRACKS];
