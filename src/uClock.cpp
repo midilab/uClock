@@ -400,35 +400,40 @@ bool inline uClockClass::processTrackShuffle(uint8_t track)
 
     // check shuffle template of current
     int8_t shff = track_shuffles[track].shuffle.step[track_step_counter[track]%track_shuffles[track].shuffle.size];
-
+    
     if (track_shuffles[track].shuffle_shoot_ctrl == false && mod_track_step_counter[track] == 0)
-        track_shuffles[track].shuffle_shoot_ctrl = true; 
-
-    //if (mod_track_step_counter[track] == mod_step_ref-1)
+        track_shuffles[track].shuffle_shoot_ctrl = true;
 
     if (shff >= 0) {
         mod_shuffle = mod_track_step_counter[track] - shff;
+
         // any late shuffle? we should skip next mod_track_step_counter == 0
-        if (track_shuffles[track].last_shff < 0 && mod_track_step_counter[track] != 1)
-            return false; 
+        if (track_shuffles[track].last_shff < 0 && mod_track_step_counter[track] != 1) {           
+            if (track_shuffles[track].shuffle_shoot_ctrl == true)
+                track_shuffles[track].shuffle_shoot_ctrl = false;
+
+            return false;
+        }
+
     } else if (shff < 0) {
         mod_shuffle = mod_track_step_counter[track] - (mod_step_ref + shff);
-        //if (last_shff < 0 && mod_track_step_counter[track] != 1)
-        //    return false; 
+
         track_shuffles[track].shuffle_shoot_ctrl = true;
     }
 
     track_shuffles[track].last_shff = shff;
 
     // shuffle_shoot_ctrl helps keep track if we have shoot or not a note for the step space of ppqn/4 pulses
-    if (mod_shuffle == 0 && track_shuffles[track].shuffle_shoot_ctrl == true) {
-        // keep track of next note shuffle for current note lenght control
+    if (mod_shuffle == 0 && track_shuffles[track].shuffle_shoot_ctrl == true) {        
+        track_shuffles[track].shuffle_shoot_ctrl = false;
+
+        // // keep track of next note shuffle for current note lenght control
         track_shuffles[track].shuffle_length_ctrl = track_shuffles[track].shuffle.step[(track_step_counter[track]+1)%track_shuffles[track].shuffle.size];
         if (shff > 0)
             track_shuffles[track].shuffle_length_ctrl -= shff;
         if (shff < 0)
             track_shuffles[track].shuffle_length_ctrl += shff;
-        track_shuffles[track].shuffle_shoot_ctrl = false;
+
         return true;
     }
 
