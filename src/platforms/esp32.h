@@ -9,6 +9,9 @@ hw_timer_t * _uclockTimer = NULL;
 //portMUX_TYPE _uclockTimerMux = portMUX_INITIALIZER_UNLOCKED;
 //#define ATOMIC(X) portENTER_CRITICAL_ISR(&_uclockTimerMux); X; portEXIT_CRITICAL_ISR(&_uclockTimerMux);
 
+// for saving the initial clock sate
+uint32_t _init_clock;
+
 // FreeRTOS main clock task size in bytes
 #define CLOCK_STACK_SIZE    5*1024 // adjust for your needs, a sequencer with heavy serial handling should be large in size
 TaskHandle_t taskHandle;
@@ -41,25 +44,34 @@ void clockTask(void *pvParameters)
 
 void initTimer(uint32_t init_clock)
 {
+    // save the initial clock value
+	_init_clock = init_clock;
+	
     // initialize the mutex for shared resource access
     _mutex = xSemaphoreCreateMutex();
 
     // create the clockTask
     xTaskCreate(clockTask, "clockTask", CLOCK_STACK_SIZE, NULL, 1, &taskHandle);
 
-    _uclockTimer = timerBegin(TIMER_ID, 80, true);
+    //_uclockTimer = timerBegin(TIMER_ID, 80, true);
+	_uclockTimer = timerBegin(1000000); // Frequência de 1 MHz
 
     // attach to generic uclock ISR
-    timerAttachInterrupt(_uclockTimer, &handlerISR, false);
+	timerAttachInterrupt(_uclockTimer, &handlerISR);
+    //timerAttachInterrupt(_uclockTimer, &handlerISR, false);
 
     // init clock tick time
-    timerAlarmWrite(_uclockTimer, init_clock, true); 
+    //timerAlarmWrite(_uclockTimer, init_clock, true); 
 
     // activate it!
-    timerAlarmEnable(_uclockTimer);
+    //timerAlarmEnable(_uclockTimer);
+
+    // init and activate clock
+	timerAlarm(_uclockTimer, _init_clock, true, 0);
 }
 
 void setTimer(uint32_t us_interval)
 {
-    timerAlarmWrite(_uclockTimer, us_interval, true); 
+    //timerAlarmWrite(_uclockTimer, us_interval, true);
+	timerAlarm(_uclockTimer, _init_clock, true, 0);
 }
