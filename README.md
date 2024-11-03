@@ -17,22 +17,23 @@ The uClock library API operates through attached callback functions mechanism:
 4. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** on uClock Start event
 5. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** on uClock Stop event
 
-### (optional) Generic mode - for unsupported boards (or avoiding usage of interrupts)
+### (optional) Software Timer mode - for unsupported boards (or avoiding usage of interrupts)
 If a supported board isn't detected during compilation then a generic fallback approach will be used. This does not utilise any interrupts and so does not ensure accurate timekeeping.  This can be useful to port your projects to boards that do not have support in uClock yet, or to test if suspected bugs in your code are related to interactions with interrupts or task handling.
 
-You can force this non-interrupt "generic mode" even on supported boards by defining the build flag `USE_UCLOCK_GENERIC`.
+You can force this non-interrupt "software timer mode" even on supported boards by defining the build flag `USE_UCLOCK_SOFTWARE_TIMER`.
 
-In order for generic mode to work, you need to add a call to your `loop()` function to process ticks. For example,
+In order for software timer mode to work, you need to add a call to your `loop()` function to process ticks. For example,
 
 ```c++
-
-// pre-declare this function somewhere, so that compiler knows about it.
-void uClockCheckTime(uint32_t micros_time);
-
 void loop() {
-  uClockCheckTime(micros());
+  uClock.run();
   
   // do anything else you need to do inside loop()...
+  // you can intercalate your main processing with other uClock.run() calls to avoid timming accuracy loss.
+  //uClock.run();
+  // do anything other inside loop()...
+  //uClock.run();
+  // the faster you can call uClock.run() without blocking the better and accurate timming you can achieve.
 }
 ```
 

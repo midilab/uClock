@@ -2,7 +2,7 @@
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(RPI2040, Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    2.1.0
+ *  @version    2.2.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
@@ -27,10 +27,8 @@
  */
 #include "uClock.h"
 
-//
-// Generic, board-agnostic, not-accurate, no-interrupt, software-only port
-//
-#if !defined(USE_UCLOCK_GENERIC)
+// no hardware timer clock? use USE_UCLOCK_SOFTWARE_TIMER
+#if !defined(USE_UCLOCK_SOFTWARE_TIMER)
     //
     // General Arduino AVRs port
     //
@@ -66,17 +64,21 @@
         #include "platforms/stm32.h"
         #define UCLOCK_PLATFORM_FOUND
     #endif
+    //
+    // RP2040 (Raspberry Pico) family
+    //
+    #if defined(ARDUINO_ARCH_RP2040)
+        #include "platforms/rp2040.h"
+        #define UCLOCK_PLATFORM_FOUND
+    #endif
 #endif
 
+//
+// Software Timer for generic, board-agnostic, not-accurate, no-interrupt, software-only port
+//
 #if !defined(UCLOCK_PLATFORM_FOUND)
-    #pragma message ("NOTE: uClock is using the 'generic' approach instead of specific board support, because board is not supported or because of USE_UCLOCK_GENERIC build flag.")
-    #include "platforms/generic.h"
-#endif
-//
-// RP2040 (Raspberry Pico) family
-//
-#if defined(ARDUINO_ARCH_RP2040)
-    #include "platforms/rp2040.h"
+    #pragma message ("NOTE: uClock is using the 'software timer' approach instead of specific board interrupted support, because board is not supported or because of USE_UCLOCK_SOFTWARE_TIMER build flag. Remember to call uClock.run() inside your loop().")
+    #include "platforms/software.h"
 #endif
 
 
@@ -209,13 +211,6 @@ void uClockClass::setTempo(float bpm)
     setTimerTempo(bpm);
 }
 
-// this function is based on sync24PPQN
-float inline uClockClass::freqToBpm(uint32_t freq)
-{
-    float usecs = 1/((float)freq/1000000.0);
-    return (float)((float)(usecs/(float)24) * 60.0);
-}
-
 float uClockClass::getTempo() 
 {
     if (mode == EXTERNAL_CLOCK) {
@@ -232,6 +227,22 @@ float uClockClass::getTempo()
         }
     }
     return tempo;
+}
+
+// for software timer implementation(fallback for no board support)
+void uClockClass::run()
+{
+#if !defined(UCLOCK_PLATFORM_FOUND)
+    // call software timer implementation of software
+    softwareTimerHandler(micros());
+#endif
+}
+
+// this function is based on sync24PPQN
+float inline uClockClass::freqToBpm(uint32_t freq)
+{
+    float usecs = 1/((float)freq/1000000.0);
+    return (float)((float)(usecs/(float)24) * 60.0);
 }
 
 void uClockClass::setMode(SyncMode tempo_mode) 
