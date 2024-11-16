@@ -2,7 +2,7 @@
  *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(RPI2040, Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    2.1.0
+ *  @version    2.2.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
@@ -129,6 +129,9 @@ class uClockClass {
         void pause();
         void setTempo(float bpm);
         float getTempo();
+
+        // for software timer implementation(fallback for no board support)
+        void run();
 
         // external timming control
         void setMode(SyncMode tempo_mode);
