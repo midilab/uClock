@@ -17,7 +17,7 @@ The uClock library API operates through attached callback functions mechanism:
 4. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** on uClock Start event
 5. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** on uClock Stop event
 
-### (optional) Software Timer mode - for unsupported boards (or avoiding usage of interrupts)
+### Software Timer mode - for unsupported boards (or avoiding usage of interrupts)
 If a supported board isn't detected during compilation then a generic fallback approach will be used. This does not utilise any interrupts and so does not ensure accurate timekeeping.  This can be useful to port your projects to boards that do not have support in uClock yet, or to test if suspected bugs in your code are related to interactions with interrupts or task handling.
 
 You can force this non-interrupt "software timer mode" even on supported boards by defining the build flag `USE_UCLOCK_SOFTWARE_TIMER`.
@@ -86,14 +86,10 @@ void onStepCallback(uint32_t step) {
   // triger step data for sequencer device...
 }
 
-<<<<<<< HEAD
-You will find more complete examples on examples/ folder.  
-=======
 // The callback function called by uClock each Pulse of 24PPQN clock resolution.
 void onSync24Callback(uint32_t tick) {
   // send sync signal to...
 }
->>>>>>> main
 
 // The callback function called when clock starts by using uClock.start() method.
 void onClockStartCallback() {
