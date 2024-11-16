@@ -6,6 +6,15 @@
 // TODO: we should do this using macro guards for avrs different clocks freqeuncy setup at compile time
 #define AVR_CLOCK_FREQ	16000000
 
+// forward declaration of uClockHandler
+void uClockHandler();
+
+// AVR ISR Entrypoint
+ISR(TIMER1_COMPA_vect)
+{
+    uClockHandler();
+}
+
 void initTimer(uint32_t init_clock)
 {
     ATOMIC(
