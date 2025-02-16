@@ -130,8 +130,8 @@ uClockClass::uClockClass()
     onStepCallback = nullptr;
     onClockStartCallback = nullptr;
     onClockStopCallback = nullptr;
-    // first ppqn references calculus
-    setPPQN(PPQN_96);
+    // first ppqn references calculus for ppqn and clock resolution
+    calculateReferencedata();
 }
 
 void uClockClass::init() 
@@ -146,15 +146,30 @@ uint32_t uClockClass::bpmToMicroSeconds(float bpm)
     return (60000000.0f / (float)ppqn / bpm);
 }
 
+void uClockClass::calculateReferencedata()
+{
+    mod_clock_ref = ppqn / clock_ppqn; 
+    mod_sync24_ref = ppqn / PPQN_24; 
+    mod_step_ref = ppqn / 4; 
+}
+
 void uClockClass::setPPQN(PPQNResolution resolution)
 {
     // stop clock to make it safe changing those references
-    // so we avoid volatile then and ATOMIC everyone
+    // so we avoid volatile then and ATOMIC everywhere
     stop();
     ppqn = resolution;
-    // calculate the mod24 and mod_step tick reference trigger
-    mod24_ref = ppqn / 24;
-    mod_step_ref = ppqn / 4;
+    calculateReferencedata();
+}
+
+void uClockClass::setClockPPQN(PPQNResolution resolution)
+{
+    // stop clock to make it safe changing those references
+    // so we avoid volatile then and ATOMIC everywhere
+    stop();
+    clock_ppqn = resolution;
+    calculateReferencedata();
+    //mod_clock_ref = ppqn / clock_ppqn; 
 }
 
 void uClockClass::start() 
@@ -238,7 +253,6 @@ void uClockClass::run()
 #endif
 }
 
-// this function is based on sync24PPQN
 float inline uClockClass::freqToBpm(uint32_t freq)
 {
     float usecs = 1/((float)freq/1000000.0);
@@ -268,8 +282,10 @@ void uClockClass::resetCounters()
 {
     tick = 0;
     int_clock_tick = 0;
-    mod24_counter = 0;
+    sync24_tick = 0;
+    mod_clock_counter = 0;
     mod_step_counter = 0;
+    mod_sync24_counter = 0;
     step_counter = 0;
     ext_clock_tick = 0;
     ext_clock_us = 0;
@@ -371,7 +387,7 @@ bool inline uClockClass::processShuffle()
     return false;
 }
 
-// it is expected to be called in 24PPQN 
+// TODO: needs to check clock signals against current phase lock parameters(based on 24ppqn sync)
 void uClockClass::handleExternalClock() 
 {
     switch (state) {
@@ -408,19 +424,19 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::handleTimerInt()  
 {
-    // reset mod24 counter reference ?
-    if (mod24_counter == mod24_ref)
-        mod24_counter = 0;
+    // reset mod_clock_counter
+    if (mod_clock_counter == mod_clock_ref)
+        mod_clock_counter = 0;
 
     // process sync signals first please...
-    if (mod24_counter == 0) {
+    if (mod_clock_counter == 0) {
 
         if (mode == EXTERNAL_CLOCK) {
             // sync tick position with external tick clock
             if ((int_clock_tick < ext_clock_tick) || (int_clock_tick > (ext_clock_tick + 1))) {
                 int_clock_tick = ext_clock_tick;
-                tick = int_clock_tick * mod24_ref;
-                mod24_counter = tick % mod24_ref;
+                tick = int_clock_tick * mod_clock_ref;
+                mod_clock_counter = tick % mod_clock_ref;
                 mod_step_counter = tick % mod_step_ref;
             }
 
@@ -446,11 +462,19 @@ void uClockClass::handleTimerInt()
             }
         }
 
-        if (onSync24Callback) {
-            onSync24Callback(int_clock_tick);
-        }
-        // internal clock tick me! sync24 tick too
+        // internal clock tick me!
         ++int_clock_tick;
+    }
+
+    // Sync24 callback
+    if (mod_sync24_counter == mod_sync24_ref)
+        mod_sync24_counter = 0;
+
+    if (onSync24Callback) {
+        if (mod_sync24_counter == 0) {
+            onSync24Callback(sync24_tick);
+            ++sync24_tick;
+        }
     }
 
     // PPQNCallback time!
@@ -476,7 +500,8 @@ void uClockClass::handleTimerInt()
     // tick me!
     ++tick;
     // increment mod counters
-    ++mod24_counter;
+    ++mod_clock_counter;
+    ++mod_sync24_counter;
     ++mod_step_counter;
 }
 

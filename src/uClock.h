@@ -84,6 +84,9 @@ class uClockClass {
         };
 
         enum PPQNResolution {
+            PPQN_4 = 4,
+            PPQN_8 = 8,
+            PPQN_12 = 12,
             PPQN_24 = 24,
             PPQN_48 = 48,
             PPQN_96 = 96,
@@ -118,6 +121,7 @@ class uClockClass {
 
         void init();
         void setPPQN(PPQNResolution resolution);
+        void setClockPPQN(PPQNResolution resolution);
 
         void handleTimerInt();
         void handleExternalClock();
@@ -162,6 +166,7 @@ class uClockClass {
 
     private:
         float inline freqToBpm(uint32_t freq);
+        void calculateReferencedata();
 
         // shuffle
         bool inline processShuffle();
@@ -175,14 +180,17 @@ class uClockClass {
         // internal clock control
         // uint16_t ppqn;
         PPQNResolution ppqn = PPQN_96;
+        PPQNResolution clock_ppqn = PPQN_24;
         uint32_t tick;
         uint32_t int_clock_tick;
-        uint8_t mod24_counter;
-        uint8_t mod24_ref;
+        uint32_t sync24_tick;
+        uint8_t mod_clock_counter;
+        uint8_t mod_clock_ref;
         uint8_t mod_step_counter;
         uint8_t mod_step_ref;
         uint32_t step_counter; // should we go uint16_t?
-
+        uint8_t mod_sync24_counter;
+        uint8_t mod_sync24_ref;
         // external clock control
         volatile uint32_t ext_clock_us;
         volatile uint32_t ext_clock_tick;
