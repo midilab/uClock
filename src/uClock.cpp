@@ -126,7 +126,13 @@ uClockClass::uClockClass()
     resetCounters();
 
     onPPQNCallback = nullptr;
+    onSync1Callback = nullptr;
+    onSync2Callback = nullptr;
+    onSync4Callback = nullptr;
+    onSync8Callback = nullptr;
+    onSync12Callback = nullptr;
     onSync24Callback = nullptr;
+    onSync48Callback = nullptr;
     onStepCallback = nullptr;
     onClockStartCallback = nullptr;
     onClockStopCallback = nullptr;
@@ -149,6 +155,11 @@ uint32_t uClockClass::bpmToMicroSeconds(float bpm)
 void uClockClass::calculateReferencedata()
 {
     mod_clock_ref = ppqn / clock_ppqn; 
+    mod_sync1_ref = ppqn / PPQN_1; 
+    mod_sync2_ref = ppqn / PPQN_2; 
+    mod_sync4_ref = ppqn / PPQN_4; 
+    mod_sync8_ref = ppqn / PPQN_8; 
+    mod_sync12_ref = ppqn / PPQN_12; 
     mod_sync24_ref = ppqn / PPQN_24; 
     mod_sync48_ref = ppqn / PPQN_48; 
     mod_step_ref = ppqn / 4; 
@@ -156,20 +167,18 @@ void uClockClass::calculateReferencedata()
 
 void uClockClass::setPPQN(PPQNResolution resolution)
 {
-    // stop clock to make it safe changing those references
-    // so we avoid volatile then and ATOMIC everywhere
-    //stop();
-    ppqn = resolution;
-    calculateReferencedata();
+    ATOMIC(
+        ppqn = resolution;
+        calculateReferencedata();
+    )
 }
 
 void uClockClass::setClockPPQN(PPQNResolution resolution)
 {
-    // stop clock to make it safe changing those references
-    // so we avoid volatile then and ATOMIC everywhere
-    //stop();
-    clock_ppqn = resolution;
-    calculateReferencedata();
+    ATOMIC(
+        clock_ppqn = resolution;
+        calculateReferencedata();
+    )
 }
 
 void uClockClass::start() 
@@ -284,14 +293,25 @@ void uClockClass::resetCounters()
     int_clock_tick = 0;
     mod_clock_counter = 0;
     mod_step_counter = 0;
-    mod_sync24_counter = 0;
-    sync24_tick = 0;
-    mod_sync48_counter = 0;
-    sync48_tick = 0;
     step_counter = 0;
     ext_clock_tick = 0;
     ext_clock_us = 0;
     ext_interval_idx = 0;
+    // sync output counters
+    mod_sync1_counter = 0;
+    sync1_tick = 0;
+    mod_sync2_counter = 0;
+    sync2_tick = 0;
+    mod_sync4_counter = 0;
+    sync4_tick = 0;
+    mod_sync8_counter = 0;
+    sync8_tick = 0;
+    mod_sync12_counter = 0;
+    sync12_tick = 0;
+    mod_sync24_counter = 0;
+    sync24_tick = 0;
+    mod_sync48_counter = 0;
+    sync48_tick = 0;
     
     for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
         ext_interval_buffer[i] = 0;
@@ -426,7 +446,7 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::handleTimerInt()  
 {
-    // reset mod_clock_counter
+    // track main input clock counter
     if (mod_clock_counter == mod_clock_ref)
         mod_clock_counter = 0;
 
@@ -467,56 +487,105 @@ void uClockClass::handleTimerInt()
         // internal clock tick me!
         ++int_clock_tick;
     }
+    ++mod_clock_counter;
+
+    // ALL OUTPUT SYNC CALLBACKS
+    // Sync1 callback
+    if (onSync1Callback) {
+        if (mod_sync1_counter == mod_sync1_ref)
+            mod_sync1_counter = 0;
+        if (mod_sync1_counter == 0) {
+            onSync1Callback(sync1_tick);
+            ++sync1_tick;
+        }
+        ++mod_sync1_counter;
+    }
+
+    // Sync2 callback
+    if (onSync2Callback) {
+        if (mod_sync2_counter == mod_sync2_ref)
+            mod_sync2_counter = 0;
+        if (mod_sync2_counter == 0) {
+            onSync2Callback(sync2_tick);
+            ++sync2_tick;
+        }
+        ++mod_sync2_counter;
+    }
+    
+    // Sync4 callback
+    if (onSync4Callback) {
+        if (mod_sync4_counter == mod_sync4_ref)
+            mod_sync4_counter = 0;
+        if (mod_sync4_counter == 0) {
+            onSync4Callback(sync4_tick);
+            ++sync4_tick;
+        }
+        ++mod_sync4_counter;
+    }
+
+    // Sync8 callback
+    if (onSync8Callback) {
+        if (mod_sync8_counter == mod_sync8_ref)
+            mod_sync8_counter = 0;
+        if (mod_sync8_counter == 0) {
+            onSync8Callback(sync8_tick);
+            ++sync8_tick;
+        }
+        ++mod_sync8_counter;
+    }
+
+    // Sync12 callback
+    if (onSync12Callback) {
+        if (mod_sync12_counter == mod_sync12_ref)
+            mod_sync12_counter = 0;
+        if (mod_sync12_counter == 0) {
+            onSync12Callback(sync12_tick);
+            ++sync12_tick;
+        }
+        ++mod_sync12_counter;
+    }
 
     // Sync24 callback
-    if (mod_sync24_counter == mod_sync24_ref)
-        mod_sync24_counter = 0;
-
     if (onSync24Callback) {
+        if (mod_sync24_counter == mod_sync24_ref)
+            mod_sync24_counter = 0;
         if (mod_sync24_counter == 0) {
             onSync24Callback(sync24_tick);
             ++sync24_tick;
         }
+        ++mod_sync24_counter;
     }
 
     // Sync48 callback
-    if (mod_sync48_counter == mod_sync48_ref)
-        mod_sync48_counter = 0;
-
     if (onSync48Callback) {
+        if (mod_sync48_counter == mod_sync48_ref)
+            mod_sync48_counter = 0;
         if (mod_sync48_counter == 0) {
             onSync48Callback(sync48_tick);
             ++sync48_tick;
         }
+        ++mod_sync48_counter;
     }
 
-    // PPQNCallback time!
+    // main PPQNCallback
     if (onPPQNCallback) {
         onPPQNCallback(tick);
+        ++tick;
     }
 
-    // reset step mod counter reference ?
-    if (mod_step_counter == mod_step_ref)
-        mod_step_counter = 0;
-    
     // step callback to support 16th old school style sequencers
     // with builtin shuffle for this callback only
     if (onStepCallback) {
+        if (mod_step_counter == mod_step_ref)
+            mod_step_counter = 0;
         // processShufle make use of mod_step_counter == 0 logic too
         if (processShuffle()) {        
             onStepCallback(step_counter);
             // going forward to the next step call
             ++step_counter;
         }
+        ++mod_step_counter;
     }
-
-    // tick me!
-    ++tick;
-    // increment mod counters
-    ++mod_clock_counter;
-    ++mod_sync24_counter;
-    ++mod_sync48_counter;
-    ++mod_step_counter;
 }
 
 // elapsed time support

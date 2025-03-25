@@ -34,16 +34,6 @@
 
 namespace umodular { namespace clock {
 
-// for extended steps in memory style and make use of 96ppqn for record propurse we can
-// keep array[step] memory layout and add new information about note possition to be check for the entire ppqn pulse
-// example: for a whole 24 pulses we only check array[step].offset that can vary from 0 to 24(ppqn/4)
-// time/tick notation and representation notes:
-// one quarter note == 4 steps in 16th notes step sequencer style
-// PPQN / 4 = pulses in between steps(from step sequencer perspective, a quarter note have 4 steps)
-// 24 PPQN (6 pulses per step)
-// 48 PPQN (12 pulses per step)
-// 96 PPQN (24 pulses per step)
-
 // min: -(ppqn/4)-1 step, max: (ppqn/4)-1 steps  
 // adjust the size of you template if more than 16 shuffle step info needed
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
@@ -108,12 +98,27 @@ class uClockClass {
         void setOnStep(void (*callback)(uint32_t step)) {
             onStepCallback = callback;
         }
+
+        // multiple output clock signatures
+        void setOnSync1(void (*callback)(uint32_t tick)) {
+            onSync1Callback = callback;
+        }
         
-        // setOnSync1
-        // setOnSync2
-        // setOnSync4
-        // setOnSync8
-        // setOnSync12
+        void setOnSync2(void (*callback)(uint32_t tick)) {
+            onSync2Callback = callback;
+        }
+        
+        void setOnSync4(void (*callback)(uint32_t tick)) {
+            onSync4Callback = callback;
+        }
+        
+        void setOnSync8(void (*callback)(uint32_t tick)) {
+            onSync8Callback = callback;
+        }
+        
+        void setOnSync12(void (*callback)(uint32_t tick)) {
+            onSync12Callback = callback;
+        }
 
         void setOnSync24(void (*callback)(uint32_t tick)) {
             onSync24Callback = callback;
@@ -185,6 +190,11 @@ class uClockClass {
 
         void (*onPPQNCallback)(uint32_t tick);
         void (*onStepCallback)(uint32_t step);
+        void (*onSync1Callback)(uint32_t tick);
+        void (*onSync2Callback)(uint32_t tick);
+        void (*onSync4Callback)(uint32_t tick);
+        void (*onSync8Callback)(uint32_t tick);
+        void (*onSync12Callback)(uint32_t tick);
         void (*onSync24Callback)(uint32_t tick);
         void (*onSync48Callback)(uint32_t tick);
         void (*onClockStartCallback)();
@@ -201,6 +211,23 @@ class uClockClass {
         uint8_t mod_step_counter;
         uint8_t mod_step_ref;
         uint32_t step_counter; // should we go uint16_t?
+
+        // clock output counters, ticks and references
+        uint8_t mod_sync1_counter;
+        uint8_t mod_sync1_ref;
+        uint32_t sync1_tick;
+        uint8_t mod_sync2_counter;
+        uint8_t mod_sync2_ref;
+        uint32_t sync2_tick;
+        uint8_t mod_sync4_counter;
+        uint8_t mod_sync4_ref;
+        uint32_t sync4_tick;
+        uint8_t mod_sync8_counter;
+        uint8_t mod_sync8_ref;
+        uint32_t sync8_tick;
+        uint8_t mod_sync12_counter;
+        uint8_t mod_sync12_ref;
+        uint32_t sync12_tick;
         uint8_t mod_sync24_counter;
         uint8_t mod_sync24_ref;
         uint32_t sync24_tick;
