@@ -57,7 +57,7 @@ typedef struct {
 // in between 64 to 128.
 // note: this doesn't impact on sync time, only display time getTempo()
 // if you dont want to use it, set it to 1 for memory save
-#define EXT_INTERVAL_BUFFER_SIZE 24
+#define EXT_INTERVAL_BUFFER_SIZE 128
 
 #define MIN_BPM	1
 #define MAX_BPM	300
@@ -84,6 +84,8 @@ class uClockClass {
         };
 
         enum PPQNResolution {
+            PPQN_1 = 1,
+            PPQN_2 = 2,
             PPQN_4 = 4,
             PPQN_8 = 8,
             PPQN_12 = 12,
@@ -107,8 +109,18 @@ class uClockClass {
             onStepCallback = callback;
         }
         
+        // setOnSync1
+        // setOnSync2
+        // setOnSync4
+        // setOnSync8
+        // setOnSync12
+
         void setOnSync24(void (*callback)(uint32_t tick)) {
             onSync24Callback = callback;
+        }
+        
+        void setOnSync48(void (*callback)(uint32_t tick)) {
+            onSync48Callback = callback;
         }
 
         void setOnClockStart(void (*callback)()) {
@@ -174,6 +186,7 @@ class uClockClass {
         void (*onPPQNCallback)(uint32_t tick);
         void (*onStepCallback)(uint32_t step);
         void (*onSync24Callback)(uint32_t tick);
+        void (*onSync48Callback)(uint32_t tick);
         void (*onClockStartCallback)();
         void (*onClockStopCallback)();
 
@@ -183,7 +196,6 @@ class uClockClass {
         PPQNResolution clock_ppqn = PPQN_24;
         uint32_t tick;
         uint32_t int_clock_tick;
-        uint32_t sync24_tick;
         uint8_t mod_clock_counter;
         uint8_t mod_clock_ref;
         uint8_t mod_step_counter;
@@ -191,6 +203,10 @@ class uClockClass {
         uint32_t step_counter; // should we go uint16_t?
         uint8_t mod_sync24_counter;
         uint8_t mod_sync24_ref;
+        uint32_t sync24_tick;
+        uint8_t mod_sync48_counter;
+        uint8_t mod_sync48_ref;
+        uint32_t sync48_tick;
         // external clock control
         volatile uint32_t ext_clock_us;
         volatile uint32_t ext_clock_tick;

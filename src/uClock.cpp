@@ -150,6 +150,7 @@ void uClockClass::calculateReferencedata()
 {
     mod_clock_ref = ppqn / clock_ppqn; 
     mod_sync24_ref = ppqn / PPQN_24; 
+    mod_sync48_ref = ppqn / PPQN_48; 
     mod_step_ref = ppqn / 4; 
 }
 
@@ -157,7 +158,7 @@ void uClockClass::setPPQN(PPQNResolution resolution)
 {
     // stop clock to make it safe changing those references
     // so we avoid volatile then and ATOMIC everywhere
-    stop();
+    //stop();
     ppqn = resolution;
     calculateReferencedata();
 }
@@ -166,10 +167,9 @@ void uClockClass::setClockPPQN(PPQNResolution resolution)
 {
     // stop clock to make it safe changing those references
     // so we avoid volatile then and ATOMIC everywhere
-    stop();
+    //stop();
     clock_ppqn = resolution;
     calculateReferencedata();
-    //mod_clock_ref = ppqn / clock_ppqn; 
 }
 
 void uClockClass::start() 
@@ -256,7 +256,7 @@ void uClockClass::run()
 float inline uClockClass::freqToBpm(uint32_t freq)
 {
     float usecs = 1/((float)freq/1000000.0);
-    return (float)((float)(usecs/(float)24) * 60.0);
+    return (float)((float)(usecs/(float)clock_ppqn) * 60.0);
 }
 
 void uClockClass::setMode(SyncMode tempo_mode) 
@@ -282,10 +282,12 @@ void uClockClass::resetCounters()
 {
     tick = 0;
     int_clock_tick = 0;
-    sync24_tick = 0;
     mod_clock_counter = 0;
     mod_step_counter = 0;
     mod_sync24_counter = 0;
+    sync24_tick = 0;
+    mod_sync48_counter = 0;
+    sync48_tick = 0;
     step_counter = 0;
     ext_clock_tick = 0;
     ext_clock_us = 0;
@@ -477,6 +479,17 @@ void uClockClass::handleTimerInt()
         }
     }
 
+    // Sync48 callback
+    if (mod_sync48_counter == mod_sync48_ref)
+        mod_sync48_counter = 0;
+
+    if (onSync48Callback) {
+        if (mod_sync48_counter == 0) {
+            onSync48Callback(sync48_tick);
+            ++sync48_tick;
+        }
+    }
+
     // PPQNCallback time!
     if (onPPQNCallback) {
         onPPQNCallback(tick);
@@ -502,6 +515,7 @@ void uClockClass::handleTimerInt()
     // increment mod counters
     ++mod_clock_counter;
     ++mod_sync24_counter;
+    ++mod_sync48_counter;
     ++mod_step_counter;
 }
 
