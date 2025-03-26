@@ -155,18 +155,19 @@ uint32_t uClockClass::bpmToMicroSeconds(float bpm)
 void uClockClass::calculateReferencedata()
 {
     mod_clock_ref = ppqn / clock_ppqn; 
-    mod_sync1_ref = ppqn / PPQN_1; 
-    mod_sync2_ref = ppqn / PPQN_2; 
-    mod_sync4_ref = ppqn / PPQN_4; 
-    mod_sync8_ref = ppqn / PPQN_8; 
-    mod_sync12_ref = ppqn / PPQN_12; 
-    mod_sync24_ref = ppqn / PPQN_24; 
-    mod_sync48_ref = ppqn / PPQN_48; 
-    mod_step_ref = ppqn / 4; 
+    mod_sync1_ref = ppqn / PPQN_1;
+    mod_sync2_ref = ppqn / PPQN_2;
+    mod_sync4_ref = ppqn / PPQN_4;
+    mod_sync8_ref = ppqn / PPQN_8;
+    mod_sync12_ref = ppqn / PPQN_12;
+    mod_sync24_ref = ppqn / PPQN_24;
+    mod_sync48_ref = ppqn / PPQN_48;
+    mod_step_ref = ppqn / 4;
 }
 
 void uClockClass::setPPQN(PPQNResolution resolution)
 {
+    // TODO: dont allow PPQN lower than 4(to avoid problems with mod_step_ref)
     ATOMIC(
         ppqn = resolution;
         calculateReferencedata();
@@ -318,10 +319,11 @@ void uClockClass::resetCounters()
     }
 }
 
-// TODO: Tap stuff
 void uClockClass::tap() 
 {
-    // tap me
+    // we can make use of mod_sync1_ref for tap
+    //uint8_t mod_tap_ref = ppqn / PPQN_1; 
+    // we only set tap if SyncMode is INTERNAL_CLOCK
 }
 
 void uClockClass::setShuffle(bool active)
@@ -409,7 +411,6 @@ bool inline uClockClass::processShuffle()
     return false;
 }
 
-// TODO: needs to check clock signals against current phase lock parameters(based on 24ppqn sync)
 void uClockClass::handleExternalClock() 
 {
     switch (state) {

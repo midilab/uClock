@@ -50,7 +50,7 @@ typedef struct {
 #define EXT_INTERVAL_BUFFER_SIZE 128
 
 #define MIN_BPM	1
-#define MAX_BPM	300
+#define MAX_BPM	400
 
 #define PHASE_FACTOR 16
 #define PLL_X 220
@@ -200,40 +200,39 @@ class uClockClass {
         void (*onClockStartCallback)();
         void (*onClockStopCallback)();
 
-        // internal clock control
-        // uint16_t ppqn;
+        // clock control
         PPQNResolution ppqn = PPQN_96;
         PPQNResolution clock_ppqn = PPQN_24;
+        // output and internal counters, ticks and references
         uint32_t tick;
         uint32_t int_clock_tick;
         uint8_t mod_clock_counter;
-        uint8_t mod_clock_ref;
+        uint16_t mod_clock_ref;
         uint8_t mod_step_counter;
         uint8_t mod_step_ref;
-        uint32_t step_counter; // should we go uint16_t?
-
-        // clock output counters, ticks and references
+        uint32_t step_counter;
         uint8_t mod_sync1_counter;
-        uint8_t mod_sync1_ref;
+        uint16_t mod_sync1_ref;
         uint32_t sync1_tick;
         uint8_t mod_sync2_counter;
-        uint8_t mod_sync2_ref;
+        uint16_t mod_sync2_ref;
         uint32_t sync2_tick;
         uint8_t mod_sync4_counter;
-        uint8_t mod_sync4_ref;
+        uint16_t mod_sync4_ref;
         uint32_t sync4_tick;
         uint8_t mod_sync8_counter;
-        uint8_t mod_sync8_ref;
+        uint16_t mod_sync8_ref;
         uint32_t sync8_tick;
         uint8_t mod_sync12_counter;
-        uint8_t mod_sync12_ref;
+        uint16_t mod_sync12_ref;
         uint32_t sync12_tick;
         uint8_t mod_sync24_counter;
-        uint8_t mod_sync24_ref;
+        uint16_t mod_sync24_ref;
         uint32_t sync24_tick;
         uint8_t mod_sync48_counter;
-        uint8_t mod_sync48_ref;
+        uint16_t mod_sync48_ref;
         uint32_t sync48_tick;
+
         // external clock control
         volatile uint32_t ext_clock_us;
         volatile uint32_t ext_clock_tick;
