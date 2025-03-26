@@ -13,21 +13,23 @@ The uClock library API operates through an attached callback function mechanism:
 
 1. **setOnPPQN(onPPQNCallback) > onPPQNCallback(uint32_t tick)** Calls are made on each new pulse based on the selected PPQN resolution (if no PPQN is set, the default is 96 PPQN).
 2. **setOnStep(onStepCallback) > onStepCallback(uint32_t step)** A good way to code an old-style step sequencer based on a 16th-note schema (not dependent on PPQN resolution).
-3. **setOnSync24(onSync24Callback) > onSync24Callback(uint32_t tick)** A good way to code a clock machine or keep your devices synced with your system.
+3. **setOnSync24(onSync24Callback) > onSync24Callback(uint32_t tick)** A good way to code a clock machine or keep your devices synced with your system is to use setOnSyncXX(), where XX represents the PPQN you want to use. MIDI specs expect 24 PPQN, but if you're working with other devices that are not MIDI standard, you can choose a different PPQN value. Please check the supported PPQNs to choose from.
 4. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** On the uClock Start event.
 5. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** On the uClock Stop event.
 
 ### Clock input/output resolutions
 
-1. **PPQN_4** 4 Pulses Per Quarter Note
-2. **PPQN_8** 8 Pulses Per Quarter Note
-3. **PPQN_12** 12 Pulses Per Quarter Note
-4. **PPQN_24** 24 Pulses Per Quarter Note
-5. **PPQN_48** 48 Pulses Per Quarter Note
-6. **PPQN_96** 96 Pulses Per Quarter Note
-7. **PPQN_384** 384 Pulses Per Quarter Note
-8. **PPQN_480** 480 Pulses Per Quarter Note
-9. **PPQN_960** 960 Pulses Per Quarter Note
+1. **PPQN_1** 1 Pulses Per Quarter Note (only input)
+2. **PPQN_2** 2 Pulses Per Quarter Note (only input)
+3. **PPQN_4** 4 Pulses Per Quarter Note
+4. **PPQN_8** 8 Pulses Per Quarter Note
+5. **PPQN_12** 12 Pulses Per Quarter Note
+6. **PPQN_24** 24 Pulses Per Quarter Note
+7. **PPQN_48** 48 Pulses Per Quarter Note
+8. **PPQN_96** 96 Pulses Per Quarter Note
+9. **PPQN_384** 384 Pulses Per Quarter Note
+10. **PPQN_480** 480 Pulses Per Quarter Note
+11. **PPQN_960** 960 Pulses Per Quarter Note
 
 To generate a MIDI sync signal and synchronize external MIDI devices, you can start with a resolution of 24 PPQN, which aligns with the clocking standards of modern MIDI-syncable devices commonly available on the market. By sending 24 pulses per quarter-note interval, you can ensure effective synchronization among your MIDI devices.
 

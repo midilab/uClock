@@ -167,7 +167,10 @@ void uClockClass::calculateReferencedata()
 
 void uClockClass::setPPQN(PPQNResolution resolution)
 {
-    // TODO: dont allow PPQN lower than 4(to avoid problems with mod_step_ref)
+    // dont allow PPQN lower than 4 for output clock (to avoid problems with mod_step_ref)
+    if (resolution < PPQN_4)
+        return;
+
     ATOMIC(
         ppqn = resolution;
         calculateReferencedata();
