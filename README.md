@@ -11,11 +11,12 @@ With uClock, you can create professional-grade sequencers, sync boxes, or genera
 ## Interface
 The uClock library API operates through an attached callback function mechanism:
 
-1. **setOnPPQN(onPPQNCallback) > onPPQNCallback(uint32_t tick)** Calls are made on each new pulse based on the selected PPQN resolution (if no PPQN is set, the default is 96 PPQN).
-2. **setOnStep(onStepCallback) > onStepCallback(uint32_t step)** A good way to code an old-style step sequencer based on a 16th-note schema (not dependent on PPQN resolution).
-3. **setOnSync24(onSync24Callback) > onSync24Callback(uint32_t tick)** A good way to code a clock machine or keep your devices synced with your system is to use setOnSyncXX(), where XX represents the PPQN you want to use. MIDI specs expect 24 PPQN, but if you're working with other devices that are not MIDI standard, you can choose a different PPQN value. Please check the supported PPQNs to choose from.
-4. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** On the uClock Start event.
-5. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** On the uClock Stop event.
+1. **setOnOutputPPQN(onPPQNCallback) > onOutputPPQNCallback(uint32_t tick)** Calls are made on each new output pulse based on the selected PPQN resolution (if no PPQN is set, the default is 96 PPQN).
+2. **setOnInputPPQN(onPPQNCallback) > onInputPPQNCallback(uint32_t tick)** Set the expected input PPQN (Pulses Per Quarter Note) resolution for external clock sync.
+3. **setOnStep(onStepCallback) > onStepCallback(uint32_t step)** A good way to code an old-style step sequencer based on a 16th-note schema, which is not dependent on PPQN (Pulses Per Quarter Note) output config.
+4. **setOnSync24(onSync24Callback) > onSync24Callback(uint32_t tick)** A good way to code a clock machine or keep your devices in sync with your system is to use setOnSyncXX(), where XX represents the PPQN (Pulses Per Quarter Note) value you want to use. MIDI specifications typically expect 24 PPQN, but if you're working with other devices that are not MIDI standard, you can choose a different PPQN value. Please refer to the supported PPQNs to select from. You can use one or more setOnSyncXX callbacks for different sync output signatures.
+5. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** On the uClock Start event.
+6. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** On the uClock Stop event.
 
 ### Clock input/output resolutions
 
