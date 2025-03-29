@@ -272,12 +272,12 @@ float inline uClockClass::freqToBpm(uint32_t freq)
     return (float)((float)(usecs/(float)input_ppqn) * 60.0);
 }
 
-void uClockClass::setMode(ClockMode tempo_mode) 
+void uClockClass::setClockMode(ClockMode tempo_mode) 
 {
     clock_mode = tempo_mode;
 }
 
-uClockClass::ClockMode uClockClass::getMode() 
+uClockClass::ClockMode uClockClass::getClockMode() 
 {
     return clock_mode;
 }
