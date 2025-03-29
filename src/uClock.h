@@ -34,7 +34,9 @@
 
 namespace umodular { namespace clock {
 
-// min: -(ppqn/4)-1 step, max: (ppqn/4)-1 steps  
+// Shuffle templates are specific for each PPQN output resolution
+// min: -(output_ppqn/4)-1 ticks
+// max: (output_ppqn/4)-1 ticks  
 // adjust the size of you template if more than 16 shuffle step info needed
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
 typedef struct {
@@ -62,7 +64,7 @@ typedef struct {
 class uClockClass {
 
     public:
-        enum SyncMode {
+        enum ClockMode {
             INTERNAL_CLOCK = 0,
             EXTERNAL_CLOCK
         };
@@ -87,11 +89,11 @@ class uClockClass {
             PPQN_960 = 960
         };
 
-        ClockState state;
+        ClockState clock_state;
         
         uClockClass();
 
-        void setOnPPQN(void (*callback)(uint32_t tick)) {
+        void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
             onPPQNCallback = callback;
         }
 
@@ -137,8 +139,8 @@ class uClockClass {
         }
 
         void init();
-        void setPPQN(PPQNResolution resolution);
-        void setClockPPQN(PPQNResolution resolution);
+        void setOutputPPQN(PPQNResolution resolution);
+        void setInputPPQN(PPQNResolution resolution);
 
         void handleTimerInt();
         void handleExternalClock();
@@ -155,8 +157,8 @@ class uClockClass {
         void run();
 
         // external timming control
-        void setMode(SyncMode tempo_mode);
-        SyncMode getMode();
+        void setClockMode(ClockMode tempo_mode);
+        ClockMode getClockMode();
         void clockMe();
 
         // shuffle
@@ -200,9 +202,9 @@ class uClockClass {
         void (*onClockStartCallback)();
         void (*onClockStopCallback)();
 
-        // clock control
-        PPQNResolution ppqn = PPQN_96;
-        PPQNResolution clock_ppqn = PPQN_24;
+        // clock input/output control
+        PPQNResolution output_ppqn = PPQN_96;
+        PPQNResolution input_ppqn = PPQN_24;
         // output and internal counters, ticks and references
         uint32_t tick;
         uint32_t int_clock_tick;
@@ -242,7 +244,7 @@ class uClockClass {
 
         float tempo;
         uint32_t start_timer;
-        SyncMode mode;
+        ClockMode clock_mode;
 
         volatile uint32_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
         uint16_t ext_interval_idx;
