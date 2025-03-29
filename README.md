@@ -62,10 +62,10 @@ If you are coming from uClock version < 2.0 versions, pay attention to the break
 
 ### setCallback function name changes
 
-- **setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now _setOnPPQN(onPPQNCallback)_ and this clock depends on the PPQN setup using _setPPQN(clockPPQNResolution)_. For clock setup you now use a separated callback via _setOnSync24(onSync24Callback)_
-- **setClock16PPQNOutput(ClockOut16PPQN)** is now _setOnStep(onStepCall)_ and it's not dependent on clock PPQN resolution  
-- **setOnClockStartOutput(onClockStartCallback)** is now _setOnClockStart(onClockStartCallback)_
-- **setOnClockStopOutput(onClockStopCallback)** is now _setOnClockStop(onClockStopCallback)_
+- `setClock96PPQNOutput(onClock96PPQNOutputCallback)` is now renamed to **`setOnOutputPPQN(onOutputPPQNCallback)`**, and its tick count is based on the PPQN setup using **`setOutputPPQN(clockOutputPPQNResolution)`**. For clock ticks, you now use a separated callback via **`setOnSyncXX(onSyncXXCallback)`**, where XX represents one of the available PPQN values
+- `setClock16PPQNOutput(ClockOut16PPQN)` is now renamed to **`setOnStep(onStepCall)`**, and it's not dependent on clock PPQN resolution.
+- `setOnClockStartOutput(onClockStartCallback)` is now renamed to **`setOnClockStart(onClockStartCallback)`**.
+- `setOnClockStopOutput(onClockStopCallback)` is now renamed to **`setOnClockStop(onClockStopCallback)`**.
 
 ### Tick resolution and sequencers
 
