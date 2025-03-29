@@ -125,7 +125,7 @@ uClockClass::uClockClass()
     clock_mode = INTERNAL_CLOCK;
     resetCounters();
 
-    onPPQNCallback = nullptr;
+    onOutputPPQNCallback = nullptr;
     onSync1Callback = nullptr;
     onSync2Callback = nullptr;
     onSync4Callback = nullptr;
@@ -572,8 +572,8 @@ void uClockClass::handleTimerInt()
     }
 
     // main PPQNCallback
-    if (onPPQNCallback) {
-        onPPQNCallback(tick);
+    if (onOutputPPQNCallback) {
+        onOutputPPQNCallback(tick);
         ++tick;
     }
 

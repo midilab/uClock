@@ -94,7 +94,7 @@ class uClockClass {
         uClockClass();
 
         void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
-            onPPQNCallback = callback;
+            onOutputPPQNCallback = callback;
         }
 
         void setOnStep(void (*callback)(uint32_t step)) {
@@ -190,7 +190,7 @@ class uClockClass {
         // shuffle
         bool inline processShuffle();
 
-        void (*onPPQNCallback)(uint32_t tick);
+        void (*onOutputPPQNCallback)(uint32_t tick);
         void (*onStepCallback)(uint32_t step);
         void (*onSync1Callback)(uint32_t tick);
         void (*onSync2Callback)(uint32_t tick);
