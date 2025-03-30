@@ -101,7 +101,7 @@ void onStepCallback(uint32_t tick)
 }
 
 // The callback function wich will be called by uClock each Pulse of 96PPQN clock resolution.
-void onPPQNCallback(uint32_t tick) 
+void onOutputPPQNCallback(uint32_t tick) 
 {
   // handle note on stack
   for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {
@@ -158,7 +158,7 @@ void setup()
   uClock.init();
   
   // Set the callback function for the clock output to send MIDI Sync message.
-  uClock.setOnPPQN(onPPQNCallback);
+  uClock.setOnOutputPPQN(onOutputPPQNCallback);
 
   // for MIDI sync
   uClock.setOnSync24(onSync24Callback);
