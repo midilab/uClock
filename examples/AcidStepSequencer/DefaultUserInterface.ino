@@ -84,15 +84,15 @@ void processInterface()
   processPots();  
 }
 
-void tempoInterface(uint32_t * tick) 
+void tempoInterface(uint32_t tick) 
 {
   // BPM led indicator
-  if ( !(*tick % (96)) || (*tick == 0) ) {  // first compass step will flash longer
+  if ( !(tick % (96)) || (tick == 0) ) {  // first compass step will flash longer
     _bpm_blink_timer = 8;
     digitalWrite(PLAY_STOP_LED_PIN , HIGH);
-  } else if ( !(*tick % (24)) ) {   // each quarter led on
+  } else if ( !(tick % (24)) ) {   // each quarter led on
     digitalWrite(PLAY_STOP_LED_PIN , HIGH);
-  } else if ( !(*tick % _bpm_blink_timer) ) { // get led off
+  } else if ( !(tick % _bpm_blink_timer) ) { // get led off
     digitalWrite(PLAY_STOP_LED_PIN , LOW);
     _bpm_blink_timer = 1;
   }

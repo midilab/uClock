@@ -1,21 +1,40 @@
 # uClock
 
-The **uClock BPM Generator library** is designed to implement precise and reliable BPM clock tick calls using the microcontroller's timer hardware interruption. It is designed to be multi-architecture, portable, and easy to use within the open source community universe. 
+The **uClock BPM Generator library** is designed to implement precise and reliable BPM clock tick calls using the microcontroller's timer hardware interrupt. It is built to be multi-architecture, portable, and easy to use within the open-source ecosystem.
 
-We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on general **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, ESP32, Raspberry Pico, Seedstudio XIAO M0 and RP2040)**. 
+We have chosen PlatformIO and Arduino as our official deployment platforms. The library has been supported and tested on various **AVR boards (ATmega168/328, ATmega16u4/32u4, and ATmega2560)** as well as **ARM boards (Teensy, STM32XX, ESP32, Raspberry Pi Pico, Seeed Studio XIAO M0, and RP2040)**.
 
-The absence of real-time features necessary for creating professional-level embedded devices for music and video on open source community-based platforms like Arduino led to the development of uClock. By leveraging the use of timer hardware interruptions, the library can schedule and manage real-time-like processing with safe shared resource access through its API.
+The absence of real-time features necessary for creating professional-level embedded devices for music and video on open-source community-based platforms like Arduino led to the development of uClock. By leveraging timer hardware interrupts, the library can schedule and manage real-time processing with safe shared resource access through its API.
 
-With uClock, you gain the ability to create professional-grade sequencers, sync boxes, or generate a precise BPM clock for external devices in the realms of music, audio/video productions, performances, or tech art installations. The library offers an external synchronization schema that enables you to generate an internal clock based on an external clock source, allowing you to master your entire MIDI setup or any other protocols according to your specific preferences and requirements.
+With uClock, you can create professional-grade sequencers, sync boxes, or generate a precise BPM clock for external devices in music, audio/video production, performances, or tech art installations. The library offers an external synchronization schema that enables you to generate an internal clock based on an external clock source, allowing you to control your entire MIDI setup or any other protocols according to your specific preferences and requirements.
 
 ## Interface
-The uClock library API operates through attached callback functions mechanism:
+The uClock library API operates through an attached callback function mechanism:
 
-1. **setOnPPQN(onPPQNCallback) > onPPQNCallback(uint32_t tick)** calls on each new pulse based on selected PPQN resolution (if no PPQN set, the default is 96PPQN)
-2. **setOnStep(onStepCallback) > onStepCallback(uint32_t step)** good way to code old style step sequencer based on 16th note schema (not dependent on PPQN resolution)
-3. **setOnSync24(onSync24Callback) > onSync24Callback(uint32_t tick)** good way to code a clock machine, or keep your devices synced with your device
-4. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** on uClock Start event
-5. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** on uClock Stop event
+1. **setOnOutputPPQN(onPPQNCallback) > onOutputPPQNCallback(uint32_t tick)** Calls are made on each new output pulse based on the selected PPQN resolution (if no PPQN is set, the default is 96 PPQN).
+2. **setOnInputPPQN(onPPQNCallback) > onInputPPQNCallback(uint32_t tick)** Set the expected input PPQN (Pulses Per Quarter Note) resolution for external clock sync.
+3. **setOnStep(onStepCallback) > onStepCallback(uint32_t step)** A good way to code an old-style step sequencer based on a 16th-note schema, which is not dependent on PPQN (Pulses Per Quarter Note) output config.
+4. **setOnSync24(onSync24Callback) > onSync24Callback(uint32_t tick)** A good way to code a clock machine or keep your devices in sync with your system is to use setOnSyncXX(), where XX represents the PPQN (Pulses Per Quarter Note) value you want to use. MIDI specifications typically expect 24 PPQN, but if you're working with other devices that are not MIDI standard, you can choose a different PPQN value. Please refer to the supported PPQNs to select from. You can use one or more setOnSyncXX callbacks for different sync output signatures.
+5. **setOnClockStart(onClockStartCallback) > onClockStartCallback()** On the uClock Start event.
+6. **setOnClockStop(onClockStopCallback) > onClockStopCallback()** On the uClock Stop event.
+
+### Clock input/output resolutions
+
+1. **PPQN_1** 1 Pulses Per Quarter Note (only input)
+2. **PPQN_2** 2 Pulses Per Quarter Note (only input)
+3. **PPQN_4** 4 Pulses Per Quarter Note
+4. **PPQN_8** 8 Pulses Per Quarter Note
+5. **PPQN_12** 12 Pulses Per Quarter Note
+6. **PPQN_24** 24 Pulses Per Quarter Note
+7. **PPQN_48** 48 Pulses Per Quarter Note
+8. **PPQN_96** 96 Pulses Per Quarter Note
+9. **PPQN_384** 384 Pulses Per Quarter Note
+10. **PPQN_480** 480 Pulses Per Quarter Note
+11. **PPQN_960** 960 Pulses Per Quarter Note
+
+To generate a MIDI sync signal and synchronize external MIDI devices, you can start with a resolution of 24 PPQN, which aligns with the clocking standards of modern MIDI-syncable devices commonly available on the market. By sending 24 pulses per quarter-note interval, you can ensure effective synchronization among your MIDI devices.
+
+If you are working on the development of a vintage-style step sequencer, utilizing a resolution of 96PPQN is a fitting option to initiate the coding process. Then you can use onStepCallback call which corresponds to a step played, note or event.
 
 ### Software Timer mode - for unsupported boards (or avoiding usage of interrupts)
 If a supported board isn't detected during compilation then a generic fallback approach will be used. This does not utilise any interrupts and so does not ensure accurate timekeeping.  This can be useful to port your projects to boards that do not have support in uClock yet, or to test if suspected bugs in your code are related to interactions with interrupts or task handling.
@@ -27,7 +46,7 @@ In order for software timer mode to work, you need to add a call to your `loop()
 ```c++
 void loop() {
   uClock.run();
-  
+
   // do anything else you need to do inside loop()...
   // you can intercalate your main processing with other uClock.run() calls to avoid timming accuracy loss.
   //uClock.run();
@@ -37,31 +56,16 @@ void loop() {
 }
 ```
 
-## Set your own resolution for your clock needs
-
-1. **PPQN_24** 24 Pulses Per Quarter Note
-2. **PPQN_48** 48 Pulses Per Quarter Note
-3. **PPQN_96** 96 Pulses Per Quarter Note
-1. **PPQN_384** 384 Pulses Per Quarter Note
-2. **PPQN_480** 480 Pulses Per Quarter Note
-3. **PPQN_960** 960 Pulses Per Quarter Note
-
-To generate a MIDI sync signal and synchronize external MIDI devices, you can start working with the resolution of 24PPQN, which aligns with the clocking standards of modern MIDI-syncable devices commonly available in the market. By sending 24 pulses per quarter note interval, you can ensure effective synchronization among your MIDI devices.
-
-If you are working on the development of a vintage-style step sequencer, utilizing a resolution of 96PPQN is a fitting option to initiate the coding process. Then you can use onStepCallback call which corresponds to a step played, note or event.
-
-Furthermore, it is possible to utilize all three resolutions simultaneously, allowing for flexibility based on your specific requirements and preferences.
-
 ## uClock v2.0 Breaking Changes
 
 If you are coming from uClock version < 2.0 versions, pay attention to the breaking changes so you can update your code to reflect the new API interface:
 
 ### setCallback function name changes
 
-- **setClock96PPQNOutput(onClock96PPQNOutputCallback)** is now _setOnPPQN(onPPQNCallback)_ and this clock depends on the PPQN setup using _setPPQN(clockPPQNResolution)_. For clock setup you now use a separated callback via _setOnSync24(onSync24Callback)_
-- **setClock16PPQNOutput(ClockOut16PPQN)** is now _setOnStep(onStepCall)_ and it's not dependent on clock PPQN resolution  
-- **setOnClockStartOutput(onClockStartCallback)** is now _setOnClockStart(onClockStartCallback)_
-- **setOnClockStopOutput(onClockStopCallback)** is now _setOnClockStop(onClockStopCallback)_
+- `setClock96PPQNOutput(onClock96PPQNOutputCallback)` is now renamed to **`setOnOutputPPQN(onOutputPPQNCallback)`**, and its tick count is based on the PPQN setup using **`setOutputPPQN(clockOutputPPQNResolution)`**. For clock ticks, you now use a separated callback via **`setOnSyncXX(onSyncXXCallback)`**, where XX represents one of the available PPQN values
+- `setClock16PPQNOutput(ClockOut16PPQN)` is now renamed to **`setOnStep(onStepCall)`**, and it's not dependent on clock PPQN resolution.
+- `setOnClockStartOutput(onClockStartCallback)` is now renamed to **`setOnClockStart(onClockStartCallback)`**.
+- `setOnClockStopOutput(onClockStopCallback)` is now renamed to **`setOnClockStop(onClockStopCallback)`**.
 
 ### Tick resolution and sequencers
 
@@ -69,7 +73,7 @@ If created a device using setClock16PPQNOutput only you just change the API call
 
 # Examples
 
-You will find more complete examples on examples/ folder:  
+You will find more complete examples on examples/ folder:
 
 ```c++
 #include <uClock.h>
@@ -112,7 +116,7 @@ void setup() {
   uClock.setPPQN(uClock.PPQN_96);
 
   // you need to use at least one!
-  uClock.setOnPPQN(onPPQNCallback);
+  uClock.setOnOutputPPQN(onPPQNCallback);
   uClock.setOnStep(onStepCallback);
   uClock.setOnSync24(onSync24Callback);
 
@@ -185,7 +189,7 @@ void setup() {
   // Set the callback function for the clock output to send MIDI Sync message based on 24PPQN
   uClock.setOnSync24(onSync24Callback);
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStartOutput(onClockStart);  
+  uClock.setOnClockStartOutput(onClockStart);
   uClock.setOnClockStopOutput(onClockStop);
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);
@@ -228,7 +232,7 @@ void setup() {
   // Set the callback function for the clock output to send MIDI Sync message. based on 24PPQN
   uClock.setOnSync24(onSync24Callback);
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStartOutput(onClockStart);  
+  uClock.setOnClockStartOutput(onClockStart);
   uClock.setOnClockStopOutput(onClockStop);
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);
@@ -302,7 +306,7 @@ bool _playing = false;
 uint16_t _step = 0;
 
 void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
-{ 
+{
   // send midi message
   command = command | (uint8_t)MIDI_CHANNEL;
   Serial.write(command);
@@ -311,14 +315,14 @@ void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 }
 
 // The callback function called by uClock each Pulse of 16PPQN clock resolution. Each call represents exactly one step.
-void onStepCallback(uint32_t tick) 
+void onStepCallback(uint32_t tick)
 {
   uint16_t step;
   uint16_t length = NOTE_LENGTH;
-  
+
   // get actual step.
   _step = tick % _step_length;
-  
+
   // send note on only if this step are not in rest mode
   if ( _sequencer[_step].rest == false ) {
 
@@ -341,15 +345,15 @@ void onStepCallback(uint32_t tick)
         _note_stack[i].note = _sequencer[_step].note;
         _note_stack[i].length = length;
         // send note on
-        sendMidiMessage(NOTE_ON, _sequencer[_step].note, _sequencer[_step].accent ? ACCENT_VELOCITY : NOTE_VELOCITY);    
+        sendMidiMessage(NOTE_ON, _sequencer[_step].note, _sequencer[_step].accent ? ACCENT_VELOCITY : NOTE_VELOCITY);
         return;
       }
     }
-  }  
+  }
 }
 
 // The callback function called by uClock each Pulse of 96PPQN clock resolution.
-void onPPQNCallback(uint32_t tick) 
+void onPPQNCallback(uint32_t tick)
 {
   // Send MIDI_CLOCK to external hardware
   Serial.write(MIDI_CLOCK);
@@ -362,19 +366,19 @@ void onPPQNCallback(uint32_t tick)
         sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
         _note_stack[i].length = -1;
       }
-    }  
+    }
   }
 }
 
 // The callback function called when clock starts by using Clock.start() method.
-void onClockStart() 
+void onClockStart()
 {
   Serial.write(MIDI_START);
   _playing = true;
 }
 
 // The callback function called when clock stops by using Clock.stop() method.
-void onClockStop() 
+void onClockStop()
 {
   Serial.write(MIDI_STOP);
   // send all note off on sequencer stop
@@ -385,25 +389,25 @@ void onClockStop()
   _playing = false;
 }
 
-void setup() 
+void setup()
 {
   // Initialize serial communication
   // the default MIDI serial speed communication at 31250 bits per second
-  Serial.begin(31250); 
+  Serial.begin(31250);
 
   // Inits the clock
   uClock.init();
-  
+
   // Set the callback function for the clock output to send MIDI Sync message.
-  uClock.setOnPPQN(onPPQNCallback);
-  
+  uClock.setOnOutputPPQN(onPPQNCallback);
+
   // Set the callback function for the step sequencer on 16ppqn
-  uClock.setOnStep(onStepCallback);  
-  
+  uClock.setOnStep(onStepCallback);
+
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
-  
+
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);
 
@@ -423,13 +427,13 @@ void setup()
 
   // pins, buttons, leds and pots config
   //configureYourUserInterface();
-  
+
   // start sequencer
   uClock.start();
 }
 
 // User interaction goes here
-void loop() 
+void loop()
 {
   // Controls your 303 engine interacting with user here...
   // you can change data by using _sequencer[] and _step_length only! do not mess with _note_stack[]!

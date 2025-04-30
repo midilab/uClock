@@ -2,7 +2,7 @@
  *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(RPI2040, Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    2.2.0
+ *  @version    2.2.1
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
@@ -34,17 +34,9 @@
 
 namespace umodular { namespace clock {
 
-// for extended steps in memory style and make use of 96ppqn for record propurse we can
-// keep array[step] memory layout and add new information about note possition to be check for the entire ppqn pulse
-// example: for a whole 24 pulses we only check array[step].offset that can vary from 0 to 24(ppqn/4)
-// time/tick notation and representation notes:
-// one quarter note == 4 steps in 16th notes step sequencer style
-// PPQN / 4 = pulses in between steps(from step sequencer perspective, a quarter note have 4 steps)
-// 24 PPQN (6 pulses per step)
-// 48 PPQN (12 pulses per step)
-// 96 PPQN (24 pulses per step)
-
-// min: -(ppqn/4)-1 step, max: (ppqn/4)-1 steps  
+// Shuffle templates are specific for each PPQN output resolution
+// min: -(output_ppqn/4)-1 ticks
+// max: (output_ppqn/4)-1 ticks  
 // adjust the size of you template if more than 16 shuffle step info needed
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
 typedef struct {
@@ -57,10 +49,10 @@ typedef struct {
 // in between 64 to 128.
 // note: this doesn't impact on sync time, only display time getTempo()
 // if you dont want to use it, set it to 1 for memory save
-#define EXT_INTERVAL_BUFFER_SIZE 24
+#define EXT_INTERVAL_BUFFER_SIZE 128
 
 #define MIN_BPM	1
-#define MAX_BPM	300
+#define MAX_BPM	400
 
 #define PHASE_FACTOR 16
 #define PLL_X 220
@@ -72,7 +64,7 @@ typedef struct {
 class uClockClass {
 
     public:
-        enum SyncMode {
+        enum ClockMode {
             INTERNAL_CLOCK = 0,
             EXTERNAL_CLOCK
         };
@@ -84,6 +76,11 @@ class uClockClass {
         };
 
         enum PPQNResolution {
+            PPQN_1 = 1,
+            PPQN_2 = 2,
+            PPQN_4 = 4,
+            PPQN_8 = 8,
+            PPQN_12 = 12,
             PPQN_24 = 24,
             PPQN_48 = 48,
             PPQN_96 = 96,
@@ -92,20 +89,45 @@ class uClockClass {
             PPQN_960 = 960
         };
 
-        ClockState state;
+        ClockState clock_state;
         
         uClockClass();
 
-        void setOnPPQN(void (*callback)(uint32_t tick)) {
-            onPPQNCallback = callback;
+        void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
+            onOutputPPQNCallback = callback;
         }
 
         void setOnStep(void (*callback)(uint32_t step)) {
             onStepCallback = callback;
         }
+
+        // multiple output clock signatures
+        void setOnSync1(void (*callback)(uint32_t tick)) {
+            onSync1Callback = callback;
+        }
         
+        void setOnSync2(void (*callback)(uint32_t tick)) {
+            onSync2Callback = callback;
+        }
+        
+        void setOnSync4(void (*callback)(uint32_t tick)) {
+            onSync4Callback = callback;
+        }
+        
+        void setOnSync8(void (*callback)(uint32_t tick)) {
+            onSync8Callback = callback;
+        }
+        
+        void setOnSync12(void (*callback)(uint32_t tick)) {
+            onSync12Callback = callback;
+        }
+
         void setOnSync24(void (*callback)(uint32_t tick)) {
             onSync24Callback = callback;
+        }
+        
+        void setOnSync48(void (*callback)(uint32_t tick)) {
+            onSync48Callback = callback;
         }
 
         void setOnClockStart(void (*callback)()) {
@@ -117,7 +139,8 @@ class uClockClass {
         }
 
         void init();
-        void setPPQN(PPQNResolution resolution);
+        void setOutputPPQN(PPQNResolution resolution);
+        void setInputPPQN(PPQNResolution resolution);
 
         void handleTimerInt();
         void handleExternalClock();
@@ -134,8 +157,8 @@ class uClockClass {
         void run();
 
         // external timming control
-        void setMode(SyncMode tempo_mode);
-        SyncMode getMode();
+        void setClockMode(ClockMode tempo_mode);
+        ClockMode getClockMode();
         void clockMe();
 
         // shuffle
@@ -162,26 +185,55 @@ class uClockClass {
 
     private:
         float inline freqToBpm(uint32_t freq);
+        void calculateReferencedata();
 
         // shuffle
         bool inline processShuffle();
 
-        void (*onPPQNCallback)(uint32_t tick);
+        void (*onOutputPPQNCallback)(uint32_t tick);
         void (*onStepCallback)(uint32_t step);
+        void (*onSync1Callback)(uint32_t tick);
+        void (*onSync2Callback)(uint32_t tick);
+        void (*onSync4Callback)(uint32_t tick);
+        void (*onSync8Callback)(uint32_t tick);
+        void (*onSync12Callback)(uint32_t tick);
         void (*onSync24Callback)(uint32_t tick);
+        void (*onSync48Callback)(uint32_t tick);
         void (*onClockStartCallback)();
         void (*onClockStopCallback)();
 
-        // internal clock control
-        // uint16_t ppqn;
-        PPQNResolution ppqn = PPQN_96;
+        // clock input/output control
+        PPQNResolution output_ppqn = PPQN_96;
+        PPQNResolution input_ppqn = PPQN_24;
+        // output and internal counters, ticks and references
         uint32_t tick;
         uint32_t int_clock_tick;
-        uint8_t mod24_counter;
-        uint8_t mod24_ref;
+        uint8_t mod_clock_counter;
+        uint16_t mod_clock_ref;
         uint8_t mod_step_counter;
         uint8_t mod_step_ref;
-        uint32_t step_counter; // should we go uint16_t?
+        uint32_t step_counter;
+        uint8_t mod_sync1_counter;
+        uint16_t mod_sync1_ref;
+        uint32_t sync1_tick;
+        uint8_t mod_sync2_counter;
+        uint16_t mod_sync2_ref;
+        uint32_t sync2_tick;
+        uint8_t mod_sync4_counter;
+        uint16_t mod_sync4_ref;
+        uint32_t sync4_tick;
+        uint8_t mod_sync8_counter;
+        uint16_t mod_sync8_ref;
+        uint32_t sync8_tick;
+        uint8_t mod_sync12_counter;
+        uint16_t mod_sync12_ref;
+        uint32_t sync12_tick;
+        uint8_t mod_sync24_counter;
+        uint16_t mod_sync24_ref;
+        uint32_t sync24_tick;
+        uint8_t mod_sync48_counter;
+        uint16_t mod_sync48_ref;
+        uint32_t sync48_tick;
 
         // external clock control
         volatile uint32_t ext_clock_us;
@@ -192,7 +244,7 @@ class uClockClass {
 
         float tempo;
         uint32_t start_timer;
-        SyncMode mode;
+        ClockMode clock_mode;
 
         volatile uint32_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
         uint16_t ext_interval_idx;
