@@ -23,7 +23,7 @@
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE. 
+ * DEALINGS IN THE SOFTWARE.
  */
 #include "uClock.h"
 
@@ -90,23 +90,23 @@
 // header of this file
 void uclockInitTimer()
 {
-    // begin at 120bpm 
+    // begin at 120bpm
     initTimer(uClock.bpmToMicroSeconds(120.00));
 }
 
-void setTimerTempo(float bpm) 
+void setTimerTempo(float bpm)
 {
     setTimer(uClock.bpmToMicroSeconds(bpm));
 }
 
 namespace umodular { namespace clock {
 
-static inline uint32_t phase_mult(uint32_t val) 
+static inline uint32_t phase_mult(uint32_t val)
 {
     return (val * PHASE_FACTOR) >> 8;
 }
 
-static inline uint32_t clock_diff(uint32_t old_clock, uint32_t new_clock) 
+static inline uint32_t clock_diff(uint32_t old_clock, uint32_t new_clock)
 {
     if (new_clock >= old_clock) {
         return new_clock - old_clock;
@@ -140,21 +140,24 @@ uClockClass::uClockClass()
     calculateReferencedata();
 }
 
-void uClockClass::init() 
+void uClockClass::init()
 {
+    if (ext_interval_buffer == nullptr)
+        setExtIntervalBuffer(1);
+
     uclockInitTimer();
     // first interval calculus
     setTempo(tempo);
 }
 
-uint32_t uClockClass::bpmToMicroSeconds(float bpm) 
+uint32_t uClockClass::bpmToMicroSeconds(float bpm)
 {
     return (60000000.0f / (float)output_ppqn / bpm);
 }
 
 void uClockClass::calculateReferencedata()
 {
-    mod_clock_ref = output_ppqn / input_ppqn; 
+    mod_clock_ref = output_ppqn / input_ppqn;
     mod_sync1_ref = output_ppqn / PPQN_1;
     mod_sync2_ref = output_ppqn / PPQN_2;
     mod_sync4_ref = output_ppqn / PPQN_4;
@@ -185,20 +188,20 @@ void uClockClass::setInputPPQN(PPQNResolution resolution)
     )
 }
 
-void uClockClass::start() 
+void uClockClass::start()
 {
     resetCounters();
     start_timer = millis();
-    
+
     if (onClockStartCallback) {
         onClockStartCallback();
-    }	
-    
+    }
+
     if (clock_mode == INTERNAL_CLOCK) {
         clock_state = STARTED;
     } else {
         clock_state = STARTING;
-    }	
+    }
 }
 
 void uClockClass::stop()
@@ -211,7 +214,7 @@ void uClockClass::stop()
     }
 }
 
-void uClockClass::pause() 
+void uClockClass::pause()
 {
     if (clock_mode == INTERNAL_CLOCK) {
         if (clock_state == PAUSED) {
@@ -222,12 +225,12 @@ void uClockClass::pause()
     }
 }
 
-void uClockClass::setTempo(float bpm) 
+void uClockClass::setTempo(float bpm)
 {
     if (clock_mode == EXTERNAL_CLOCK) {
         return;
     }
-    
+
     if (bpm < MIN_BPM || bpm > MAX_BPM) {
         return;
     }
@@ -239,19 +242,19 @@ void uClockClass::setTempo(float bpm)
     setTimerTempo(bpm);
 }
 
-float uClockClass::getTempo() 
+float uClockClass::getTempo()
 {
     if (clock_mode == EXTERNAL_CLOCK) {
         uint32_t acc = 0;
         // wait the buffer to get full
-        if (ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE-1] == 0) {
+        if (ext_interval_buffer[ext_interval_buffer_size-1] == 0) {
             return tempo;
         }
-        for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
+        for (uint8_t i=0; i < ext_interval_buffer_size; i++) {
             acc += ext_interval_buffer[i];
         }
         if (acc != 0) {
-            return freqToBpm(acc / EXT_INTERVAL_BUFFER_SIZE);
+            return freqToBpm(acc / ext_interval_buffer_size);
         }
     }
     return tempo;
@@ -272,17 +275,17 @@ float inline uClockClass::freqToBpm(uint32_t freq)
     return (float)((float)(usecs/(float)input_ppqn) * 60.0);
 }
 
-void uClockClass::setClockMode(ClockMode tempo_mode) 
+void uClockClass::setClockMode(ClockMode tempo_mode)
 {
     clock_mode = tempo_mode;
 }
 
-uClockClass::ClockMode uClockClass::getClockMode() 
+uClockClass::ClockMode uClockClass::getClockMode()
 {
     return clock_mode;
 }
 
-void uClockClass::clockMe() 
+void uClockClass::clockMe()
 {
     if (clock_mode == EXTERNAL_CLOCK) {
         ATOMIC(
@@ -291,7 +294,17 @@ void uClockClass::clockMe()
     }
 }
 
-void uClockClass::resetCounters() 
+void uClockClass::setExtIntervalBuffer(uint8_t buffer_size)
+{
+    if (ext_interval_buffer != nullptr)
+        return;
+
+    // alloc once and forever policy
+    ext_interval_buffer_size = buffer_size;
+    ext_interval_buffer = (uint32_t*) malloc( sizeof(uint32_t) * ext_interval_buffer_size );
+}
+
+void uClockClass::resetCounters()
 {
     tick = 0;
     int_clock_tick = 0;
@@ -316,16 +329,16 @@ void uClockClass::resetCounters()
     sync24_tick = 0;
     mod_sync48_counter = 0;
     sync48_tick = 0;
-    
-    for (uint8_t i=0; i < EXT_INTERVAL_BUFFER_SIZE; i++) {
+
+    for (uint8_t i=0; i < ext_interval_buffer_size; i++) {
         ext_interval_buffer[i] = 0;
     }
 }
 
-void uClockClass::tap() 
+void uClockClass::tap()
 {
     // we can make use of mod_sync1_ref for tap
-    //uint8_t mod_tap_ref = output_ppqn / PPQN_1; 
+    //uint8_t mod_tap_ref = output_ppqn / PPQN_1;
     // we only set tap if ClockMode is INTERNAL_CLOCK
 }
 
@@ -381,7 +394,7 @@ bool inline uClockClass::processShuffle()
     int8_t shff = shuffle.step[step_counter%shuffle.size];
 
     if (shuffle_shoot_ctrl == false && mod_step_counter == 0)
-        shuffle_shoot_ctrl = true; 
+        shuffle_shoot_ctrl = true;
 
     //if (mod_step_counter == mod_step_ref-1)
 
@@ -389,11 +402,11 @@ bool inline uClockClass::processShuffle()
         mod_shuffle = mod_step_counter - shff;
         // any late shuffle? we should skip next mod_step_counter == 0
         if (last_shff < 0 && mod_step_counter != 1)
-            return false; 
+            return false;
     } else if (shff < 0) {
         mod_shuffle = mod_step_counter - (mod_step_ref + shff);
         //if (last_shff < 0 && mod_step_counter != 1)
-        //    return false; 
+        //    return false;
         shuffle_shoot_ctrl = true;
     }
 
@@ -414,7 +427,7 @@ bool inline uClockClass::processShuffle()
     return false;
 }
 
-void uClockClass::handleExternalClock() 
+void uClockClass::handleExternalClock()
 {
     switch (clock_state) {
         case PAUSED:
@@ -434,7 +447,7 @@ void uClockClass::handleExternalClock()
             ext_clock_tick++;
 
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
-            if(++ext_interval_idx >= EXT_INTERVAL_BUFFER_SIZE) {
+            if(++ext_interval_idx >= ext_interval_buffer_size) {
                 ext_interval_idx = 0;
             }
             ext_interval_buffer[ext_interval_idx] = last_interval;
@@ -448,7 +461,7 @@ void uClockClass::handleExternalClock()
     }
 }
 
-void uClockClass::handleTimerInt()  
+void uClockClass::handleTimerInt()
 {
     // track main input clock counter
     if (mod_clock_counter == mod_clock_ref)
@@ -515,7 +528,7 @@ void uClockClass::handleTimerInt()
         }
         ++mod_sync2_counter;
     }
-    
+
     // Sync4 callback
     if (onSync4Callback) {
         if (mod_sync4_counter == mod_sync4_ref)
@@ -583,7 +596,7 @@ void uClockClass::handleTimerInt()
         if (mod_step_counter == mod_step_ref)
             mod_step_counter = 0;
         // processShufle make use of mod_step_counter == 0 logic too
-        if (processShuffle()) {        
+        if (processShuffle()) {
             onStepCallback(step_counter);
             // going forward to the next step call
             ++step_counter;
@@ -605,7 +618,7 @@ uint8_t uClockClass::getNumberOfMinutes(uint32_t time)
 {
     if ( time == 0 ) {
         return time;
-    }	
+    }
     return (((_millis - time) / 1000) / SECS_PER_MIN) % SECS_PER_MIN;
 }
 
@@ -613,7 +626,7 @@ uint8_t uClockClass::getNumberOfHours(uint32_t time)
 {
     if ( time == 0 ) {
         return time;
-    }	
+    }
     return (((_millis - time) / 1000) % SECS_PER_DAY) / SECS_PER_HOUR;
 }
 
@@ -621,7 +634,7 @@ uint8_t uClockClass::getNumberOfDays(uint32_t time)
 {
     if ( time == 0 ) {
         return time;
-    }	
+    }
     return ((_millis - time) / 1000) / SECS_PER_DAY;
 }
 
@@ -629,12 +642,12 @@ uint32_t uClockClass::getNowTimer()
 {
     return _millis;
 }
-    
+
 uint32_t uClockClass::getPlayTime()
 {
     return start_timer;
 }
-    
+
 } } // end namespace umodular::clock
 
 umodular::clock::uClockClass uClock;
@@ -642,13 +655,13 @@ umodular::clock::uClockClass uClock;
 volatile uint32_t _millis = 0;
 
 //
-// TIMER HANDLER 
-// 
-void uClockHandler() 
+// TIMER HANDLER
+//
+void uClockHandler()
 {
     // global timer counter
     _millis = millis();
-    
+
     if (uClock.clock_state == uClock.STARTED) {
         uClock.handleTimerInt();
     }
