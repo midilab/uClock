@@ -184,6 +184,7 @@ class uClockClass {
 
     private:
         float inline freqToBpm(uint32_t freq);
+        float inline constrainBpm(float bpm);
         void calculateReferencedata();
 
         // shuffle
