@@ -254,7 +254,7 @@ float uClockClass::getTempo()
             acc += ext_interval_buffer[i];
         }
         if (acc != 0) {
-            return freqToBpm(acc / ext_interval_buffer_size);
+            return constrainBpm(freqToBpm(acc / ext_interval_buffer_size));
         }
     }
     return tempo;
@@ -273,6 +273,11 @@ float inline uClockClass::freqToBpm(uint32_t freq)
 {
     float usecs = 1/((float)freq/1000000.0);
     return (float)((float)(usecs/(float)input_ppqn) * 60.0);
+}
+
+float inline uClockClass::constrainBpm(float bpm)
+{
+    return (bpm < MIN_BPM) ? MIN_BPM : ( bpm > MAX_BPM ? MAX_BPM : bpm );
 }
 
 void uClockClass::setClockMode(ClockMode tempo_mode)
@@ -492,12 +497,10 @@ void uClockClass::handleTimerInt()
             }
 
             // update internal clock timer frequency
-            float bpm = freqToBpm(counter);
+            float bpm = constrainBpm(freqToBpm(counter));
             if (bpm != tempo) {
-                if (bpm >= MIN_BPM && bpm <= MAX_BPM) {
-                    tempo = bpm;
-                    setTimerTempo(bpm);
-                }
+                tempo = bpm;
+                setTimerTempo(bpm);
             }
         }
 
