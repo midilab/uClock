@@ -1,13 +1,13 @@
 /* Uart MIDI out
- *  
- * This example demonstrates how to send MIDI data via Uart 
- * interface on STM32 family. 
- * 
+ *
+ * This example demonstrates how to send MIDI data via Uart
+ * interface on STM32 family.
+ *
  * This example code is in the public domain.
  *
  * Requires STM32Duino board manager to be installed.
- * 
- * Define HardwareSerial using any available UART/USART. 
+ *
+ * Define HardwareSerial using any available UART/USART.
  * Nucleo boards have UART/USART pins that are used by the ST-LINK interface (unless using solder bridging).
  *
  * Tested on Nucleo-F401RE and Nucleo-F072RB (PA9=D8 PA10=D2 on the Arduino pins)
@@ -62,15 +62,17 @@ void setup() {
 
   // An led to display BPM
   pinMode(LED_BUILTIN, OUTPUT);
-  
+
   // Setup our clock system
-  // Inits the clock
-  uClock.init();
   // Set the callback function for the clock output to send MIDI Sync message.
   uClock.setOnSync24(onSync24Callback);
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
+
+  // Inits the clock
+  uClock.init();
+
   // Set the clock BPM to 126 BPM
   uClock.setTempo(120);
   // Starts the clock, tick-tac-tick-tac...
@@ -79,5 +81,5 @@ void setup() {
 
 // Do it whatever to interface with Clock.stop(), Clock.start(), Clock.setTempo() and integrate your environment...
 void loop() {
-  
+
 }

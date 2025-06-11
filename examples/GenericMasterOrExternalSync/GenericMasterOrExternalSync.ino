@@ -48,12 +48,9 @@ void onClockStopCallback() {
 }
 
 void setup() {
-
-  // inits the clock library
-  uClock.init();
-
-  // avaliable output PPQN resolutions for this example
-  // [ uClock.PPQN_48, uClock.PPQN_96, uClock.PPQN_384, uClock.PPQN_480, uClock.PPQN_960 ]
+  // setup clock library
+  // avaliable output resolutions
+  // [ uClock.PPQN_4, uClock.PPQN_8, uClock.PPQN_12, uClock.PPQN_24, uClock.PPQN_48, uClock.PPQN_96, uClock.PPQN_384, uClock.PPQN_480, uClock.PPQN_960 ]
   // not mandatory to call, the default is 96PPQN if not set
   uClock.setOutputPPQN(uClock.PPQN_96);
 
@@ -76,7 +73,15 @@ void setup() {
   // set external sync mode?
   if (_external_sync_on) {
     uClock.setClockMode(uClock.EXTERNAL_CLOCK);
+    // what is the clock of incomming signal to sync with?
+    // not mandatory to call, the default is 24PPQN if not set
+    // avaliable input resolutions -  should be always InputPPQN <= OutputPPQN
+    // [ uClock.PPQN_1, uClock.PPQN_2, uClock.PPQN_4, uClock.PPQN_8, uClock.PPQN_12, uClock.PPQN_24, uClock.PPQN_48, uClock.PPQN_96, uClock.PPQN_384, uClock.PPQN_480, uClock.PPQN_960 ]
+    uClock.setInputPPQN(uClock.PPQN_24);
   }
+
+  // inits the clock library
+  uClock.init();
 
   // starts clock
   uClock.start();

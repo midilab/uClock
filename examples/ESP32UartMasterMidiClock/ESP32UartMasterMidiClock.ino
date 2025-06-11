@@ -1,12 +1,12 @@
 /* Uart MIDI Sync Box
- *  
- * This example demonstrates how to change the Uart MIDI 
- * device name on ESP32 family. 
- * 
+ *
+ * This example demonstrates how to change the Uart MIDI
+ * device name on ESP32 family.
+ *
  * This example code is in the public domain.
- * 
+ *
  * ...
- * 
+ *
  */
 #include <uClock.h>
 
@@ -54,15 +54,17 @@ void setup() {
 
   // A led to count bpms
   pinMode(LED_BUILTIN, OUTPUT);
-  
+
   // Setup our clock system
-  // Inits the clock
-  uClock.init();
   // Set the callback function for the clock output to send MIDI Sync message.
   uClock.setOnSync24(onSync24Callback);
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
+
+  // Inits the clock
+  uClock.init();
+
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);
   // Starts the clock, tick-tac-tick-tac...
@@ -71,5 +73,5 @@ void setup() {
 
 // Do it whatever to interface with Clock.stop(), Clock.start(), Clock.setTempo() and integrate your environment...
 void loop() {
-  
+
 }
