@@ -1,9 +1,9 @@
 /* USB MIDI Sync Slave Box Monitor
- *  
+ *
  * This example demonstrates how to create a
- * MIDI hid compilant slave clock box with 
+ * MIDI hid compilant slave clock box with
  * monitor support using oled displays
- * 
+ *
  * You need the following libraries to make it work
  * - Midi Library
  * - USB-MIDI and MIDIUSB
@@ -94,20 +94,28 @@ void setup() {
   //u8x8 = new U8X8_SH1106_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
   u8x8 = new U8X8_SSD1306_128X64_NONAME_HW_I2C(U8X8_PIN_NONE);
   u8x8->begin();
-  u8x8->setFont(u8x8_font_pressstart2p_r); 
+  u8x8->setFont(u8x8_font_pressstart2p_r);
   u8x8->clear();
   u8x8->setFlipMode(true);
-  u8x8->drawUTF8(0, 0, "uClock"); 
+  u8x8->drawUTF8(0, 0, "uClock");
 
   //
   // uClock Setup
   //
-  uClock.init();
   uClock.setOnSync24(onSync24Callback);
   // For MIDI Sync Start and Stop
   uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
-  uClock.setMode(uClock.EXTERNAL_CLOCK);
+  uClock.setClockMode(uClock.EXTERNAL_CLOCK);
+  // for smooth slave tempo calculate display you should raise the
+  // buffer_size of ext_interval_buffer in between 64 to 128. 254 max size.
+  // note: this doesn't impact on sync time, only display time getTempo()
+  // if you dont want to use it, it is default set it to 1 for memory save
+  uClock.setExtIntervalBuffer(128);
+
+  // init uClock
+  uClock.init();
+
   //uClock.setTempo(136.5);
   //uClock.start();
 }
@@ -115,7 +123,7 @@ void setup() {
 void loop() {
   while(MIDI.read()) {}
   // DO NOT ADD MORE PROCESS HERE AT THE COST OF LOSING CLOCK SYNC
-  // Since arduino make use of Serial RX interruption we need to 
+  // Since arduino make use of Serial RX interruption we need to
   // read Serial as fast as we can on the loop
   if (bpm != uClock.getTempo()) {
     bpm = uClock.getTempo();
@@ -127,20 +135,20 @@ void loop() {
       u8x8->drawUTF8(8+4, 7, " ");
     }
   }
-  if (clock_state != uClock.state) { 
+  if (clock_state != uClock.state) {
     clock_state = uClock.state;
     if (clock_state >= 1) {
-      u8x8->drawUTF8(0, 7, "Playing"); 
-    } else { 
-      u8x8->drawUTF8(0, 7, "Stopped"); 
+      u8x8->drawUTF8(0, 7, "Playing");
+    } else {
+      u8x8->drawUTF8(0, 7, "Stopped");
     }
   }
   if (clock_mode != uClock.getMode()) {
     clock_mode = uClock.getMode();
     if (clock_mode == uClock.EXTERNAL_CLOCK) {
-      u8x8->drawUTF8(10, 0, "Slave "); 
-    } else { 
-      u8x8->drawUTF8(10, 0, "Master"); 
+      u8x8->drawUTF8(10, 0, "Slave ");
+    } else {
+      u8x8->drawUTF8(10, 0, "Master");
     }
   }
 }

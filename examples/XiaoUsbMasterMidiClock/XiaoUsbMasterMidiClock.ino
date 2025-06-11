@@ -1,12 +1,12 @@
 /* USB MIDI Sync Box
- *  
- * This example demonstrates how to change the USB MIDI 
- * device name on Seeedstudio XIAO M0. 
- * 
+ *
+ * This example demonstrates how to change the USB MIDI
+ * device name on Seeedstudio XIAO M0.
+ *
  * This example code is in the public domain.
- * 
+ *
  * Tested with Adafruit TinyUSB version 0.10.5
- * 
+ *
  */
 #include <Adafruit_TinyUSB.h>
 #include <MIDI.h>
@@ -52,15 +52,17 @@ void setup() {
 
   // A led to count bpms
   pinMode(LED_BUILTIN, OUTPUT);
-  
+
   // Setup our clock system
-  // Inits the clock
-  uClock.init();
   // Set the callback function for the clock output to send MIDI Sync message.
   uClock.setOnSync24(onSync24Callback);
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
+
+  // Inits the clock
+  uClock.init();
+
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);
   // Starts the clock, tick-tac-tick-tac...

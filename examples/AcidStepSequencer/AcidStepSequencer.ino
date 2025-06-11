@@ -54,7 +54,7 @@ bool _playing = false;
 uint16_t _step = 0;
 
 void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
-{ 
+{
   // send midi message
   command = command | (uint8_t)MIDI_CHANNEL;
   Serial.write(command);
@@ -63,14 +63,14 @@ void sendMidiMessage(uint8_t command, uint8_t byte1, uint8_t byte2)
 }
 
 // Each call represents exactly one step.
-void onStepCallback(uint32_t tick) 
+void onStepCallback(uint32_t tick)
 {
   uint16_t step;
   uint16_t length = NOTE_LENGTH;
-  
+
   // get actual step.
   _step = tick % _step_length;
-  
+
   // send note on only if this step are not in rest mode
   if ( _sequencer[_step].rest == false ) {
 
@@ -93,15 +93,15 @@ void onStepCallback(uint32_t tick)
         _note_stack[i].note = _sequencer[_step].note;
         _note_stack[i].length = length;
         // send note on
-        sendMidiMessage(NOTE_ON, _sequencer[_step].note, _sequencer[_step].accent ? ACCENT_VELOCITY : NOTE_VELOCITY);    
+        sendMidiMessage(NOTE_ON, _sequencer[_step].note, _sequencer[_step].accent ? ACCENT_VELOCITY : NOTE_VELOCITY);
         return;
       }
     }
-  }  
+  }
 }
 
 // The callback function wich will be called by uClock each Pulse of 96PPQN clock resolution.
-void onOutputPPQNCallback(uint32_t tick) 
+void onOutputPPQNCallback(uint32_t tick)
 {
   // handle note on stack
   for ( uint8_t i = 0; i < NOTE_STACK_SIZE; i++ ) {
@@ -111,7 +111,7 @@ void onOutputPPQNCallback(uint32_t tick)
         sendMidiMessage(NOTE_OFF, _note_stack[i].note, 0);
         _note_stack[i].length = -1;
       }
-    }  
+    }
   }
 
   // user feedback about sequence time events
@@ -124,14 +124,14 @@ void onSync24Callback(uint32_t tick) {
 }
 
 // The callback function wich will be called when clock starts by using Clock.start() method.
-void onClockStart() 
+void onClockStart()
 {
   Serial.write(MIDI_START);
   _playing = true;
 }
 
 // The callback function wich will be called when clock stops by using Clock.stop() method.
-void onClockStop() 
+void onClockStop()
 {
   Serial.write(MIDI_STOP);
   // send all note off on sequencer stop
@@ -142,21 +142,18 @@ void onClockStop()
   _playing = false;
 }
 
-void setup() 
+void setup()
 {
   // Initialize serial communication
 #ifdef MIDI_MODE
   // the default MIDI serial speed communication at 31250 bits per second
-  Serial.begin(31250); 
+  Serial.begin(31250);
 #endif
 #ifdef SERIAL_MODE
   // for usage with a PC with a serial to MIDI bridge
   Serial.begin(115200);
 #endif
 
-  // Inits the clock
-  uClock.init();
-  
   // Set the callback function for the clock output to send MIDI Sync message.
   uClock.setOnOutputPPQN(onOutputPPQNCallback);
 
@@ -164,12 +161,15 @@ void setup()
   uClock.setOnSync24(onSync24Callback);
 
   // Set the callback function for the step sequencer on 16ppqn
-  uClock.setOnStep(onStepCallback);  
-  
+  uClock.setOnStep(onStepCallback);
+
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
-  
+
+  // Inits the clock
+  uClock.init();
+
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);
 
@@ -192,7 +192,7 @@ void setup()
 }
 
 // User interaction goes here
-void loop() 
+void loop()
 {
   processInterface();
 }

@@ -23,7 +23,7 @@
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE. 
+ * DEALINGS IN THE SOFTWARE.
  */
 
 #ifndef __U_CLOCK_H__
@@ -36,7 +36,7 @@ namespace umodular { namespace clock {
 
 // Shuffle templates are specific for each PPQN output resolution
 // min: -(output_ppqn/4)-1 ticks
-// max: (output_ppqn/4)-1 ticks  
+// max: (output_ppqn/4)-1 ticks
 // adjust the size of you template if more than 16 shuffle step info needed
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
 typedef struct {
@@ -44,12 +44,6 @@ typedef struct {
     uint8_t size = MAX_SHUFFLE_TEMPLATE_SIZE;
     int8_t step[MAX_SHUFFLE_TEMPLATE_SIZE] = {0};
 } SHUFFLE_TEMPLATE;
-
-// for smooth slave tempo calculate display you should raise this value 
-// in between 64 to 128.
-// note: this doesn't impact on sync time, only display time getTempo()
-// if you dont want to use it, set it to 1 for memory save
-#define EXT_INTERVAL_BUFFER_SIZE 128
 
 #define MIN_BPM	1
 #define MAX_BPM	400
@@ -90,7 +84,7 @@ class uClockClass {
         };
 
         ClockState clock_state;
-        
+
         uClockClass();
 
         void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
@@ -105,19 +99,19 @@ class uClockClass {
         void setOnSync1(void (*callback)(uint32_t tick)) {
             onSync1Callback = callback;
         }
-        
+
         void setOnSync2(void (*callback)(uint32_t tick)) {
             onSync2Callback = callback;
         }
-        
+
         void setOnSync4(void (*callback)(uint32_t tick)) {
             onSync4Callback = callback;
         }
-        
+
         void setOnSync8(void (*callback)(uint32_t tick)) {
             onSync8Callback = callback;
         }
-        
+
         void setOnSync12(void (*callback)(uint32_t tick)) {
             onSync12Callback = callback;
         }
@@ -125,7 +119,7 @@ class uClockClass {
         void setOnSync24(void (*callback)(uint32_t tick)) {
             onSync24Callback = callback;
         }
-        
+
         void setOnSync48(void (*callback)(uint32_t tick)) {
             onSync48Callback = callback;
         }
@@ -145,7 +139,7 @@ class uClockClass {
         void handleTimerInt();
         void handleExternalClock();
         void resetCounters();
-        
+
         // external class control
         void start();
         void stop();
@@ -160,6 +154,11 @@ class uClockClass {
         void setClockMode(ClockMode tempo_mode);
         ClockMode getClockMode();
         void clockMe();
+        // for smooth slave tempo calculate display you should raise the
+        // buffer_size of ext_interval_buffer in between 64 to 128. 254 max size.
+        // note: this doesn't impact on sync time, only display time getTempo()
+        // if you dont want to use it, it is default set it to 1 for memory save
+        void setExtIntervalBuffer(uint8_t buffer_size);
 
         // shuffle
         void setShuffle(bool active);
@@ -169,10 +168,10 @@ class uClockClass {
         void setShuffleTemplate(int8_t * shuff, uint8_t size);
         // use this to know how many positive or negative ticks to add to current note length
         int8_t getShuffleLength();
-        
+
         // todo!
         void tap();
-        
+
         // elapsed time support
         uint8_t getNumberOfSeconds(uint32_t time);
         uint8_t getNumberOfMinutes(uint32_t time);
@@ -185,6 +184,7 @@ class uClockClass {
 
     private:
         float inline freqToBpm(uint32_t freq);
+        float inline constrainBpm(float bpm);
         void calculateReferencedata();
 
         // shuffle
@@ -246,7 +246,8 @@ class uClockClass {
         uint32_t start_timer;
         ClockMode clock_mode;
 
-        volatile uint32_t ext_interval_buffer[EXT_INTERVAL_BUFFER_SIZE];
+        volatile uint32_t * ext_interval_buffer = nullptr;
+        uint8_t ext_interval_buffer_size;
         uint16_t ext_interval_idx;
 
         // shuffle implementation
@@ -265,4 +266,3 @@ extern "C" {
 }
 
 #endif /* __U_CLOCK_H__ */
-
