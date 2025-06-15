@@ -7,37 +7,39 @@
 #define MIDI_STOP  0xFC
 
 // The callback function wich will be called by Clock each Pulse of 24PPQN clock resolution.
-void onSync24Callback(uint32_t tick) 
+void onSync24Callback(uint32_t tick)
 {
   // Send MIDI_CLOCK to external gears
   Serial.write(MIDI_CLOCK);
 }
 
 // The callback function wich will be called when clock starts by using Clock.start() method.
-void onClockStart() 
+void onClockStart()
 {
   Serial.write(MIDI_START);
 }
 
 // The callback function wich will be called when clock stops by using Clock.stop() method.
-void onClockStop() 
+void onClockStop()
 {
   Serial.write(MIDI_STOP);
 }
 
-void setup() 
+void setup()
 {
 
   // Initialize serial communication at 31250 bits per second, the default MIDI serial speed communication:
   Serial.begin(31250);
 
-  // Inits the clock
-  uClock.init();
   // Set the callback function for the clock output to send MIDI Sync message.
   uClock.setOnSync24(onSync24Callback);
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
+
+  // Inits the clock
+  uClock.init();
+
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);
 
@@ -47,7 +49,7 @@ void setup()
 }
 
 // Do it whatever to interface with Clock.stop(), Clock.start(), Clock.setTempo() and integrate your environment...
-void loop() 
+void loop()
 {
 
 }

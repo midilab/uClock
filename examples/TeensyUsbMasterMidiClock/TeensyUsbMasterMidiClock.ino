@@ -1,6 +1,6 @@
 /* USB MIDI Sync Box
- *  
- * This example demonstrates how to change the USB MIDI 
+ *
+ * This example demonstrates how to change the USB MIDI
  * device name on Teensy LC, 3.x and 4.x.  When creating more
  * that one MIDI device, custom names are much easier to
  * use when selecting each device in MIDI software on
@@ -12,9 +12,9 @@
  * steps to get your operating system to "forget" the
  * cached info.  (TODO: wanted... can anyone contribute
  * instructions for these systems)
- * 
+ *
  * You must select MIDI from the "Tools > USB Type" menu
- * 
+ *
  * This example code is in the public domain.
  */
 
@@ -53,15 +53,17 @@ void onClockStop() {
 void setup() {
   // A led to count bpms
   pinMode(LED_BUILTIN, OUTPUT);
-  
+
   // Setup our clock system
-  // Inits the clock
-  uClock.init();
   // Set the callback function for the clock output to send MIDI Sync message.
   uClock.setOnSync24(onSync24Callback);
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStart(onClockStart);  
+  uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
+
+  // Inits the clock
+  uClock.init();
+
   // Set the clock BPM to 126 BPM
   uClock.setTempo(126);
   // Starts the clock, tick-tac-tick-tac...

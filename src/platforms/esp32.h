@@ -3,11 +3,7 @@
 #include <freertos/semphr.h>
 
 // esp32-specific timer
-#define TIMER_ID	0
 hw_timer_t * _uclockTimer = NULL;
-// mutex control for ISR
-//portMUX_TYPE _uclockTimerMux = portMUX_INITIALIZER_UNLOCKED;
-//#define ATOMIC(X) portENTER_CRITICAL_ISR(&_uclockTimerMux); X; portEXIT_CRITICAL_ISR(&_uclockTimerMux);
 
 // FreeRTOS main clock task size in bytes
 #define CLOCK_STACK_SIZE    5*1024 // adjust for your needs, a sequencer with heavy serial handling should be large in size
@@ -47,7 +43,7 @@ void initTimer(uint32_t init_clock)
     // create the clockTask
     xTaskCreate(clockTask, "clockTask", CLOCK_STACK_SIZE, NULL, 1, &taskHandle);
 
-    _uclockTimer = timerBegin(1000000);
+    _uclockTimer = timerBegin(init_clock);
 
     // attach to generic uclock ISR
     timerAttachInterrupt(_uclockTimer, &handlerISR);
