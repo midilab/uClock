@@ -198,8 +198,10 @@ void uClockClass::start()
     }
 
     if (clock_mode == INTERNAL_CLOCK) {
+        Serial.printf("uClockClass::start(): uClock setting STARTED\n");
         clock_state = STARTED;
     } else {
+        Serial.printf("uClockClass::start(): uClock setting STARTING\n");
         clock_state = STARTING;
     }
 }
@@ -220,6 +222,7 @@ void uClockClass::continue_playing() {
         if (clock_mode == INTERNAL_CLOCK) {
             clock_state = STARTED;
         } else {
+            Serial.printf("uClockClass::continue_playing(): uClock setting STARTING\n");
             clock_state = STARTING;
         }
         if (onClockContinueCallback) {
@@ -309,11 +312,7 @@ uClockClass::ClockMode uClockClass::getClockMode()
 
 void uClockClass::clockMe()
 {
-    if (clock_mode == EXTERNAL_CLOCK) {
-        ATOMIC(
-            handleExternalClock()
-        )
-    }
+    ATOMIC(handleExternalClock())
 }
 
 void uClockClass::setExtIntervalBuffer(uint8_t buffer_size)
@@ -458,6 +457,7 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = STARTED;
             ext_clock_us = micros();
+            Serial.printf("handleExternalClock: uClock is STARTING at ext_clock_tick\t%u with ext_clock_us = %u\n", ext_clock_tick, ext_clock_us);
             break;
 
         case STARTED:
@@ -475,9 +475,11 @@ void uClockClass::handleExternalClock()
             ext_interval_buffer[ext_interval_idx] = last_interval;
 
             if (ext_clock_tick == 1) {
+                Serial.printf("handleExternalClock: uClock is STARTED at ext_clock_tick\t%u with ext_clock_us = %u, setting ext_interval to last_interval\t%u us\n", ext_clock_tick, ext_clock_us, last_interval);
                 ext_interval = last_interval;
             } else {
                 ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
+                Serial.printf("handleExternalClock: uClock is STARTED at ext_clock_tick\t%u with ext_clock_us = %u, setting ext_interval from PLL\t\t\t%u us\n", ext_clock_tick, ext_clock_us, last_interval);
             }
             break;
     }
@@ -514,8 +516,13 @@ void uClockClass::handleTimerInt()
             }
 
             // update internal clock timer frequency
-            float bpm = constrainBpm(freqToBpm(counter));
-            if (bpm != tempo) {
+            //if (ext_clock_tick > 20) {
+            if (ext_interval > 0) {
+                float bpm = constrainBpm(freqToBpm(counter));
+                if (Serial) {
+                    Serial.printf("uClock: External clock tick %u, counter %u, ext_interval %u, so is detected as BPM %f\n", ext_clock_tick, counter, ext_interval, bpm);
+                    Serial.flush();
+                }
                 tempo = bpm;
                 setTimerTempo(bpm);
             }
