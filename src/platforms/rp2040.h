@@ -25,7 +25,6 @@ void initTimer(uint32_t init_clock) {
 
 void setTimer(uint32_t us_interval) {
     if (Serial) {
-        Serial.printf("setTimer(): Setting uClock timer interval to %u us\n", us_interval);
         Serial.flush();
     }
     cancel_repeating_timer(&timer);
