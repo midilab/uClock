@@ -198,7 +198,7 @@ void uClockClass::start()
     }
 
     if (clock_mode == INTERNAL_CLOCK) {
-        Serial.printf("uClockClass::start(): uClock setting STARTED\n");
+        if (Serial) Serial.printf("uClockClass::start(): uClock setting STARTED\n");
         clock_state = STARTED;
     } else {
         Serial.printf("uClockClass::start(): uClock setting STARTING\n");
@@ -457,7 +457,7 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = STARTED;
             ext_clock_us = micros();
-            Serial.printf("handleExternalClock: uClock is STARTING at ext_clock_tick\t%u with ext_clock_us = %u\n", ext_clock_tick, ext_clock_us);
+            if (Serial) Serial.printf("handleExternalClock: uClock is STARTING at ext_clock_tick\t%u with ext_clock_us = %u\n", ext_clock_tick, ext_clock_us);
             break;
 
         case STARTED:
@@ -475,11 +475,11 @@ void uClockClass::handleExternalClock()
             ext_interval_buffer[ext_interval_idx] = last_interval;
 
             if (ext_clock_tick == 1) {
-                Serial.printf("handleExternalClock: uClock is STARTED at ext_clock_tick\t%u with ext_clock_us = %u, setting ext_interval to last_interval\t%u us\n", ext_clock_tick, ext_clock_us, last_interval);
+                if (Serial) Serial.printf("handleExternalClock: uClock is STARTED at ext_clock_tick\t%u with ext_clock_us = %u, setting ext_interval to last_interval\t%u us\n", ext_clock_tick, ext_clock_us, last_interval);
                 ext_interval = last_interval;
             } else {
                 ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
-                Serial.printf("handleExternalClock: uClock is STARTED at ext_clock_tick\t%u with ext_clock_us = %u, setting ext_interval from PLL\t\t\t%u us\n", ext_clock_tick, ext_clock_us, last_interval);
+                if (Serial) Serial.printf("handleExternalClock: uClock is STARTED at ext_clock_tick\t%u with ext_clock_us = %u, setting ext_interval from PLL\t\t\t%u us\n", ext_clock_tick, ext_clock_us, last_interval);
             }
             break;
     }
