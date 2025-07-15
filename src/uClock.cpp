@@ -215,6 +215,7 @@ void uClockClass::stop()
 }
 
 void uClockClass::continue_playing() {
+    // todo: if not paused, should we start anyway?
     if (clock_state == PAUSED) {
         start_timer = millis();
         if (clock_mode == INTERNAL_CLOCK) {
@@ -230,15 +231,9 @@ void uClockClass::continue_playing() {
 
 void uClockClass::pause()
 {
-    if (clock_mode == INTERNAL_CLOCK) {
-        if (clock_state == PAUSED) {
-            start();
-        } else {
-            clock_state = PAUSED;
-            if (onClockPauseCallback) {
-                onClockPauseCallback();
-            }
-        }
+    clock_state = PAUSED;
+    if (onClockPauseCallback) {
+        onClockPauseCallback();
     }
 }
 
