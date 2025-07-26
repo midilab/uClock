@@ -333,8 +333,6 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = SYNCING;
             ext_clock_us = micros();
-            // force first internal tick processing
-            handleInternalClock();
             break;
     }
 }
@@ -680,6 +678,6 @@ void uClockHandler()
     // global timer counter
     _millis = millis();
 
-    if (uClock.clock_state == uClock.STARTED)
+    if (uClock.clock_state == uClock.STARTED || uClock.clock_state == uClock.SYNCING)
         uClock.handleInternalClock();
 }
