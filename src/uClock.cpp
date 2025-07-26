@@ -307,6 +307,7 @@ void uClockClass::handleExternalClock()
             // no break here, just go on to calculate our first ext_interval
 
         case STARTED:
+        {
             uint32_t now_clock_us = micros();
             last_interval = clock_diff(ext_clock_us, now_clock_us);
             ext_clock_us = now_clock_us;
@@ -326,6 +327,7 @@ void uClockClass::handleExternalClock()
                 ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
             }
             break;
+        }
 
         case PAUSED:
             break;
