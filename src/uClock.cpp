@@ -165,7 +165,7 @@ void uClockClass::handleInternalClock()
     // process sync signals first please...
     if (mod_clock_counter == 0) {
 
-        if (clock_mode == EXTERNAL_CLOCK) {
+        if (clock_mode == EXTERNAL_CLOCK && clock_state == STARTED) {
             // sync tick position with external tick clock
             if ((int_clock_tick < ext_clock_tick) || (int_clock_tick > (ext_clock_tick + 1))) {
                 int_clock_tick = ext_clock_tick;
@@ -333,7 +333,8 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = SYNCING;
             ext_clock_us = micros();
-            // should we force internal tick process based on this first tick?
+            // force first internal tick processing
+            handleInternalClock();
             break;
     }
 }
