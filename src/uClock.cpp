@@ -311,17 +311,16 @@ void uClockClass::handleExternalClock()
             last_interval = clock_diff(ext_clock_us, now_clock_us);
             ext_clock_us = now_clock_us;
 
-            // external clock tick me!
-            ext_clock_tick++;
-
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
-            if(++ext_interval_idx >= ext_interval_buffer_size) {
+            if(++ext_interval_idx >= ext_interval_buffer_size)
                 ext_interval_idx = 0;
-            }
             ext_interval_buffer[ext_interval_idx] = last_interval;
 
             // calculate sync interval
             ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
+
+            // external clock tick me!
+            ext_clock_tick++;
             break;
 
         case PAUSED:
@@ -330,6 +329,7 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = SYNCING;
             ext_clock_us = micros();
+
             // external clock tick me!
             ext_clock_tick++;
             break;
@@ -338,8 +338,7 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::clockMe()
 {
-    if (clock_mode == EXTERNAL_CLOCK)
-        ATOMIC(handleExternalClock())
+    ATOMIC(handleExternalClock())
 }
 
 void uClockClass::start()
