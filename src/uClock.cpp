@@ -81,7 +81,6 @@
     #include "platforms/software.h"
 #endif
 
-
 //
 // Platform specific timer setup/control
 //
@@ -136,6 +135,8 @@ uClockClass::uClockClass()
     onStepCallback = nullptr;
     onClockStartCallback = nullptr;
     onClockStopCallback = nullptr;
+    onClockPauseCallback = nullptr;
+    onClockContinueCallback = nullptr;
     // initialize reference data
     calculateReferencedata();
 }
@@ -301,9 +302,9 @@ void uClockClass::handleExternalClock()
 {
     switch (clock_state) {
         case SYNCING:
-            // set clock_mode as started and goes on to calculate the first ext_interval
+            // set clock_mode as started, and goes on to calculate the first ext_interval
             clock_state = STARTED;
-            // no break here just go on to calculate our first ext_interval
+            // no break here, just go on to calculate our first ext_interval
 
         case STARTED:
             uint32_t now_clock_us = micros();
