@@ -66,6 +66,7 @@ class uClockClass {
         enum ClockState {
             PAUSED = 0,
             STARTING,
+            SYNCING,
             STARTED
         };
 

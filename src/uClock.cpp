@@ -304,9 +304,14 @@ void uClockClass::handleExternalClock()
             break;
 
         case STARTING:
-            clock_state = STARTED;
+            clock_state = SYNCING;
             ext_clock_us = micros();
             break;
+
+        case SYNCING:
+            // set clock_mode as start and goes on to calculate the first ext_interval
+            clock_state = STARTED;
+            // no break here just go on to calculate our first ext_interval
 
         case STARTED:
             uint32_t now_clock_us = micros();
