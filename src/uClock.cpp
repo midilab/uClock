@@ -320,11 +320,8 @@ void uClockClass::handleExternalClock()
             }
             ext_interval_buffer[ext_interval_idx] = last_interval;
 
-            if (ext_clock_tick == 1) {
-                ext_interval = last_interval;
-            } else {
-                ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
-            }
+            // calculate sync interval
+            ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
             break;
 
         case PAUSED:
@@ -333,6 +330,8 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = SYNCING;
             ext_clock_us = micros();
+            // external clock tick me!
+            ext_clock_tick++;
             break;
     }
 }
