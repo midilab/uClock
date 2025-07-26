@@ -309,7 +309,7 @@ void uClockClass::handleExternalClock()
             break;
 
         case SYNCING:
-            // set clock_mode as start and goes on to calculate the first ext_interval
+            // set clock_mode as started and goes on to calculate the first ext_interval
             clock_state = STARTED;
             // no break here just go on to calculate our first ext_interval
 
@@ -376,8 +376,12 @@ void uClockClass::pause()
         } else if (clock_mode == EXTERNAL_CLOCK) {
             ATOMIC(clock_state = STARTING)
         }
+        if (onClockContinueCallback)
+            onClockContinueCallback();
     } else {
         ATOMIC(clock_state = PAUSED)
+        if (onClockPauseCallback)
+            onClockPauseCallback();
     }
 }
 
