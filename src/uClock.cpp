@@ -385,11 +385,10 @@ void uClockClass::pause()
 
 void uClockClass::setClockMode(ClockMode tempo_mode)
 {
+    ATOMIC(clock_mode = tempo_mode)
     // trying to set external clock while playing? force sync ext_interval
     if (tempo_mode == EXTERNAL_CLOCK && clock_state == STARTED)
         ATOMIC(clock_state = STARTING)
-
-    ATOMIC(clock_mode = tempo_mode)
 }
 
 uClockClass::ClockMode uClockClass::getClockMode()
