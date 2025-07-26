@@ -329,9 +329,7 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = SYNCING;
             ext_clock_us = micros();
-
-            // external clock tick me!
-            ext_clock_tick++;
+            // should we force internal tick process based on this first tick?
             break;
     }
 }
