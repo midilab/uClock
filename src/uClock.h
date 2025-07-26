@@ -66,6 +66,7 @@ class uClockClass {
         enum ClockState {
             PAUSED = 0,
             STARTING,
+            SYNCING,
             STARTED
         };
 
@@ -86,6 +87,7 @@ class uClockClass {
         ClockState clock_state;
 
         uClockClass();
+        ~uClockClass();
 
         void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
             onOutputPPQNCallback = callback;
@@ -132,11 +134,19 @@ class uClockClass {
             onClockStopCallback = callback;
         }
 
+        void setOnClockPause(void (*callback)()) {
+            onClockPauseCallback = callback;
+        }
+
+        void setOnClockContinue(void (*callback)()) {
+            onClockContinueCallback = callback;
+        }
+
         void init();
         void setOutputPPQN(PPQNResolution resolution);
         void setInputPPQN(PPQNResolution resolution);
 
-        void handleTimerInt();
+        void handleInternalClock();
         void handleExternalClock();
         void resetCounters();
 
@@ -201,6 +211,8 @@ class uClockClass {
         void (*onSync48Callback)(uint32_t tick);
         void (*onClockStartCallback)();
         void (*onClockStopCallback)();
+        void (*onClockPauseCallback)();
+        void (*onClockContinueCallback)();
 
         // clock input/output control
         PPQNResolution output_ppqn = PPQN_96;
@@ -242,9 +254,9 @@ class uClockClass {
         uint32_t last_interval;
         uint32_t sync_interval;
 
-        float tempo;
+        volatile float tempo;
+        volatile ClockMode clock_mode;
         uint32_t start_timer;
-        ClockMode clock_mode;
 
         volatile uint32_t * ext_interval_buffer = nullptr;
         uint8_t ext_interval_buffer_size;
