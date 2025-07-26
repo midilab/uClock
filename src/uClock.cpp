@@ -347,9 +347,8 @@ void uClockClass::start()
     resetCounters();
     start_timer = millis();
 
-    if (onClockStartCallback) {
+    if (onClockStartCallback)
         onClockStartCallback();
-    }
 
     if (clock_mode == INTERNAL_CLOCK) {
         ATOMIC(clock_state = STARTED)
@@ -363,9 +362,8 @@ void uClockClass::stop()
     ATOMIC(clock_state = PAUSED)
     resetCounters();
     start_timer = 0;
-    if (onClockStopCallback) {
+    if (onClockStopCallback)
         onClockStopCallback();
-    }
 }
 
 void uClockClass::pause()
@@ -387,10 +385,10 @@ void uClockClass::pause()
 
 void uClockClass::setClockMode(ClockMode tempo_mode)
 {
-    if (tempo_mode == EXTERNAL_CLOCK && clock_state == STARTED) {
-        // trying to set external clock while playing? force sync last clock tick
+    // trying to set external clock while playing? force sync ext_interval
+    if (tempo_mode == EXTERNAL_CLOCK && clock_state == STARTED)
         ATOMIC(clock_state = STARTING)
-    }
+
     ATOMIC(clock_mode = tempo_mode)
 }
 
