@@ -300,14 +300,6 @@ void uClockClass::handleInternalClock()
 void uClockClass::handleExternalClock()
 {
     switch (clock_state) {
-        case PAUSED:
-            break;
-
-        case STARTING:
-            clock_state = SYNCING;
-            ext_clock_us = micros();
-            break;
-
         case SYNCING:
             // set clock_mode as started and goes on to calculate the first ext_interval
             clock_state = STARTED;
@@ -332,6 +324,14 @@ void uClockClass::handleExternalClock()
             } else {
                 ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
             }
+            break;
+
+        case PAUSED:
+            break;
+
+        case STARTING:
+            clock_state = SYNCING;
+            ext_clock_us = micros();
             break;
     }
 }
