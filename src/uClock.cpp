@@ -27,7 +27,9 @@
  */
 #include "uClock.h"
 
-// no hardware timer clock? use USE_UCLOCK_SOFTWARE_TIMER
+//
+// Compile time selection of Platform implementation of timer setup/control/handler
+//
 #if !defined(USE_UCLOCK_SOFTWARE_TIMER)
     //
     // General Arduino AVRs port
@@ -75,6 +77,7 @@
 
 //
 // Software Timer for generic, board-agnostic, not-accurate, no-interrupt, software-only port
+// No hardware timer support? use USE_UCLOCK_SOFTWARE_TIMER
 //
 #if !defined(UCLOCK_PLATFORM_FOUND)
     #pragma message ("NOTE: uClock is using the 'software timer' approach instead of specific board interrupted support, because board is not supported or because of USE_UCLOCK_SOFTWARE_TIMER build flag. Remember to call uClock.run() inside your loop().")
@@ -82,21 +85,33 @@
 #endif
 
 //
-// Platform specific timer setup/control
+// Platform specific timer handler/setup/control wrappers
 //
-// initTimer(uint32_t us_interval) and setTimer(uint32_t us_interval)
-// are called from architecture specific module included at the
-// header of this file
-void uclockInitTimer()
+// global timer counter
+volatile uint32_t _millis = 0;
+
+// called each tick genarated from platform specific code
+void uClockHandler()
 {
-    // begin at 120bpm
+    _millis = millis();
+
+    if (uClock.clock_state == uClock.STARTED || uClock.clock_state == uClock.SYNCING)
+        uClock.handleInternalClock();
+}
+
+// initTimer(uint32_t us_interval) and setTimer(uint32_t us_interval)
+// are defined at platform specific code and are platform dependent
+void uClockInitTimer()
+{
+    // initialize at 120bpm as default
     initTimer(uClock.bpmToMicroSeconds(120.00));
 }
 
-void setTimerTempo(float bpm)
+void uClockSetTimerTempo(float bpm)
 {
     setTimer(uClock.bpmToMicroSeconds(bpm));
 }
+
 
 namespace umodular { namespace clock {
 
@@ -116,27 +131,8 @@ static inline uint32_t clock_diff(uint32_t old_clock, uint32_t new_clock)
 
 uClockClass::uClockClass()
 {
-    tempo = 120;
-    start_timer = 0;
-    last_interval = 0;
-    sync_interval = 0;
-    clock_state = PAUSED;
-    clock_mode = INTERNAL_CLOCK;
     resetCounters();
 
-    onOutputPPQNCallback = nullptr;
-    onSync1Callback = nullptr;
-    onSync2Callback = nullptr;
-    onSync4Callback = nullptr;
-    onSync8Callback = nullptr;
-    onSync12Callback = nullptr;
-    onSync24Callback = nullptr;
-    onSync48Callback = nullptr;
-    onStepCallback = nullptr;
-    onClockStartCallback = nullptr;
-    onClockStopCallback = nullptr;
-    onClockPauseCallback = nullptr;
-    onClockContinueCallback = nullptr;
     // initialize reference data
     calculateReferencedata();
 }
@@ -151,7 +147,7 @@ void uClockClass::init()
     if (ext_interval_buffer == nullptr)
         setExtIntervalBuffer(1);
 
-    uclockInitTimer();
+    uClockInitTimer();
     // first interval calculus
     setTempo(tempo);
 }
@@ -174,23 +170,22 @@ void uClockClass::handleInternalClock()
                 mod_step_counter = tick % mod_step_ref;
             }
 
-            uint32_t counter = ext_interval;
-            uint32_t now_clock_us = micros();
-            sync_interval = clock_diff(ext_clock_us, now_clock_us);
+            hlp_counter = ext_interval;
+            hlp_sync_interval = clock_diff(ext_clock_us, micros());
 
             if (int_clock_tick <= ext_clock_tick) {
-                counter -= phase_mult(sync_interval);
+                hlp_counter -= phase_mult(hlp_sync_interval);
             } else {
-                if (counter > sync_interval) {
-                    counter += phase_mult(counter - sync_interval);
+                if (hlp_counter > hlp_sync_interval) {
+                    hlp_counter += phase_mult(hlp_counter - hlp_sync_interval);
                 }
             }
 
             // update internal clock timer frequency
-            float bpm = constrainBpm(freqToBpm(counter));
-            if (bpm != tempo) {
-                tempo = bpm;
-                setTimerTempo(bpm);
+            hlp_external_bpm = constrainBpm(freqToBpm(hlp_counter));
+            if (hlp_external_bpm != tempo) {
+                tempo = hlp_external_bpm;
+                uClockSetTimerTempo(tempo);
             }
         }
 
@@ -307,27 +302,25 @@ void uClockClass::handleExternalClock()
             // no break here, just go on to calculate our first ext_interval
 
         case STARTED:
-        {
-            uint32_t now_clock_us = micros();
-            last_interval = clock_diff(ext_clock_us, now_clock_us);
-            ext_clock_us = now_clock_us;
+            hlp_now_clock_us = micros();
+            hlp_last_interval = clock_diff(ext_clock_us, hlp_now_clock_us);
+            ext_clock_us = hlp_now_clock_us;
 
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
             if(++ext_interval_idx >= ext_interval_buffer_size)
                 ext_interval_idx = 0;
-            ext_interval_buffer[ext_interval_idx] = last_interval;
+            ext_interval_buffer[ext_interval_idx] = hlp_last_interval;
 
             // external clock tick me!
             ext_clock_tick++;
 
             // calculate sync interval
             if (ext_clock_tick == 1) {
-                ext_interval = last_interval;
+                ext_interval = hlp_last_interval;
             } else {
-                ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
+                ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)hlp_last_interval) >> 8;
             }
             break;
-        }
 
         case PAUSED:
             break;
@@ -448,7 +441,7 @@ void uClockClass::setTempo(float bpm)
 
     ATOMIC(tempo = bpm)
 
-    setTimerTempo(bpm);
+    uClockSetTimerTempo(bpm);
 }
 
 float uClockClass::getTempo()
@@ -668,17 +661,3 @@ uint32_t uClockClass::getPlayTime()
 } } // end namespace umodular::clock
 
 umodular::clock::uClockClass uClock;
-
-volatile uint32_t _millis = 0;
-
-//
-// TIMER HANDLER
-//
-void uClockHandler()
-{
-    // global timer counter
-    _millis = millis();
-
-    if (uClock.clock_state == uClock.STARTED || uClock.clock_state == uClock.SYNCING)
-        uClock.handleInternalClock();
-}

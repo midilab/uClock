@@ -84,7 +84,7 @@ class uClockClass {
             PPQN_960 = 960
         };
 
-        ClockState clock_state;
+        ClockState clock_state = PAUSED;
 
         uClockClass();
         ~uClockClass();
@@ -200,19 +200,20 @@ class uClockClass {
         // shuffle
         bool inline processShuffle();
 
-        void (*onOutputPPQNCallback)(uint32_t tick);
-        void (*onStepCallback)(uint32_t step);
-        void (*onSync1Callback)(uint32_t tick);
-        void (*onSync2Callback)(uint32_t tick);
-        void (*onSync4Callback)(uint32_t tick);
-        void (*onSync8Callback)(uint32_t tick);
-        void (*onSync12Callback)(uint32_t tick);
-        void (*onSync24Callback)(uint32_t tick);
-        void (*onSync48Callback)(uint32_t tick);
-        void (*onClockStartCallback)();
-        void (*onClockStopCallback)();
-        void (*onClockPauseCallback)();
-        void (*onClockContinueCallback)();
+        // callbacks
+        void (*onOutputPPQNCallback)(uint32_t tick) = nullptr;
+        void (*onStepCallback)(uint32_t step) = nullptr;
+        void (*onSync1Callback)(uint32_t tick) = nullptr;
+        void (*onSync2Callback)(uint32_t tick) = nullptr;
+        void (*onSync4Callback)(uint32_t tick) = nullptr;
+        void (*onSync8Callback)(uint32_t tick) = nullptr;
+        void (*onSync12Callback)(uint32_t tick) = nullptr;
+        void (*onSync24Callback)(uint32_t tick) = nullptr;
+        void (*onSync48Callback)(uint32_t tick) = nullptr;
+        void (*onClockStartCallback)() = nullptr;
+        void (*onClockStopCallback)() = nullptr;
+        void (*onClockPauseCallback)() = nullptr;
+        void (*onClockContinueCallback)() = nullptr;
 
         // clock input/output control
         PPQNResolution output_ppqn = PPQN_96;
@@ -251,12 +252,16 @@ class uClockClass {
         volatile uint32_t ext_clock_us;
         volatile uint32_t ext_clock_tick;
         volatile uint32_t ext_interval;
-        uint32_t last_interval;
-        uint32_t sync_interval;
+        // helpers
+        uint32_t hlp_counter = 0;
+        uint32_t hlp_sync_interval = 0;
+        float hlp_external_bpm = 120.0;
+        uint32_t hlp_now_clock_us = 0;
+        uint32_t hlp_last_interval = 0;
 
-        volatile float tempo;
-        volatile ClockMode clock_mode;
-        uint32_t start_timer;
+        volatile float tempo = 120;
+        volatile ClockMode clock_mode = INTERNAL_CLOCK;
+        uint32_t start_timer = 0;
 
         volatile uint32_t * ext_interval_buffer = nullptr;
         uint8_t ext_interval_buffer_size;
