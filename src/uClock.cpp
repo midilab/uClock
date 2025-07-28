@@ -2,7 +2,7 @@
  *  @file       uClock.cpp
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(RPI2040, Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    2.2.1
+ *  @version    2.3.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
@@ -77,7 +77,7 @@
 
 //
 // Software Timer for generic, board-agnostic, not-accurate, no-interrupt, software-only port
-// No hardware timer support? use USE_UCLOCK_SOFTWARE_TIMER
+// No hardware timer support? fallback to USE_UCLOCK_SOFTWARE_TIMER
 //
 #if !defined(UCLOCK_PLATFORM_FOUND)
     #pragma message ("NOTE: uClock is using the 'software timer' approach instead of specific board interrupted support, because board is not supported or because of USE_UCLOCK_SOFTWARE_TIMER build flag. Remember to call uClock.run() inside your loop().")
@@ -90,7 +90,7 @@
 // global timer counter
 volatile uint32_t _millis = 0;
 
-// called each tick genarated from platform specific code
+// called each tick genarated from platform specific timer
 void uClockHandler()
 {
     _millis = millis();
@@ -314,7 +314,7 @@ void uClockClass::handleExternalClock()
             // external clock tick me!
             ext_clock_tick++;
 
-            // calculate sync interval
+            // set sync interval
             if (ext_clock_tick == 1) {
                 ext_interval = hlp_last_interval;
             } else {
@@ -322,6 +322,7 @@ void uClockClass::handleExternalClock()
             }
             break;
 
+        case STOPED:
         case PAUSED:
             break;
 
@@ -354,7 +355,7 @@ void uClockClass::start()
 
 void uClockClass::stop()
 {
-    ATOMIC(clock_state = PAUSED)
+    ATOMIC(clock_state = STOPED)
     resetCounters();
     start_timer = 0;
     if (onClockStopCallback)
@@ -363,7 +364,11 @@ void uClockClass::stop()
 
 void uClockClass::pause()
 {
-    if (clock_state == PAUSED) {
+    if (clock_state == STARTED) {
+        ATOMIC(clock_state = PAUSED)
+        if (onClockPauseCallback)
+            onClockPauseCallback();
+    } else if (clock_state == PAUSED) {
         if (clock_mode == INTERNAL_CLOCK) {
             ATOMIC(clock_state = STARTED)
         } else if (clock_mode == EXTERNAL_CLOCK) {
@@ -371,19 +376,17 @@ void uClockClass::pause()
         }
         if (onClockContinueCallback)
             onClockContinueCallback();
-    } else {
-        ATOMIC(clock_state = PAUSED)
-        if (onClockPauseCallback)
-            onClockPauseCallback();
     }
 }
 
 void uClockClass::setClockMode(ClockMode tempo_mode)
 {
-    ATOMIC(clock_mode = tempo_mode)
-    // trying to set external clock while playing? force sync ext_interval
-    if (tempo_mode == EXTERNAL_CLOCK && clock_state == STARTED)
-        ATOMIC(clock_state = STARTING)
+    ATOMIC(
+        clock_mode = tempo_mode;
+        // trying to set external clock while playing? force sync ext_interval
+        if (clock_mode == EXTERNAL_CLOCK && clock_state == STARTED)
+            clock_state = STARTING;
+    )
 }
 
 uClockClass::ClockMode uClockClass::getClockMode()

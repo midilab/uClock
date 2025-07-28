@@ -2,7 +2,7 @@
  *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(RPI2040, Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    2.2.1
+ *  @version    2.3.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
  *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
@@ -64,7 +64,8 @@ class uClockClass {
         };
 
         enum ClockState {
-            PAUSED = 0,
+            STOPED = 0,
+            PAUSED,
             STARTING,
             SYNCING,
             STARTED
@@ -84,7 +85,7 @@ class uClockClass {
             PPQN_960 = 960
         };
 
-        ClockState clock_state = PAUSED;
+        ClockState clock_state = STOPED;
 
         uClockClass();
         ~uClockClass();
