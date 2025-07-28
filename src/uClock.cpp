@@ -139,7 +139,11 @@ uClockClass::uClockClass()
 
 uClockClass::~uClockClass()
 {
-    delete[] ext_interval_buffer;
+    if (ext_interval_buffer)
+        delete[] ext_interval_buffer;
+
+    if (tracks)
+        delete[] tracks;
 }
 
 void uClockClass::init()
@@ -167,7 +171,7 @@ void uClockClass::handleInternalClock()
                 int_clock_tick = ext_clock_tick;
                 tick = int_clock_tick * mod_clock_ref;
                 mod_clock_counter = tick % mod_clock_ref;
-                mod_step_counter = tick % mod_step_ref;
+                syncModStepCounter(tick % mod_step_ref);
             }
 
             hlp_counter = ext_interval;
@@ -272,24 +276,17 @@ void uClockClass::handleInternalClock()
         ++mod_sync48_counter;
     }
 
+    // StepSeq extension: step callback to support 16th old school style sequencers
+    // with builtin shuffle
+    if (tracks != nullptr) {
+        // should callback onStepCallback()
+        stepSeqTick(tick);
+    }
+
     // main PPQNCallback
     if (onOutputPPQNCallback) {
         onOutputPPQNCallback(tick);
         ++tick;
-    }
-
-    // step callback to support 16th old school style sequencers
-    // with builtin shuffle for this callback only
-    if (onStepCallback) {
-        if (mod_step_counter == mod_step_ref)
-            mod_step_counter = 0;
-        // processShufle make use of mod_step_counter == 0 logic too
-        if (processShuffle()) {
-            onStepCallback(step_counter);
-            // going forward to the next step call
-            ++step_counter;
-        }
-        ++mod_step_counter;
     }
 }
 
@@ -322,13 +319,13 @@ void uClockClass::handleExternalClock()
             }
             break;
 
-        case STOPED:
-        case PAUSED:
-            break;
-
         case STARTING:
             clock_state = SYNCING;
             ext_clock_us = micros();
+            break;
+
+        case STOPED:
+        case PAUSED:
             break;
     }
 }
@@ -394,6 +391,146 @@ uClockClass::ClockMode uClockClass::getClockMode()
     return clock_mode;
 }
 
+// for software timer implementation(fallback for no timer board support)
+void uClockClass::run()
+{
+#if !defined(UCLOCK_PLATFORM_FOUND)
+    // call software timer implementation
+    softwareTimerHandler(micros());
+#endif
+}
+
+void uClockClass::stepSeqTick(uint32_t tick)
+{
+    for (uint8_t track=0; track < track_slots_size; track++) {
+        if (tracks[track].mod_step_counter == mod_step_ref)
+            tracks[track].mod_step_counter = 0;
+        // processShufle make use of tracks[track].mod_step_counter == 0 logic too
+        if (processShuffle(track)) {
+            if (onStepGlobalCallback)
+                onStepGlobalCallback(tracks[track].step_counter);
+            if (onStepMultiCallback)
+                onStepMultiCallback(tracks[track].step_counter, track);
+
+            // going forward to the next step call
+            ++tracks[track].step_counter;
+        }
+        ++tracks[track].mod_step_counter;
+    }
+}
+
+void uClockClass::syncModStepCounter(uint8_t counter)
+{
+    for (uint8_t track=0; track < track_slots_size; track++)
+        tracks[track].mod_step_counter = counter;
+}
+
+void uClockClass::setShuffle(bool active, uint8_t track)
+{
+    if (tracks == nullptr)
+        return;
+
+    ATOMIC(tracks[track].shuffle.tmplt.active = active)
+}
+
+bool uClockClass::isShuffled(uint8_t track)
+{
+    if (tracks == nullptr)
+        return;
+
+    return tracks[track].shuffle.tmplt.active;
+}
+
+void uClockClass::setShuffleSize(uint8_t size, uint8_t track)
+{
+    if (tracks == nullptr)
+        return;
+
+    if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
+        size = MAX_SHUFFLE_TEMPLATE_SIZE;
+    ATOMIC(tracks[track].shuffle.tmplt.size = size)
+}
+
+void uClockClass::setShuffleData(uint8_t step, int8_t tick, uint8_t track)
+{
+    if (tracks == nullptr)
+        return;
+
+    if (step >= MAX_SHUFFLE_TEMPLATE_SIZE)
+        return;
+    ATOMIC(tracks[track].shuffle.tmplt.step[step] = tick)
+}
+
+void uClockClass::setShuffleTemplate(int8_t * shuff, uint8_t size, uint8_t track)
+{
+    if (tracks == nullptr)
+        return;
+
+    //uint8_t size = sizeof(shuff) / sizeof(shuff[0]);
+    if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
+        size = MAX_SHUFFLE_TEMPLATE_SIZE;
+    ATOMIC(tracks[track].shuffle.tmplt.size = size)
+    for (uint8_t i=0; i < size; i++) {
+        setShuffleData(i, shuff[i], track);
+    }
+}
+
+int8_t uClockClass::getShuffleLength(uint8_t track)
+{
+    if (tracks == nullptr)
+        return 0;
+
+    return tracks[track].shuffle.shuffle_length_ctrl;
+}
+
+bool inline uClockClass::processShuffle(uint8_t track)
+{
+    if (tracks == nullptr)
+        return false;
+
+    if (!tracks[track].shuffle.tmplt.active) {
+        return tracks[track].mod_step_counter == 0;
+    }
+
+    int8_t mod_shuffle = 0;
+
+    // check shuffle template of current
+    int8_t shff = tracks[track].shuffle.tmplt.step[tracks[track].step_counter%tracks[track].shuffle.tmplt.size];
+
+    if (tracks[track].shuffle.shuffle_shoot_ctrl == false && tracks[track].mod_step_counter == 0)
+        tracks[track].shuffle.shuffle_shoot_ctrl = true;
+
+    //if (tracks[track].mod_step_counter == mod_step_ref-1)
+
+    if (shff >= 0) {
+        mod_shuffle = tracks[track].mod_step_counter - shff;
+        // any late shuffle? we should skip next tracks[track].mod_step_counter == 0
+        if (tracks[track].shuffle.last_shff < 0 && tracks[track].mod_step_counter != 1)
+            return false;
+    } else if (shff < 0) {
+        mod_shuffle = tracks[track].mod_step_counter - (mod_step_ref + shff);
+        //if (tracks[track].shuffle.last_shff < 0 && tracks[track].mod_step_counter != 1)
+        //    return false;
+        tracks[track].shuffle.shuffle_shoot_ctrl = true;
+    }
+
+    tracks[track].shuffle.last_shff = shff;
+
+    // shuffle_shoot_ctrl helps keep track if we have shoot or not a note for the step space of output_ppqn/4 pulses
+    if (mod_shuffle == 0 && tracks[track].shuffle.shuffle_shoot_ctrl == true) {
+        // keep track of next note shuffle for current note lenght control
+        tracks[track].shuffle.shuffle_length_ctrl = tracks[track].shuffle.tmplt.step[(tracks[track].step_counter+1)%tracks[track].shuffle.tmplt.size];
+        if (shff > 0)
+            tracks[track].shuffle.shuffle_length_ctrl -= shff;
+        if (shff < 0)
+            tracks[track].shuffle.shuffle_length_ctrl += shff;
+        tracks[track].shuffle.shuffle_shoot_ctrl = false;
+        return true;
+    }
+
+    return false;
+}
+
 uint32_t uClockClass::bpmToMicroSeconds(float bpm)
 {
     return (60000000.0f / (float)output_ppqn / bpm);
@@ -434,13 +571,11 @@ void uClockClass::setInputPPQN(PPQNResolution resolution)
 
 void uClockClass::setTempo(float bpm)
 {
-    if (clock_mode == EXTERNAL_CLOCK) {
+    if (clock_mode == EXTERNAL_CLOCK)
         return;
-    }
 
-    if (bpm < MIN_BPM || bpm > MAX_BPM) {
+    if (bpm < MIN_BPM || bpm > MAX_BPM)
         return;
-    }
 
     ATOMIC(tempo = bpm)
 
@@ -465,15 +600,6 @@ float uClockClass::getTempo()
     return tempo;
 }
 
-// for software timer implementation(fallback for no board support)
-void uClockClass::run()
-{
-#if !defined(UCLOCK_PLATFORM_FOUND)
-    // call software timer implementation of software
-    softwareTimerHandler(micros());
-#endif
-}
-
 float inline uClockClass::freqToBpm(uint32_t freq)
 {
     float usecs = 1/((float)freq/1000000.0);
@@ -485,7 +611,7 @@ float inline uClockClass::constrainBpm(float bpm)
     return (bpm < MIN_BPM) ? MIN_BPM : ( bpm > MAX_BPM ? MAX_BPM : bpm );
 }
 
-void uClockClass::setExtIntervalBuffer(uint8_t buffer_size)
+void uClockClass::setExtIntervalBuffer(size_t buffer_size)
 {
     if (ext_interval_buffer != nullptr)
         return;
@@ -500,8 +626,6 @@ void uClockClass::resetCounters()
     tick = 0;
     int_clock_tick = 0;
     mod_clock_counter = 0;
-    mod_step_counter = 0;
-    step_counter = 0;
     ext_clock_tick = 0;
     ext_clock_us = 0;
     ext_interval_idx = 0;
@@ -521,6 +645,11 @@ void uClockClass::resetCounters()
     mod_sync48_counter = 0;
     sync48_tick = 0;
 
+    for (uint8_t track=0; track < track_slots_size; track++) {
+        tracks[track].mod_step_counter = 0;
+        tracks[track].step_counter = 0;
+    }
+
     for (uint8_t i=0; i < ext_interval_buffer_size; i++) {
         ext_interval_buffer[i] = 0;
     }
@@ -531,91 +660,6 @@ void uClockClass::tap()
     // we can make use of mod_sync1_ref for tap
     //uint8_t mod_tap_ref = output_ppqn / PPQN_1;
     // we only set tap if ClockMode is INTERNAL_CLOCK
-}
-
-void uClockClass::setShuffle(bool active)
-{
-    ATOMIC(shuffle.active = active)
-}
-
-bool uClockClass::isShuffled()
-{
-    return shuffle.active;
-}
-
-void uClockClass::setShuffleSize(uint8_t size)
-{
-    if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
-        size = MAX_SHUFFLE_TEMPLATE_SIZE;
-    ATOMIC(shuffle.size = size)
-}
-
-void uClockClass::setShuffleData(uint8_t step, int8_t tick)
-{
-    if (step >= MAX_SHUFFLE_TEMPLATE_SIZE)
-        return;
-    ATOMIC(shuffle.step[step] = tick)
-}
-
-void uClockClass::setShuffleTemplate(int8_t * shuff, uint8_t size)
-{
-    //uint8_t size = sizeof(shuff) / sizeof(shuff[0]);
-    if (size > MAX_SHUFFLE_TEMPLATE_SIZE)
-        size = MAX_SHUFFLE_TEMPLATE_SIZE;
-    ATOMIC(shuffle.size = size)
-    for (uint8_t i=0; i < size; i++) {
-        setShuffleData(i, shuff[i]);
-    }
-}
-
-int8_t uClockClass::getShuffleLength()
-{
-    return shuffle_length_ctrl;
-}
-
-bool inline uClockClass::processShuffle()
-{
-    if (!shuffle.active) {
-        return mod_step_counter == 0;
-    }
-
-    int8_t mod_shuffle = 0;
-
-    // check shuffle template of current
-    int8_t shff = shuffle.step[step_counter%shuffle.size];
-
-    if (shuffle_shoot_ctrl == false && mod_step_counter == 0)
-        shuffle_shoot_ctrl = true;
-
-    //if (mod_step_counter == mod_step_ref-1)
-
-    if (shff >= 0) {
-        mod_shuffle = mod_step_counter - shff;
-        // any late shuffle? we should skip next mod_step_counter == 0
-        if (last_shff < 0 && mod_step_counter != 1)
-            return false;
-    } else if (shff < 0) {
-        mod_shuffle = mod_step_counter - (mod_step_ref + shff);
-        //if (last_shff < 0 && mod_step_counter != 1)
-        //    return false;
-        shuffle_shoot_ctrl = true;
-    }
-
-    last_shff = shff;
-
-    // shuffle_shoot_ctrl helps keep track if we have shoot or not a note for the step space of output_ppqn/4 pulses
-    if (mod_shuffle == 0 && shuffle_shoot_ctrl == true) {
-        // keep track of next note shuffle for current note lenght control
-        shuffle_length_ctrl = shuffle.step[(step_counter+1)%shuffle.size];
-        if (shff > 0)
-            shuffle_length_ctrl -= shff;
-        if (shff < 0)
-            shuffle_length_ctrl += shff;
-        shuffle_shoot_ctrl = false;
-        return true;
-    }
-
-    return false;
 }
 
 // elapsed time support
