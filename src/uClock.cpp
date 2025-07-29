@@ -155,6 +155,7 @@ void uClockClass::handleInternalClock()
     // process sync signals first please...
     if (tick % mod_clock_ref) {
         // internal clock tick me!
+        // used to compare and lock tick on external mode clock
         ++int_clock_tick;
     }
 
@@ -231,15 +232,14 @@ void uClockClass::handleInternalClock()
 
 void uClockClass::handleExternalClock()
 {
-
     // lock tick with external sync clock
-    // sync tick position with external tick clock
-    if (abs(int_clock_tick-ext_clock_tick) > 2) {
-        int_clock_tick = ext_clock_tick;
-        tick = int_clock_tick * mod_clock_ref;
+    // sync tick position with external clock signal
+    if (clock_mode == EXTERNAL_CLOCK) {
+        if (abs(int_clock_tick-ext_clock_tick) > 2) {
+            int_clock_tick = ext_clock_tick;
+            tick = int_clock_tick * mod_clock_ref;
+        }
     }
-    // external clock tick me!
-    ext_clock_tick++;
 
     switch (clock_state) {
         case STARTED:
@@ -248,10 +248,12 @@ void uClockClass::handleExternalClock()
             ext_clock_us = hlp_now_clock_us;
 
             // update internal clock timer frequency
-            hlp_external_bpm = constrainBpm(freqToBpm(ext_interval));
-            if (hlp_external_bpm != tempo) {
-                tempo = hlp_external_bpm;
-                uClockSetTimerTempo(tempo);
+            if (clock_mode == EXTERNAL_CLOCK) {
+                hlp_external_bpm = constrainBpm(freqToBpm(ext_interval));
+                if (hlp_external_bpm != tempo) {
+                    tempo = hlp_external_bpm;
+                    uClockSetTimerTempo(tempo);
+                }
             }
 
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
@@ -269,6 +271,8 @@ void uClockClass::handleExternalClock()
         case PAUSED:
             break;
     }
+    // external clock tick me!
+    ext_clock_tick++;
 }
 
 void uClockClass::clockMe()
