@@ -247,10 +247,10 @@ void uClockClass::handleExternalClock()
                 }
                 // lock tick with external sync clock
                 // sync tick position with external clock signal
-                if (abs(int_clock_tick-ext_clock_tick) > 2) {
-                    int_clock_tick = ext_clock_tick;
-                    tick = int_clock_tick * mod_clock_ref;
-                }
+                //if (abs(int_clock_tick-ext_clock_tick) > 2) {
+                //    int_clock_tick = ext_clock_tick;
+                //    tick = int_clock_tick * mod_clock_ref;
+                //}
             }
 
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
