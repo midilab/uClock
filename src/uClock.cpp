@@ -264,6 +264,8 @@ void uClockClass::handleExternalClock()
             ext_clock_us = micros();
             ext_clock_tick = 0;
             int_clock_tick = 0;
+            ext_interval = 0;
+            ext_interval_idx = 0;
             break;
 
         case STOPED:
@@ -530,14 +532,9 @@ float uClockClass::getTempo()
 {
     if (clock_mode == EXTERNAL_CLOCK) {
         uint32_t acc = 0;
-        uint8_t buffer_size = ext_interval_buffer_size;
-        if (ext_clock_tick == 0)
-            return tempo;
-        else if (ext_clock_tick < ext_interval_buffer_size)
-            buffer_size = ext_clock_tick+1;
-        for (uint8_t i=0; i < buffer_size; i++)
+        for (uint8_t i=0; i < ext_interval_buffer_size; i++)
             acc += ext_interval_buffer[i];
-        return constrainBpm(freqToBpm(acc / buffer_size));
+        return constrainBpm(freqToBpm(acc / ext_interval_buffer_size));
     }
     return tempo;
 }
@@ -567,7 +564,6 @@ void uClockClass::resetCounters()
 {
     tick = 0;
     int_clock_tick = 0;
-    //mod_clock_counter = 0;
     //ext_clock_tick = 0;
     ext_clock_us = 0;
     ext_interval = 0;
