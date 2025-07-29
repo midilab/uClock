@@ -239,7 +239,7 @@ void uClockClass::handleExternalClock()
             ext_clock_us = hlp_now_clock_us;
 
             // update internal clock timer frequency
-            if (clock_mode == EXTERNAL_CLOCK) {
+            if (clock_mode == EXTERNAL_CLOCK && uClock.clock_state == uClock.STARTED) {
                 hlp_external_bpm = constrainBpm(freqToBpm(ext_interval));
                 if (hlp_external_bpm != tempo) {
                     tempo = hlp_external_bpm;
@@ -568,7 +568,7 @@ void uClockClass::resetCounters()
     tick = 0;
     int_clock_tick = 0;
     //mod_clock_counter = 0;
-    ext_clock_tick = 0;
+    //ext_clock_tick = 0;
     ext_clock_us = 0;
     ext_interval = 0;
     ext_interval_idx = 0;
@@ -585,9 +585,9 @@ void uClockClass::resetCounters()
         tracks[track].step_counter = 0;
     }
 
-    for (uint8_t i=0; i < ext_interval_buffer_size; i++) {
-        ext_interval_buffer[i] = 0;
-    }
+    //for (uint8_t i=0; i < ext_interval_buffer_size; i++) {
+    //    ext_interval_buffer[i] = 0;
+    //}
 }
 
 void uClockClass::tap()
