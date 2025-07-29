@@ -348,12 +348,8 @@ void uClockClass::run()
 void uClockClass::stepSeqTick()
 {
     for (uint8_t track=0; track < track_slots_size; track++) {
-        //if (tracks[track].mod_step_counter == mod_step_ref)
-        //    tracks[track].mod_step_counter = 0;
-        // processShufle make use of tracks[track].mod_step_counter == 0 logic too
         bool stepProcess = false;
         if (!tracks[track].shuffle.tmplt.active) {
-            //return tracks[track].mod_step_counter == 0;
             if (tick % mod_step_ref == 0)
                 stepProcess = true;
         } else if (processShuffle(track)) {
@@ -369,7 +365,6 @@ void uClockClass::stepSeqTick()
             // going forward to the next step call
             ++tracks[track].step_counter;
         }
-        //++tracks[track].mod_step_counter;
     }
 }
 
