@@ -232,15 +232,6 @@ void uClockClass::handleInternalClock()
 
 void uClockClass::handleExternalClock()
 {
-    // lock tick with external sync clock
-    // sync tick position with external clock signal
-    if (clock_mode == EXTERNAL_CLOCK) {
-        if (abs(int_clock_tick-ext_clock_tick) > 2) {
-            int_clock_tick = ext_clock_tick;
-            tick = int_clock_tick * mod_clock_ref;
-        }
-    }
-
     switch (clock_state) {
         case STARTED:
             hlp_now_clock_us = micros();
@@ -254,6 +245,12 @@ void uClockClass::handleExternalClock()
                     tempo = hlp_external_bpm;
                     uClockSetTimerTempo(tempo);
                 }
+                // lock tick with external sync clock
+                // sync tick position with external clock signal
+                if (abs(int_clock_tick-ext_clock_tick) > 2) {
+                    int_clock_tick = ext_clock_tick;
+                    tick = int_clock_tick * mod_clock_ref;
+                }
             }
 
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
@@ -265,12 +262,15 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = STARTED;
             ext_clock_us = micros();
+            ext_clock_tick = 0;
+            int_clock_tick = 0;
             break;
 
         case STOPED:
         case PAUSED:
             break;
     }
+
     // external clock tick me!
     ext_clock_tick++;
 }
@@ -573,23 +573,15 @@ void uClockClass::resetCounters()
     ext_interval = 0;
     ext_interval_idx = 0;
     // sync output counters
-    //mod_sync1_counter = 0;
     sync1_tick = 0;
-    //mod_sync2_counter = 0;
     sync2_tick = 0;
-    //mod_sync4_counter = 0;
     sync4_tick = 0;
-    //mod_sync8_counter = 0;
     sync8_tick = 0;
-    //mod_sync12_counter = 0;
     sync12_tick = 0;
-    //mod_sync24_counter = 0;
     sync24_tick = 0;
-    //mod_sync48_counter = 0;
     sync48_tick = 0;
 
     for (uint8_t track=0; track < track_slots_size; track++) {
-        //tracks[track].mod_step_counter = 0;
         tracks[track].step_counter = 0;
     }
 
