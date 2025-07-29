@@ -264,8 +264,6 @@ void uClockClass::handleExternalClock()
             ext_clock_us = micros();
             ext_clock_tick = 0;
             int_clock_tick = 0;
-            ext_interval = 0;
-            ext_interval_idx = 0;
             break;
 
         case STOPED:
