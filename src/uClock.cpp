@@ -444,17 +444,16 @@ bool inline uClockClass::processShuffle(uint8_t track)
     if (tracks[track].shuffle.shuffle_shoot_ctrl == false && tick % mod_step_ref == 0)
         tracks[track].shuffle.shuffle_shoot_ctrl = true;
 
-    //if (tracks[track].mod_step_counter == mod_step_ref-1)
-
     if (shff >= 0) {
         mod_shuffle = (tick % mod_step_ref) - shff;
         // any late shuffle? we should skip next tracks[track].mod_step_counter == 0
-        if (tracks[track].shuffle.last_shff < 0 && tick % mod_step_ref != 1)
+        if (tracks[track].shuffle.last_shff < 0 && tick % mod_step_ref != 1) {
+            if (tracks[track].shuffle.shuffle_shoot_ctrl == true)
+                tracks[track].shuffle.shuffle_shoot_ctrl = false;
             return false;
+        }
     } else if (shff < 0) {
         mod_shuffle = (tick % mod_step_ref) - (mod_step_ref + shff);
-        //if (tracks[track].shuffle.last_shff < 0 && tracks[track].mod_step_counter != 1)
-        //    return false;
         tracks[track].shuffle.shuffle_shoot_ctrl = true;
     }
 
