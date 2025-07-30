@@ -239,7 +239,7 @@ void uClockClass::handleExternalClock()
             ext_clock_us = hlp_now_clock_us;
 
             // update internal clock timer frequency
-            if (clock_mode == EXTERNAL_CLOCK && uClock.clock_state == uClock.STARTED) {
+            if (clock_mode == EXTERNAL_CLOCK) {
                 hlp_external_bpm = constrainBpm(freqToBpm(ext_interval));
                 if (hlp_external_bpm != tempo) {
                     tempo = hlp_external_bpm;
@@ -379,7 +379,7 @@ void uClockClass::setShuffle(bool active, uint8_t track)
 bool uClockClass::isShuffled(uint8_t track)
 {
     if (tracks == nullptr)
-        return;
+        return false;
 
     return tracks[track].shuffle.tmplt.active;
 }
@@ -493,6 +493,10 @@ void uClockClass::setOutputPPQN(PPQNResolution resolution)
     if (resolution < PPQN_4)
         return;
 
+    // dont allow output_ppqn lower than input_ppqn
+    if (resolution < input_ppqn)
+        return;
+
     ATOMIC(
         output_ppqn = resolution;
         calculateReferencedata();
@@ -501,6 +505,10 @@ void uClockClass::setOutputPPQN(PPQNResolution resolution)
 
 void uClockClass::setInputPPQN(PPQNResolution resolution)
 {
+    // dont allow input_ppqn greater than output_ppqn
+    if (resolution > output_ppqn)
+        return;
+
     ATOMIC(
         input_ppqn = resolution;
         calculateReferencedata();
