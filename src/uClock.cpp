@@ -244,12 +244,17 @@ void uClockClass::handleExternalClock()
                     tempo = hlp_external_bpm;
                     uClockSetTimerTempo(tempo);
                 }
+                // TODO: missing clock tick inference algorithim
+                // to avoid tick miss sync with external quarter note start
+                // bad comm, missing a local read, bad sync signal? miss 1 clock and things goes off quarter start beat.
+                // or maybe this could be a optional external/internal clock phase lock?
+                //
                 // ideal world here we should have ext_clock_tick == int_clock_tick
                 // wich means each external tick subsequent internal tick should be
                 // fired and fire again only after another external tick income.
                 // lock tick with external sync clock
                 // sync tick position with external clock signal
-                if (ext_clock_tick > int_clock_tick || int_clock_tick > ext_clock_tick) {
+                if (clock_diff(int_clock_tick, ext_clock_tick) > 1) {
                     // only update tick at a full quarter start based on output_ppqn to avoid step quarter phase sync problems
                     if (tick % output_ppqn == 0) {
                         int_clock_tick = ext_clock_tick;
