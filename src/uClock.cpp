@@ -217,16 +217,16 @@ void uClockClass::handleInternalClock()
     }
 
     // main PPQNCallback
-    if (onOutputPPQNCallback) {
+    if (onOutputPPQNCallback)
         onOutputPPQNCallback(tick);
-        ++tick;
-    }
 
     // reference internal clock to use with external clock tick sync for ext clock phase lock
     if (tick % mod_clock_ref == 0) {
         // internal clock tick me!
         ++int_clock_tick;
     }
+
+    ++tick;
 }
 
 void uClockClass::handleExternalClock()
