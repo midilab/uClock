@@ -222,7 +222,7 @@ void uClockClass::handleInternalClock()
         ++tick;
     }
 
-    // reference internal clock to use with external clock tick sync
+    // reference internal clock to use with external clock tick sync for ext clock phase lock
     if (tick % mod_clock_ref == 0) {
         // internal clock tick me!
         ++int_clock_tick;

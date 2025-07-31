@@ -248,8 +248,8 @@ class uClockClass {
         uint32_t start_timer = 0;
 
         // output and internal counters, ticks and references
-        uint32_t tick;
-        uint32_t int_clock_tick;
+        volatile uint32_t tick;
+        volatile uint32_t int_clock_tick;
         uint16_t mod_clock_ref;
         uint8_t mod_step_ref;
         uint16_t mod_sync1_ref;
