@@ -152,13 +152,6 @@ void uClockClass::init()
 
 void uClockClass::handleInternalClock()
 {
-    // process sync signals first please...
-    if (tick % mod_clock_ref) {
-        // internal clock tick me!
-        // used to compare and lock tick on external mode clock
-        ++int_clock_tick;
-    }
-
     // ALL OUTPUT SYNC CALLBACKS
     // Sync1 callback
     if (onSync1Callback) {
@@ -228,6 +221,12 @@ void uClockClass::handleInternalClock()
         onOutputPPQNCallback(tick);
         ++tick;
     }
+
+    // reference internal clock to use with external clock tick sync
+    if (tick % mod_clock_ref == 0) {
+        // internal clock tick me!
+        ++int_clock_tick;
+    }
 }
 
 void uClockClass::handleExternalClock()
@@ -245,12 +244,18 @@ void uClockClass::handleExternalClock()
                     tempo = hlp_external_bpm;
                     uClockSetTimerTempo(tempo);
                 }
+                // ideal world here we should have ext_clock_tick == int_clock_tick
+                // wich means each external tick subsequent internal tick should be
+                // fired and fire again only after another external tick income.
                 // lock tick with external sync clock
                 // sync tick position with external clock signal
-                //if (abs(int_clock_tick-ext_clock_tick) > 2) {
-                //    int_clock_tick = ext_clock_tick;
-                //    tick = int_clock_tick * mod_clock_ref;
-                //}
+                if (ext_clock_tick > int_clock_tick || int_clock_tick > ext_clock_tick) {
+                    // only update tick at a full quarter start based on output_ppqn to avoid step quarter phase sync problems
+                    if (tick % output_ppqn == 0) {
+                        int_clock_tick = ext_clock_tick;
+                        tick = int_clock_tick * mod_clock_ref;
+                    }
+                }
             }
 
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
@@ -564,7 +569,7 @@ void uClockClass::resetCounters()
 {
     tick = 0;
     int_clock_tick = 0;
-    //ext_clock_tick = 0;
+    ext_clock_tick = 0;
     ext_clock_us = 0;
     ext_interval = 0;
     ext_interval_idx = 0;
