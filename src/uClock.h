@@ -249,7 +249,7 @@ class uClockClass {
 
         // output and internal counters, ticks and references
         volatile uint32_t tick;
-        volatile uint32_t int_clock_tick;
+        //volatile uint32_t int_clock_tick;
         uint16_t mod_clock_ref;
         uint8_t mod_step_ref;
         uint16_t mod_sync1_ref;
@@ -269,7 +269,6 @@ class uClockClass {
 
         // external clock control
         volatile uint32_t ext_clock_us = 0;
-        volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
         // helpers
         float hlp_external_bpm = 120.0;
@@ -287,6 +286,9 @@ class uClockClass {
         volatile uint32_t * ext_interval_buffer = nullptr;
         size_t ext_interval_buffer_size = 0;
         uint16_t ext_interval_idx = 0;
+    public:
+        volatile uint32_t ext_clock_tick = 0;
+        volatile uint32_t int_clock_tick = 0;
 };
 
 } } // end namespace umodular::clock

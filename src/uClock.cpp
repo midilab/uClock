@@ -95,7 +95,18 @@ void uClockHandler()
 {
     _millis = millis();
 
-    if (uClock.clock_state == uClock.STARTED || uClock.clock_state == uClock.STARTING)
+    bool readyToTick = false;
+    if (uClock.getClockMode()==uClock.ClockMode::INTERNAL_CLOCK) {
+        // internal clock tick
+        readyToTick = true;
+    } else if (uClock.getClockMode()==uClock.ClockMode::EXTERNAL_CLOCK) {
+        // external clock tick
+        if (uClock.ext_clock_tick > uClock.int_clock_tick) {
+            readyToTick = true;
+        }
+    }
+
+    if (readyToTick && (uClock.clock_state == uClock.STARTED || uClock.clock_state == uClock.STARTING))
         uClock.handleInternalClock();
 }
 
