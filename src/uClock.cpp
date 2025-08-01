@@ -95,18 +95,7 @@ void uClockHandler()
 {
     _millis = millis();
 
-    bool readyToTick = false;
-    if (uClock.getClockMode()==uClock.ClockMode::INTERNAL_CLOCK) {
-        // internal clock tick
-        readyToTick = true;
-    } else if (uClock.getClockMode()==uClock.ClockMode::EXTERNAL_CLOCK) {
-        // external clock tick
-        if (uClock.ext_clock_tick > uClock.int_clock_tick) {
-            readyToTick = true;
-        }
-    }
-
-    if (readyToTick && (uClock.clock_state == uClock.STARTED || uClock.clock_state == uClock.STARTING))
+    if (uClock.allowTick() && (uClock.clock_state == uClock.STARTED || uClock.clock_state == uClock.STARTING))
         uClock.handleInternalClock();
 }
 
@@ -300,6 +289,23 @@ void uClockClass::handleExternalClock()
 void uClockClass::clockMe()
 {
     ATOMIC(handleExternalClock())
+}
+
+void uClockClass::setStrictExternalMode(bool strict) 
+{
+    strict_external_mode = strict;
+}
+bool uClockClass::isStrictExternalMode() 
+{
+    return strict_external_mode;
+}
+bool uClockClass::allowTick() 
+{
+    if (getClockMode()==ClockMode::EXTERNAL_CLOCK && isStrictExternalMode())
+        // in strict mode and external, so only allow internal clock to tick if external clock has already been received
+        return ext_clock_tick > int_clock_tick;
+    // in internal clock mode or non-strict external clock mode, always allow internal clock to tick
+    return true;
 }
 
 void uClockClass::start()
