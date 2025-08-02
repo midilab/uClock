@@ -280,6 +280,7 @@ class uClockClass {
         volatile uint32_t ext_clock_us = 0;
         volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
+        volatile uint32_t ext_last_interval = 0;
         volatile uint32_t request_sync = 0;
         volatile float external_tempo = tempo;
         uint8_t phase_lock_quarters = 1;
