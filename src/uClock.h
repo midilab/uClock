@@ -281,9 +281,6 @@ class uClockClass {
         volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
         uint8_t phase_lock_quarters = 1;
-        // helpers
-        float hlp_external_bpm = 120.0;
-        uint32_t hlp_now_clock_us = 0;
 
         // StepSeq extension
         // main stepseq tick processor

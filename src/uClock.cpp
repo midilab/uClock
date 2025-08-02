@@ -231,12 +231,16 @@ void uClockClass::handleInternalClock()
 
 void uClockClass::handleExternalClock()
 {
-    hlp_now_clock_us = micros();
+    static uint32_t now_clock_us = 0;
+    static float external_tempo = 120.0;
+
+    // calculate and store ext_interval
+    now_clock_us = micros();
     if (ext_clock_us > 0)
-        ext_interval = clock_diff(ext_clock_us, hlp_now_clock_us);
+        ext_interval = clock_diff(ext_clock_us, now_clock_us);
     else
         ext_interval = 0;
-    ext_clock_us = hlp_now_clock_us;
+    ext_clock_us = now_clock_us;
 
     switch (clock_state) {
         case STARTED:
@@ -274,9 +278,9 @@ void uClockClass::handleExternalClock()
                 // update timer at the end of external bpm calculus and phase-lock
                 // setting each platform specific setTimer to fire up just after it sets
                 // the timer will make a better sync schema
-                hlp_external_bpm = constrainBpm(freqToBpm(ext_interval));
-                if (hlp_external_bpm != tempo) {
-                    tempo = hlp_external_bpm;
+                external_tempo = constrainBpm(freqToBpm(ext_interval));
+                if (external_tempo != tempo) {
+                    tempo = external_tempo;
                     uClockSetTimerTempo(tempo);
                 }
             }
@@ -284,9 +288,8 @@ void uClockClass::handleExternalClock()
 
         case STARTING:
             clock_state = STARTED;
-            //ext_clock_us = micros();
             //ext_clock_tick = 0;
-            //int_clock_tick = ext_clock_tick;
+            //int_clock_tick = 0;
             break;
 
         case STOPED:
@@ -316,11 +319,11 @@ void uClockClass::start()
     if (onClockStartCallback)
         onClockStartCallback();
 
-    //if (clock_mode == INTERNAL_CLOCK) {
+    if (clock_mode == INTERNAL_CLOCK) {
         ATOMIC(clock_state = STARTED)
-    //} else {
-    //    ATOMIC(clock_state = STARTING)
-    //}
+    } else {
+        ATOMIC(clock_state = STARTING)
+    }
 }
 
 void uClockClass::stop()
@@ -339,11 +342,11 @@ void uClockClass::pause()
         if (onClockPauseCallback)
             onClockPauseCallback();
     } else if (clock_state == PAUSED) {
-        //if (clock_mode == INTERNAL_CLOCK) {
+        if (clock_mode == INTERNAL_CLOCK) {
             ATOMIC(clock_state = STARTED)
-        //} else if (clock_mode == EXTERNAL_CLOCK) {
-        //    ATOMIC(clock_state = STARTING)
-        //}
+        } else if (clock_mode == EXTERNAL_CLOCK) {
+            ATOMIC(clock_state = STARTING)
+        }
         if (onClockContinueCallback)
             onClockContinueCallback();
     }
@@ -353,9 +356,9 @@ void uClockClass::setClockMode(ClockMode tempo_mode)
 {
     ATOMIC(
         clock_mode = tempo_mode;
-        // trying to set external clock while playing? force sync ext_interval
-        //if (clock_mode == EXTERNAL_CLOCK && clock_state == STARTED)
-        //    clock_state = STARTING;
+        // trying to set external clock while playing?
+        if (clock_mode == EXTERNAL_CLOCK && clock_state == STARTED)
+            clock_state = STARTING;
     )
 }
 
