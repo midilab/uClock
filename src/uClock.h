@@ -150,19 +150,27 @@ class uClockClass {
         }
 
         // Step Seq extension support?
+        // Step Seq supports per track control:
+        // shuffle: YES
+        // shift: ROADMAP
+        // direction: ROADMAP
         // keep API compatibility for setOnStep global track
         void setOnStep(void (*callback)(uint32_t step)) {
-            track_slots_size = 1;
-            // alloc once and forever policy
-            tracks = new TRACK_SLOT[track_slots_size];
-            onStepGlobalCallback = callback;
+            if (tracks == nullptr) {
+                track_slots_size = 1;
+                // alloc once and forever policy
+                tracks = new TRACK_SLOT[track_slots_size];
+                onStepGlobalCallback = callback;
+            }
         }
         // extended stepSeq multitrack support for setOnStep
         void setOnStep(void (*callback)(uint32_t step, uint8_t track), uint8_t track_number) {
-            track_slots_size = track_number;
-            // alloc once and forever policy
-            tracks = new TRACK_SLOT[track_slots_size];
-            onStepMultiCallback = callback;
+            if (tracks == nullptr) {
+                track_slots_size = track_number;
+                // alloc once and forever policy
+                tracks = new TRACK_SLOT[track_slots_size];
+                onStepMultiCallback = callback;
+            }
         }
 
         void init();
@@ -198,6 +206,7 @@ class uClockClass {
         void setClockMode(ClockMode tempo_mode);
         ClockMode getClockMode();
         void clockMe();
+        void setPhaseLockQuartersCount(uint8_t count);
         // for smooth slave tempo calculate display you should raise the
         // buffer_size of ext_interval_buffer in between 64 to 128. 254 max size.
         // note: this doesn't impact on sync time, only display time getTempo()
@@ -271,6 +280,7 @@ class uClockClass {
         volatile uint32_t ext_clock_us = 0;
         volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
+        uint8_t phase_lock_quarters = 1;
         // helpers
         float hlp_external_bpm = 120.0;
         uint32_t hlp_now_clock_us = 0;
