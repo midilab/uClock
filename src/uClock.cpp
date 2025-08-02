@@ -152,6 +152,14 @@ void uClockClass::init()
 
 void uClockClass::handleInternalClock()
 {
+    // watch for external tempo changes if EXTERNAL_CLOCK
+    if (clock_mode == EXTERNAL_CLOCK) {
+        if (external_tempo != tempo) {
+            tempo = external_tempo;
+            uClockSetTimerTempo(tempo);
+        }
+    }
+
     // ALL OUTPUT SYNC CALLBACKS
     // Sync1 callback
     if (onSync1Callback) {
@@ -226,13 +234,13 @@ void uClockClass::handleInternalClock()
         ++int_clock_tick;
     }
 
+    // tick me!
     ++tick;
 }
 
 void uClockClass::handleExternalClock()
 {
     static uint32_t now_clock_us = 0;
-    static float external_tempo = 120.0;
 
     // calculate and store ext_interval
     now_clock_us = micros();
@@ -245,7 +253,7 @@ void uClockClass::handleExternalClock()
     switch (clock_state) {
         case STARTED:
             // update internal clock timer frequency
-            if (clock_mode == EXTERNAL_CLOCK && ext_interval > 0) {
+            if (clock_mode == EXTERNAL_CLOCK) {
                 // TODO: missing clock tick, inference algorithim
                 // to avoid tick miss sync with external quarter note start
                 // bad comm, missing a local read, bad sync signal? miss 1 clock and things goes off quarter start beat.
@@ -257,7 +265,7 @@ void uClockClass::handleExternalClock()
                 // lock tick with external sync clock
                 // sync tick position with external clock signal
                 // Clock Phase-lock
-                if (clock_diff(int_clock_tick, ext_clock_tick) >= 1) {
+                if ((int_clock_tick < ext_clock_tick) || (int_clock_tick > (ext_clock_tick + 1))) {
                     tick = ext_clock_tick * mod_clock_ref;
                     // only update tick at a full quarter or phase_lock_quarters * a quarter
                     // how many quarters to count until we phase-lock?
@@ -278,11 +286,8 @@ void uClockClass::handleExternalClock()
                 // update timer at the end of external bpm calculus and phase-lock
                 // setting each platform specific setTimer to fire up just after it sets
                 // the timer will make a better sync schema
-                external_tempo = constrainBpm(freqToBpm(ext_interval));
-                if (external_tempo != tempo) {
-                    tempo = external_tempo;
-                    uClockSetTimerTempo(tempo);
-                }
+                if (ext_interval > 0)
+                    external_tempo = constrainBpm(freqToBpm(ext_interval));
             }
             break;
 
@@ -298,10 +303,11 @@ void uClockClass::handleExternalClock()
     }
 
     // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
-    ext_interval_buffer[ext_interval_idx] = ext_interval;
-    if(++ext_interval_idx >= ext_interval_buffer_size)
-        ext_interval_idx = 0;
-
+    if (ext_interval > 0) {
+        ext_interval_buffer[ext_interval_idx] = ext_interval;
+        if(++ext_interval_idx >= ext_interval_buffer_size)
+            ext_interval_idx = 0;
+    }
     // external clock tick me!
     ext_clock_tick++;
 }

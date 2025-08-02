@@ -252,7 +252,7 @@ class uClockClass {
         // input/output tick resolution
         PPQNResolution output_ppqn = PPQN_96;
         PPQNResolution input_ppqn = PPQN_24;
-        volatile float tempo = 120;
+        volatile float tempo = 120.0;
         volatile ClockMode clock_mode = INTERNAL_CLOCK;
         uint32_t start_timer = 0;
 
@@ -280,6 +280,8 @@ class uClockClass {
         volatile uint32_t ext_clock_us = 0;
         volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
+        volatile uint32_t request_sync = 0;
+        volatile float external_tempo = tempo;
         uint8_t phase_lock_quarters = 1;
 
         // StepSeq extension
