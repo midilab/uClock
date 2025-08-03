@@ -62,6 +62,9 @@ typedef struct {
 #define MIN_BPM	1
 #define MAX_BPM	400
 
+#define PHASE_FACTOR 16
+#define PLL_X 220
+
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
