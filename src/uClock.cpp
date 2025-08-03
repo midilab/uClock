@@ -161,8 +161,26 @@ void uClockClass::handleInternalClock()
     // watch for external tempo changes if EXTERNAL_CLOCK
     if (clock_mode == EXTERNAL_CLOCK) {
         // Tick Phase-lock
-        // if ((int_clock_tick < ext_clock_tick) || (int_clock_tick > (ext_clock_tick + 1))) {
-        if (abs(int_clock_tick-ext_clock_tick) >= 1) {
+        if (clock_diff(int_clock_tick, ext_clock_tick) > 1) {
+        //if (abs(int_clock_tick-ext_clock_tick) >= 1) {
+            // any external interval avaliable to start sync timer?
+            if (ext_interval > 0) {
+                uint32_t counter = ext_interval;
+                // phase-multiplier interval
+                if (int_clock_tick <= ext_clock_tick) {
+                    counter -= phase_mult(ext_last_interval);
+                } else {
+                    if (counter > ext_last_interval) {
+                        counter += phase_mult(counter - ext_last_interval);
+                    }
+                }
+
+                external_tempo = constrainBpm(freqToBpm(counter));
+                if (external_tempo != tempo) {
+                    tempo = external_tempo;
+                    uClockSetTimerTempo(tempo);
+                }
+            }
             // only update tick at a full quarter or phase_lock_quarters * a quarter
             // how many quarters to count until we phase-lock?
             if ((ext_clock_tick * mod_clock_ref) % (output_ppqn*phase_lock_quarters) == 0) {
@@ -180,6 +198,7 @@ void uClockClass::handleInternalClock()
                 sync48_tick = tick/mod_sync48_ref;
             }
         }
+
     }
 
     // ALL OUTPUT SYNC CALLBACKS
@@ -290,25 +309,6 @@ void uClockClass::handleExternalClock()
                     ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)ext_last_interval) >> 8;
                 }
 
-                // any external interval avaliable to start sync timer?
-                if (ext_interval > 0) {
-                    uint32_t counter = ext_interval;
-
-                    // phase-multiplier interval
-                    if (int_clock_tick <= ext_clock_tick) {
-                        counter -= phase_mult(ext_last_interval);
-                    } else {
-                        if (counter > ext_last_interval) {
-                            counter += phase_mult(counter - ext_last_interval);
-                        }
-                    }
-
-                    external_tempo = constrainBpm(freqToBpm(counter));
-                    if (external_tempo != tempo) {
-                        tempo = external_tempo;
-                        uClockSetTimerTempo(tempo);
-                    }
-                }
             }
             break;
 
@@ -337,7 +337,7 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::clockMe()
 {
-    ATOMIC(handleExternalClock())
+    handleExternalClock();
 }
 
 void uClockClass::start()
@@ -641,8 +641,8 @@ void uClockClass::resetCounters()
     tick = 0;
     int_clock_tick = 0;
     ext_clock_tick = 0;
-    //ext_clock_us = 0;
-    //ext_interval = 0;
+    ext_clock_us = 0;
+    ext_interval = 0;
     ext_interval_idx = 0;
     // sync output counters
     sync1_tick = 0;
