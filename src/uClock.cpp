@@ -162,6 +162,22 @@ void uClockClass::handleInternalClock()
     if (clock_mode == EXTERNAL_CLOCK) {
         // Tick Phase-lock
         if (clock_diff(int_clock_tick, ext_clock_tick) > 1) {
+            // only update tick at a full quarter or phase_lock_quarters * a quarter
+            // how many quarters to count until we phase-lock?
+            if ((ext_clock_tick * mod_clock_ref) % (output_ppqn*phase_lock_quarters) == 0) {
+                tick = ext_clock_tick * mod_clock_ref;
+                int_clock_tick = ext_clock_tick;
+                // update any counter reference for ahead of time int_clock_tick
+                for (uint8_t track=0; track < track_slots_size; track++)
+                    tracks[track].step_counter = tick/mod_step_ref;
+                sync1_tick = tick/mod_sync1_ref;
+                sync2_tick = tick/mod_sync2_ref;
+                sync4_tick = tick/mod_sync4_ref;
+                sync8_tick = tick/mod_sync8_ref;
+                sync12_tick = tick/mod_sync12_ref;
+                sync24_tick = tick/mod_sync24_ref;
+                sync48_tick = tick/mod_sync48_ref;
+            }
             // any external interval avaliable to start sync timer?
             if (ext_interval > 0) {
                 uint32_t counter = ext_interval;
@@ -180,22 +196,6 @@ void uClockClass::handleInternalClock()
                     tempo = external_tempo;
                     uClockSetTimerTempo(tempo);
                 }
-            }
-            // only update tick at a full quarter or phase_lock_quarters * a quarter
-            // how many quarters to count until we phase-lock?
-            if ((ext_clock_tick * mod_clock_ref) % (output_ppqn*phase_lock_quarters) == 0) {
-                tick = ext_clock_tick * mod_clock_ref;
-                int_clock_tick = ext_clock_tick;
-                // update any counter reference for ahead of time int_clock_tick
-                for (uint8_t track=0; track < track_slots_size; track++)
-                    tracks[track].step_counter = tick/mod_step_ref;
-                sync1_tick = tick/mod_sync1_ref;
-                sync2_tick = tick/mod_sync2_ref;
-                sync4_tick = tick/mod_sync4_ref;
-                sync8_tick = tick/mod_sync8_ref;
-                sync12_tick = tick/mod_sync12_ref;
-                sync24_tick = tick/mod_sync24_ref;
-                sync48_tick = tick/mod_sync48_ref;
             }
         }
     }
