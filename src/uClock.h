@@ -57,10 +57,14 @@ typedef struct {
     //int8_t shift = 0;
     //uint8_t direction = 0;
     uint32_t step_counter = 0;
+    uint8_t mod_step_counter;
 } TRACK_SLOT;
 
 #define MIN_BPM	1
 #define MAX_BPM	400
+
+#define PHASE_FACTOR 16
+#define PLL_X 220
 
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
@@ -150,19 +154,27 @@ class uClockClass {
         }
 
         // Step Seq extension support?
+        // Step Seq supports per track control:
+        // shuffle: YES
+        // shift: ROADMAP
+        // direction: ROADMAP
         // keep API compatibility for setOnStep global track
         void setOnStep(void (*callback)(uint32_t step)) {
-            track_slots_size = 1;
-            // alloc once and forever policy
-            tracks = new TRACK_SLOT[track_slots_size];
-            onStepGlobalCallback = callback;
+            if (tracks == nullptr) {
+                track_slots_size = 1;
+                // alloc once and forever policy
+                tracks = new TRACK_SLOT[track_slots_size];
+                onStepGlobalCallback = callback;
+            }
         }
         // extended stepSeq multitrack support for setOnStep
         void setOnStep(void (*callback)(uint32_t step, uint8_t track), uint8_t track_number) {
-            track_slots_size = track_number;
-            // alloc once and forever policy
-            tracks = new TRACK_SLOT[track_slots_size];
-            onStepMultiCallback = callback;
+            if (tracks == nullptr) {
+                track_slots_size = track_number;
+                // alloc once and forever policy
+                tracks = new TRACK_SLOT[track_slots_size];
+                onStepMultiCallback = callback;
+            }
         }
 
         void init();
@@ -203,6 +215,7 @@ class uClockClass {
         bool allowTick();
         void setStrictExternalMode(bool strict);
         bool isStrictExternalMode();
+        void setPhaseLockQuartersCount(uint8_t count);
         // for smooth slave tempo calculate display you should raise the
         // buffer_size of ext_interval_buffer in between 64 to 128. 254 max size.
         // note: this doesn't impact on sync time, only display time getTempo()
@@ -248,7 +261,7 @@ class uClockClass {
         // input/output tick resolution
         PPQNResolution output_ppqn = PPQN_96;
         PPQNResolution input_ppqn = PPQN_24;
-        volatile float tempo = 120;
+        volatile float tempo = 120.0;
         volatile ClockMode clock_mode = INTERNAL_CLOCK;
         uint32_t start_timer = 0;
         bool strict_external_mode = false;
@@ -256,30 +269,40 @@ class uClockClass {
         // output and internal counters, ticks and references
         volatile uint32_t tick;
         volatile uint32_t int_clock_tick;
-        uint16_t mod_clock_ref;
         uint8_t mod_step_ref;
+        uint8_t mod_clock_counter;
+        uint16_t mod_clock_ref;
+        uint8_t mod_sync1_counter;
         uint16_t mod_sync1_ref;
         uint32_t sync1_tick;
+        uint8_t mod_sync2_counter;
         uint16_t mod_sync2_ref;
         uint32_t sync2_tick;
+        uint8_t mod_sync4_counter;
         uint16_t mod_sync4_ref;
         uint32_t sync4_tick;
+        uint8_t mod_sync8_counter;
         uint16_t mod_sync8_ref;
         uint32_t sync8_tick;
+        uint8_t mod_sync12_counter;
         uint16_t mod_sync12_ref;
         uint32_t sync12_tick;
+        uint8_t mod_sync24_counter;
         uint16_t mod_sync24_ref;
         uint32_t sync24_tick;
+        uint8_t mod_sync48_counter;
         uint16_t mod_sync48_ref;
         uint32_t sync48_tick;
+
 
         // external clock control
         volatile uint32_t ext_clock_us = 0;
         volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
-        // helpers
-        float hlp_external_bpm = 120.0;
-        uint32_t hlp_now_clock_us = 0;
+        volatile uint32_t ext_last_interval = 0;
+        volatile uint32_t request_sync = 0;
+        volatile float external_tempo = tempo;
+        uint8_t phase_lock_quarters = 1;
 
         // StepSeq extension
         // main stepseq tick processor
