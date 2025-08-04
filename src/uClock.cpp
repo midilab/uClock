@@ -162,10 +162,14 @@ void uClockClass::handleInternalClock()
     if (clock_state == uClock.STOPED || clock_state == uClock.PAUSED || clock_state == uClock.STARTING)
         return;
 
+    // main input clock counter control
+    if (mod_clock_counter == mod_clock_ref)
+        mod_clock_counter = 0;
+
     // watch for external tempo changes if EXTERNAL_CLOCK
     if (clock_mode == EXTERNAL_CLOCK) {
 
-        if (mod_clock_counter == mod_clock_ref) {
+        if (mod_clock_counter == 0) {
             // Tick Phase-lock
             if (abs(int_clock_tick - ext_clock_tick) > 1) {
                 // only update tick at a full quarter or phase_lock_quarters * a quarter
@@ -173,7 +177,6 @@ void uClockClass::handleInternalClock()
                 if ((ext_clock_tick * mod_clock_ref) % (output_ppqn*phase_lock_quarters) == 0) {
                     tick = ext_clock_tick * mod_clock_ref;
                     int_clock_tick = ext_clock_tick;
-                    mod_clock_counter = 0;
                     // update any counter reference for ahead of time int_clock_tick
                     for (uint8_t track=0; track < track_slots_size; track++) {
                         tracks[track].step_counter = tick/mod_step_ref;
@@ -218,6 +221,14 @@ void uClockClass::handleInternalClock()
             }
         }
     }
+
+    // process clock signal
+    if (mod_clock_counter == 0) {
+        // reference internal clock to use with external clock tick sync for ext clock phase lock
+        // internal clock tick me!
+        ++int_clock_tick;
+    }
+    ++mod_clock_counter;
 
     // ALL OUTPUT SYNC CALLBACKS
     // Sync1 callback
@@ -310,17 +321,6 @@ void uClockClass::handleInternalClock()
 
     // tick me!
     ++tick;
-
-    // track main input clock counter
-    if (mod_clock_counter == mod_clock_ref)
-        mod_clock_counter = 0;
-    // process clock signal
-    if (mod_clock_counter == 0) {
-        // reference internal clock to use with external clock tick sync for ext clock phase lock
-        // internal clock tick me!
-        ++int_clock_tick;
-    }
-    ++mod_clock_counter;
 }
 
 void uClockClass::handleExternalClock()
