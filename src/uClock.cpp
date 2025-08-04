@@ -158,7 +158,6 @@ void uClockClass::handleInternalClock()
     static uint32_t counter = 0;
     static uint32_t sync_interval = 0;
 
-    //static uint16_t tick_skip = 0;
     if (clock_state == uClock.STOPED || clock_state == uClock.PAUSED || clock_state == uClock.STARTING)
         return;
 
@@ -381,7 +380,7 @@ void uClockClass::handleExternalClock()
 
 void uClockClass::clockMe()
 {
-    handleExternalClock();
+    ATOMIC(handleExternalClock())
 }
 
 void uClockClass::start()
