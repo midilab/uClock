@@ -94,7 +94,6 @@ volatile uint32_t _millis = 0;
 void uClockHandler()
 {
     _millis = millis();
-
     uClock.handleInternalClock();
 }
 
@@ -170,11 +169,10 @@ void uClockClass::handleInternalClock()
     if (clock_mode == EXTERNAL_CLOCK) {
 
         if (mod_clock_counter == 0) {
-
             // Tick Phase-lock
             if (abs(int_clock_tick - ext_clock_tick) > 1) {
 
-                // check for strict external mode
+                // check for strict external mode -- don't progress if external clock hasn't caught up with internal clock
                 if (!uClock.allowTick())
                     return;
 
@@ -226,7 +224,6 @@ void uClockClass::handleInternalClock()
                 }
             }
         }
-
     }
 
     // process clock signal
