@@ -57,6 +57,7 @@ typedef struct {
     //int8_t shift = 0;
     //uint8_t direction = 0;
     uint32_t step_counter = 0;
+    uint8_t mod_step_counter;
 } TRACK_SLOT;
 
 #define MIN_BPM	1
@@ -262,22 +263,31 @@ class uClockClass {
         // output and internal counters, ticks and references
         volatile uint32_t tick;
         volatile uint32_t int_clock_tick;
-        uint16_t mod_clock_ref;
         uint8_t mod_step_ref;
+        uint8_t mod_clock_counter;
+        uint16_t mod_clock_ref;
+        uint8_t mod_sync1_counter;
         uint16_t mod_sync1_ref;
         uint32_t sync1_tick;
+        uint8_t mod_sync2_counter;
         uint16_t mod_sync2_ref;
         uint32_t sync2_tick;
+        uint8_t mod_sync4_counter;
         uint16_t mod_sync4_ref;
         uint32_t sync4_tick;
+        uint8_t mod_sync8_counter;
         uint16_t mod_sync8_ref;
         uint32_t sync8_tick;
+        uint8_t mod_sync12_counter;
         uint16_t mod_sync12_ref;
         uint32_t sync12_tick;
+        uint8_t mod_sync24_counter;
         uint16_t mod_sync24_ref;
         uint32_t sync24_tick;
+        uint8_t mod_sync48_counter;
         uint16_t mod_sync48_ref;
         uint32_t sync48_tick;
+
 
         // external clock control
         volatile uint32_t ext_clock_us = 0;
