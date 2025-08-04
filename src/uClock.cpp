@@ -95,8 +95,7 @@ void uClockHandler()
 {
     _millis = millis();
 
-    if (uClock.allowTick())
-        uClock.handleInternalClock();
+    uClock.handleInternalClock();
 }
 
 // initTimer(uint32_t us_interval) and setTimer(uint32_t us_interval)
@@ -171,8 +170,14 @@ void uClockClass::handleInternalClock()
     if (clock_mode == EXTERNAL_CLOCK) {
 
         if (mod_clock_counter == 0) {
+
             // Tick Phase-lock
             if (abs(int_clock_tick - ext_clock_tick) > 1) {
+
+                // check for strict external mode
+                if (!uClock.allowTick())
+                    return;
+
                 // only update tick at a full quarter or phase_lock_quarters * a quarter
                 // how many quarters to count until we phase-lock?
                 if ((ext_clock_tick * mod_clock_ref) % (output_ppqn*phase_lock_quarters) == 0) {
@@ -221,6 +226,7 @@ void uClockClass::handleInternalClock()
                 }
             }
         }
+
     }
 
     // process clock signal
