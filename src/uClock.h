@@ -70,7 +70,7 @@ enum SyncResolution {
     SYNC48 = 48
 };
 
-// Sync callback structure for batch processing
+// sync callback structure for dynamic multiple sync outputs support
 struct SyncCallback {
     void (*callback)(uint32_t tick) = nullptr;
     uint8_t mod_counter = 0;
@@ -80,10 +80,9 @@ struct SyncCallback {
 };
 
 #define MIN_BPM	1
-#define MAX_BPM	400
+#define MAX_BPM	500
 
 #define PHASE_FACTOR 16
-#define PLL_X 220
 
 #define MICROS_PER_MIN (60000000UL)
 #define SECS_PER_MIN  (60UL)
@@ -293,18 +292,17 @@ class uClockClass {
         uint32_t start_timer = 0;
 
         // output and internal counters, ticks and references
-        volatile uint32_t tick;
-        volatile uint32_t int_clock_tick;
-        uint8_t mod_step_ref;
-        uint8_t mod_clock_counter;
-        uint16_t mod_clock_ref;
+        volatile uint32_t tick = 0;
+        volatile uint32_t int_clock_tick = 0;
+        uint8_t mod_step_ref = 0;
+        uint8_t mod_clock_counter = 0;
+        uint16_t mod_clock_ref = 0;
 
         // external clock control
         volatile uint32_t ext_clock_us = 0;
         volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
         volatile uint32_t ext_last_interval = 0;
-        volatile uint32_t request_sync = 0;
         volatile float external_tempo = tempo;
         uint8_t phase_lock_quarters = 1;
 
@@ -316,7 +314,7 @@ class uClockClass {
         TRACK_SLOT * tracks = nullptr;
         size_t track_slots_size = 0;
 
-        // external clock bpm calculus
+        // external clock bpm read calculus getTempo()
         volatile uint32_t * ext_interval_buffer = nullptr;
         size_t ext_interval_buffer_size = 0;
         uint16_t ext_interval_idx = 0;
