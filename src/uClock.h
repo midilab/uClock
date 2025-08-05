@@ -280,7 +280,7 @@ class uClockClass {
         // step seq extension for global and multi track sequences control
         void (*onStepGlobalCallback)(uint32_t step) = nullptr;
         void (*onStepMultiCallback)(uint32_t step, uint8_t track) = nullptr;
-        // Sync callback array for batch processing
+        // sync callback data
         SyncCallback * sync_callbacks = nullptr;
         uint8_t sync_callback_size = 0;
 

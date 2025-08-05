@@ -128,6 +128,9 @@ uClockClass::uClockClass()
 
 uClockClass::~uClockClass()
 {
+    if (sync_callbacks)
+        delete[] sync_callbacks;
+
     if (ext_interval_buffer)
         delete[] ext_interval_buffer;
 
