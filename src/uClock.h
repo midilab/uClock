@@ -60,12 +60,32 @@ typedef struct {
     uint8_t mod_step_counter;
 } TRACK_SLOT;
 
+enum SyncResolution {
+    SYNC1 = 1,
+    SYNC2 = 2,
+    SYNC4 = 4,
+    SYNC8 = 8,
+    SYNC12 = 12,
+    SYNC24 = 24,
+    SYNC48 = 48
+};
+
+// Sync callback structure for batch processing
+struct SyncCallback {
+    void (*callback)(uint32_t tick) = nullptr;
+    uint8_t mod_counter = 0;
+    uint16_t sync_ref = 0;
+    uint32_t tick = 0;
+    SyncResolution resolution;
+};
+
 #define MIN_BPM	1
 #define MAX_BPM	400
 
 #define PHASE_FACTOR 16
 #define PLL_X 220
 
+#define MICROS_PER_MIN (60000000UL)
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
@@ -108,33 +128,49 @@ class uClockClass {
             onOutputPPQNCallback = callback;
         }
 
-        // multiple output clock signatures
+        // multiple output sync clock signatures support
+        void setOnSync(SyncResolution resolution, void (*callback)(uint32_t tick)) {
+            // alloc once and forever policy!
+           	// reallocate by creating a new array, copying data, and deleting the old one
+           	SyncCallback * new_sync_callbacks = new SyncCallback[sync_callback_size+1];
+           	if (sync_callbacks != nullptr) {
+          		memcpy(new_sync_callbacks, sync_callbacks, sizeof(SyncCallback) * (sync_callback_size+1));
+          		delete[] sync_callbacks;
+           	}
+            sync_callbacks = new_sync_callbacks;
+
+            sync_callbacks[sync_callback_size].callback = callback;
+            sync_callbacks[sync_callback_size].resolution = resolution;
+
+            ++sync_callback_size;
+        }
+
         void setOnSync1(void (*callback)(uint32_t tick)) {
-            onSync1Callback = callback;
+            setOnSync(SYNC1, callback);
         }
 
         void setOnSync2(void (*callback)(uint32_t tick)) {
-            onSync2Callback = callback;
+            setOnSync(SYNC2, callback);
         }
 
         void setOnSync4(void (*callback)(uint32_t tick)) {
-            onSync4Callback = callback;
+            setOnSync(SYNC4, callback);
         }
 
         void setOnSync8(void (*callback)(uint32_t tick)) {
-            onSync8Callback = callback;
+            setOnSync(SYNC8, callback);
         }
 
         void setOnSync12(void (*callback)(uint32_t tick)) {
-            onSync12Callback = callback;
+            setOnSync(SYNC12, callback);
         }
 
         void setOnSync24(void (*callback)(uint32_t tick)) {
-            onSync24Callback = callback;
+            setOnSync(SYNC24, callback);
         }
 
         void setOnSync48(void (*callback)(uint32_t tick)) {
-            onSync48Callback = callback;
+            setOnSync(SYNC48, callback);
         }
 
         void setOnClockStart(void (*callback)()) {
@@ -237,13 +273,6 @@ class uClockClass {
 
         // callbacks
         void (*onOutputPPQNCallback)(uint32_t tick) = nullptr;
-        void (*onSync1Callback)(uint32_t tick) = nullptr;
-        void (*onSync2Callback)(uint32_t tick) = nullptr;
-        void (*onSync4Callback)(uint32_t tick) = nullptr;
-        void (*onSync8Callback)(uint32_t tick) = nullptr;
-        void (*onSync12Callback)(uint32_t tick) = nullptr;
-        void (*onSync24Callback)(uint32_t tick) = nullptr;
-        void (*onSync48Callback)(uint32_t tick) = nullptr;
         void (*onClockStartCallback)() = nullptr;
         void (*onClockStopCallback)() = nullptr;
         void (*onClockPauseCallback)() = nullptr;
@@ -251,6 +280,9 @@ class uClockClass {
         // step seq extension for global and multi track sequences control
         void (*onStepGlobalCallback)(uint32_t step) = nullptr;
         void (*onStepMultiCallback)(uint32_t step, uint8_t track) = nullptr;
+        // Sync callback array for batch processing
+        SyncCallback * sync_callbacks = nullptr;
+        uint8_t sync_callback_size = 0;
 
         // clock core
         // input/output tick resolution
@@ -266,28 +298,6 @@ class uClockClass {
         uint8_t mod_step_ref;
         uint8_t mod_clock_counter;
         uint16_t mod_clock_ref;
-        uint8_t mod_sync1_counter;
-        uint16_t mod_sync1_ref;
-        uint32_t sync1_tick;
-        uint8_t mod_sync2_counter;
-        uint16_t mod_sync2_ref;
-        uint32_t sync2_tick;
-        uint8_t mod_sync4_counter;
-        uint16_t mod_sync4_ref;
-        uint32_t sync4_tick;
-        uint8_t mod_sync8_counter;
-        uint16_t mod_sync8_ref;
-        uint32_t sync8_tick;
-        uint8_t mod_sync12_counter;
-        uint16_t mod_sync12_ref;
-        uint32_t sync12_tick;
-        uint8_t mod_sync24_counter;
-        uint16_t mod_sync24_ref;
-        uint32_t sync24_tick;
-        uint8_t mod_sync48_counter;
-        uint16_t mod_sync48_ref;
-        uint32_t sync48_tick;
-
 
         // external clock control
         volatile uint32_t ext_clock_us = 0;
