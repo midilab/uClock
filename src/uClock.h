@@ -101,6 +101,7 @@ class uClockClass {
             STOPED = 0,
             PAUSED,
             STARTING,
+            SYNCING,
             STARTED
         };
 

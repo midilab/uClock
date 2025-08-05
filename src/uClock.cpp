@@ -156,7 +156,7 @@ void uClockClass::handleInternalClock()
     static uint32_t counter = 0;
     static uint32_t sync_interval = 0;
 
-    if (clock_state <= STARTING) // STOPED=0, PAUSED=1, STARTING=2, STARTED=4
+    if (clock_state <= STARTING) // STOPED=0, PAUSED=1, STARTING=2, SYNCING=3, STARTED=4
         return;
 
     // main input clock counter control
@@ -257,8 +257,16 @@ void uClockClass::handleExternalClock()
     // external clock tick me!
     ext_clock_tick++;
 
-    if (clock_state == STARTING)
-        clock_state = STARTED;
+    switch (clock_state) {
+        case STARTING:
+            clock_state = SYNCING;
+            start_sync_counter = 4;
+            return;
+        case SYNCING:
+            if (--start_sync_counter == 0)
+                clock_state = STARTED;
+            return;
+    }
 
     // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
     if (ext_interval > 0) {
