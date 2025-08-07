@@ -164,7 +164,7 @@ void uClockClass::handleInternalClock()
         mod_clock_counter = 0;
 
     // watch for external tempo changes if EXTERNAL_CLOCK
-    if (clock_mode == EXTERNAL_CLOCK && mod_clock_counter == 0) {
+    if (clock_mode == EXTERNAL_CLOCK) {
         // Tick Phase-lock
         if (labs(int_clock_tick - ext_clock_tick) > 1) {
             // only update tick at a full quarter or phase_lock_quarters * a quarter
