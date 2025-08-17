@@ -167,6 +167,11 @@ void uClockClass::handleInternalClock()
     if (clock_mode == EXTERNAL_CLOCK && mod_clock_counter == 0) {
         // Tick Phase-lock
         if (labs(int_clock_tick - ext_clock_tick) > 1) {
+
+            // check for strict external mode -- don't progress if external clock hasn't caught up with internal clock
+            if (!uClock.allowTick())
+                return;
+
             // only update tick at a full quarter or phase_lock_quarters * a quarter
             // how many quarters to count until we phase-lock?
             if ((ext_clock_tick * mod_clock_ref) % (output_ppqn*phase_lock_quarters) == 0) {
@@ -304,6 +309,23 @@ void uClockClass::handleExternalClock()
 void uClockClass::clockMe()
 {
     ATOMIC(handleExternalClock())
+}
+
+void uClockClass::setStrictExternalMode(bool strict) 
+{
+    strict_external_mode = strict;
+}
+bool uClockClass::isStrictExternalMode() 
+{
+    return strict_external_mode;
+}
+bool uClockClass::allowTick() 
+{
+    if (getClockMode()==ClockMode::EXTERNAL_CLOCK && isStrictExternalMode())
+        // in strict mode and external, so only allow internal clock to tick if external clock has already been received
+        return ext_clock_tick > int_clock_tick;
+    // in internal clock mode or non-strict external clock mode, always allow internal clock to tick
+    return true;
 }
 
 void uClockClass::start()

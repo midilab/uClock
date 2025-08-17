@@ -242,10 +242,15 @@ class uClockClass {
         // for software timer implementation(fallback for no board support)
         void run();
 
-        // external timming control
+        // external timing control
         void setClockMode(ClockMode tempo_mode);
         ClockMode getClockMode();
         void clockMe();
+
+        // strict external clock mode functions
+        bool allowTick();
+        void setStrictExternalMode(bool strict);
+        bool isStrictExternalMode();
         void setPhaseLockQuartersCount(uint8_t count);
         // for smooth slave tempo calculate display you should raise the
         // buffer_size of ext_interval_buffer in between 64 to 128. 254 max size.
@@ -291,6 +296,7 @@ class uClockClass {
         volatile float tempo = 120.0;
         volatile ClockMode clock_mode = INTERNAL_CLOCK;
         uint32_t start_timer = 0;
+        bool strict_external_mode = false;
 
         // output and internal counters, ticks and references
         volatile uint32_t tick;
