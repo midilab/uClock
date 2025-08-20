@@ -264,6 +264,10 @@ class uClockClass {
         uint32_t getNowTimer();
         uint32_t getPlayTime();
 
+        // interrupt overflow debug
+        uint16_t getIntOverflowCounter();
+        uint16_t getExtOverflowCounter();
+
         uint32_t bpmToMicroSeconds(float bpm);
 
     private:
@@ -305,6 +309,10 @@ class uClockClass {
         volatile uint32_t ext_interval = 0;
         volatile float external_tempo = tempo;
         uint8_t phase_lock_quarters = 1;
+
+        // debug interrupts overflow
+        volatile uint16_t int_overflow_counter = 0;
+        volatile uint16_t ext_overflow_counter = 0;
 
         // StepSeq extension
         // main stepseq tick processor

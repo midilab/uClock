@@ -156,14 +156,13 @@ void uClockClass::handleInternalClock()
     static uint32_t counter = 0;
     static uint32_t sync_interval = 0;
 
+    // for debug usage while developing any application under uClock
+    ++int_overflow_counter;
+
     if (clock_state <= STARTING) // STOPED=0, PAUSED=1, STARTING=2, SYNCING=3, STARTED=4
         return;
 
-    // main input clock counter control
-    if (mod_clock_counter == mod_clock_ref)
-        mod_clock_counter = 0;
-
-    // watch for external tempo changes if EXTERNAL_CLOCK
+    // tick phase lock and external tempo match for EXTERNAL_CLOCK mode
     if (clock_mode == EXTERNAL_CLOCK) {
         // Tick Phase-lock
         if (labs(int_clock_tick - ext_clock_tick) > 1) {
@@ -209,12 +208,13 @@ void uClockClass::handleInternalClock()
         }
     }
 
-    // process clock signal
-    if (mod_clock_counter == 0) {
-        // reference internal clock to use with external clock tick sync for ext clock phase lock
-        // internal clock tick me!
+    // main input clock counter control
+    if (mod_clock_counter == mod_clock_ref)
+        mod_clock_counter = 0;
+    // process internal clock signal
+    // int_clock_tick is the internal clock reference. mainly used for external clock phase lock
+    if (mod_clock_counter == 0)
         ++int_clock_tick;
-    }
     ++mod_clock_counter;
 
     // sync callbacks
@@ -223,6 +223,7 @@ void uClockClass::handleInternalClock()
             sync_callbacks[i].mod_counter = 0;
         if (sync_callbacks[i].mod_counter == 0) {
             sync_callbacks[i].callback(sync_callbacks[i].tick);
+            // tick sync callback
             ++sync_callbacks[i].tick;
         }
         ++sync_callbacks[i].mod_counter;
@@ -230,21 +231,27 @@ void uClockClass::handleInternalClock()
 
     // StepSeq extension: step callback to support 16th old school style sequencers
     // with builtin shuffle - process onStepCallback()
-    if (tracks != nullptr)
+    if (tracks)
         stepSeqTick();
 
     // main PPQNCallback
     if (onOutputPPQNCallback)
         onOutputPPQNCallback(tick);
 
-    // tick me!
+    // internal ticking
     ++tick;
+
+    // for debug usage while developing any application under uClock
+    --int_overflow_counter;
 }
 
 void uClockClass::handleExternalClock()
 {
     static uint32_t now_clock_us = 0;
     static uint8_t start_sync_counter = 0;
+
+    // for debug usage while developing any application under uClock
+    ++ext_overflow_counter;
 
     // calculate and store ext_interval
     now_clock_us = micros();
@@ -259,19 +266,23 @@ void uClockClass::handleExternalClock()
         case STARTING:
             clock_state = SYNCING;
             start_sync_counter = 4;
-            return;
+            break;
         case SYNCING:
             if (--start_sync_counter == 0)
                 clock_state = STARTED;
-            return;
+            break;
+        default:
+            // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
+            if (ext_interval > 0) {
+                ext_interval_buffer[ext_interval_idx] = ext_interval;
+                if(++ext_interval_idx >= ext_interval_buffer_size)
+                    ext_interval_idx = 0;
+            }
+            break;
     }
 
-    // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
-    if (ext_interval > 0) {
-        ext_interval_buffer[ext_interval_idx] = ext_interval;
-        if(++ext_interval_idx >= ext_interval_buffer_size)
-            ext_interval_idx = 0;
-    }
+    // for debug usage while developing any application under uClock
+    --ext_overflow_counter;
 }
 
 void uClockClass::clockMe()
@@ -647,6 +658,20 @@ uint32_t uClockClass::getNowTimer()
 uint32_t uClockClass::getPlayTime()
 {
     return start_timer;
+}
+
+uint16_t uClockClass::getIntOverflowCounter()
+{
+    uint16_t counter = 0;
+    ATOMIC(counter = int_overflow_counter)
+    return counter
+}
+
+uint16_t uClockClass::getExtOverflowCounter()
+{
+    uint16_t counter = 0;
+    ATOMIC(counter = ext_overflow_counter)
+    return counter
 }
 
 } } // end namespace umodular::clock
