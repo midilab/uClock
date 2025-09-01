@@ -664,14 +664,14 @@ uint16_t uClockClass::getIntOverflowCounter()
 {
     uint16_t counter = 0;
     ATOMIC(counter = int_overflow_counter)
-    return counter
+    return counter;
 }
 
 uint16_t uClockClass::getExtOverflowCounter()
 {
     uint16_t counter = 0;
     ATOMIC(counter = ext_overflow_counter)
-    return counter
+    return counter;
 }
 
 } } // end namespace umodular::clock
