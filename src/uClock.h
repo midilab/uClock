@@ -32,6 +32,8 @@
 #include <Arduino.h>
 #include <inttypes.h>
 
+#define UCLOCK_HAS_STRICT_EXTERNAL_MODE
+
 namespace umodular { namespace clock {
 
 // Shuffle templates are specific for each PPQN output resolution
