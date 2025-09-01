@@ -156,15 +156,14 @@ void uClockClass::handleInternalClock()
     static uint32_t counter = 0;
     static uint32_t sync_interval = 0;
 
-    if (clock_state <= STARTING) // STOPED=0, PAUSED=1, STARTING=2, STARTED=3
+    // for debug usage while developing any application under uClock
+    ++int_overflow_counter;
+
+    if (clock_state <= STARTING) // STOPED=0, PAUSED=1, STARTING=2, SYNCING=3, STARTED=4
         return;
 
-    // main input clock counter control
-    if (mod_clock_counter == mod_clock_ref)
-        mod_clock_counter = 0;
-
-    // watch for external tempo changes if EXTERNAL_CLOCK
-    if (clock_mode == EXTERNAL_CLOCK && mod_clock_counter == 0) {
+    // tick phase lock and external tempo match for EXTERNAL_CLOCK mode
+    if (clock_mode == EXTERNAL_CLOCK) {
         // Tick Phase-lock
         if (labs(int_clock_tick - ext_clock_tick) > 1) {
 
@@ -214,96 +213,81 @@ void uClockClass::handleInternalClock()
         }
     }
 
-    // process clock signal
-    if (mod_clock_counter == 0) {
-        // reference internal clock to use with external clock tick sync for ext clock phase lock
-        // internal clock tick me!
+    // main input clock counter control
+    if (mod_clock_counter == mod_clock_ref)
+        mod_clock_counter = 0;
+    // process internal clock signal
+    // int_clock_tick is the internal clock reference. mainly used for external clock phase lock
+    if (mod_clock_counter == 0)
         ++int_clock_tick;
-    }
     ++mod_clock_counter;
 
     // sync callbacks
     for (uint8_t i = 0; i < sync_callback_size; i++) {
-        if (sync_callbacks[i].callback) {
-            if (sync_callbacks[i].mod_counter == sync_callbacks[i].sync_ref)
-                sync_callbacks[i].mod_counter = 0;
-            if (sync_callbacks[i].mod_counter == 0) {
-                sync_callbacks[i].callback(sync_callbacks[i].tick);
-                ++sync_callbacks[i].tick;
-            }
-            ++sync_callbacks[i].mod_counter;
+        if (sync_callbacks[i].mod_counter == sync_callbacks[i].sync_ref)
+            sync_callbacks[i].mod_counter = 0;
+        if (sync_callbacks[i].mod_counter == 0) {
+            sync_callbacks[i].callback(sync_callbacks[i].tick);
+            // tick sync callback
+            ++sync_callbacks[i].tick;
         }
+        ++sync_callbacks[i].mod_counter;
     }
 
     // StepSeq extension: step callback to support 16th old school style sequencers
-    // with builtin shuffle
-    if (tracks != nullptr) {
-        // process onStepCallback()
+    // with builtin shuffle - process onStepCallback()
+    if (tracks)
         stepSeqTick();
-    }
 
     // main PPQNCallback
     if (onOutputPPQNCallback)
         onOutputPPQNCallback(tick);
 
-    // tick me!
+    // internal ticking
     ++tick;
+
+    // for debug usage while developing any application under uClock
+    --int_overflow_counter;
 }
 
 void uClockClass::handleExternalClock()
 {
     static uint32_t now_clock_us = 0;
+    static uint8_t start_sync_counter = 0;
+
+    // for debug usage while developing any application under uClock
+    ++ext_overflow_counter;
 
     // calculate and store ext_interval
     now_clock_us = micros();
     if (ext_clock_us > 0)
-        ext_last_interval = clock_diff(ext_clock_us, now_clock_us);
-    else {
-        ext_last_interval = 0;
-        ext_interval = 0;
-    }
+        ext_interval = clock_diff(ext_clock_us, now_clock_us);
     ext_clock_us = now_clock_us;
-
-    switch (clock_state) {
-        case STARTED:
-            // update internal clock timer frequency
-            if (clock_mode == EXTERNAL_CLOCK) {
-                // TODO: missing clock tick, inference algorithim
-                // to avoid tick miss sync with external quarter note start
-                // bad comm, missing a local read, bad sync signal? miss 1 clock and things goes off quarter start beat.
-                // or maybe this could be a optional external/internal clock phase lock?
-
-                // set sync interval for setTempo at handlerExternalClock
-                if (ext_clock_tick == 1) {
-                    ext_interval = ext_last_interval;
-                } else {
-                    ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)ext_last_interval) >> 8;
-                }
-            }
-            break;
-
-        case STARTING:
-            clock_state = STARTED;
-            //if (ext_last_interval > 0)
-            //    ext_interval = ext_last_interval;
-            //ext_clock_tick = 0;
-            //int_clock_tick = 0;
-            break;
-
-        case STOPED:
-        case PAUSED:
-            break;
-    }
 
     // external clock tick me!
     ext_clock_tick++;
 
-    // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
-    if (ext_interval > 0) {
-        ext_interval_buffer[ext_interval_idx] = ext_interval;
-        if(++ext_interval_idx >= ext_interval_buffer_size)
-            ext_interval_idx = 0;
+    switch (clock_state) {
+        case STARTING:
+            clock_state = SYNCING;
+            start_sync_counter = 4;
+            break;
+        case SYNCING:
+            if (--start_sync_counter == 0)
+                clock_state = STARTED;
+            break;
+        default:
+            // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
+            if (ext_interval > 0) {
+                ext_interval_buffer[ext_interval_idx] = ext_interval;
+                if(++ext_interval_idx >= ext_interval_buffer_size)
+                    ext_interval_idx = 0;
+            }
+            break;
     }
+
+    // for debug usage while developing any application under uClock
+    --ext_overflow_counter;
 }
 
 void uClockClass::clockMe()
@@ -330,23 +314,22 @@ bool uClockClass::allowTick()
 
 void uClockClass::start()
 {
-    resetCounters();
+    ATOMIC(resetCounters())
     start_timer = millis();
-
-    if (onClockStartCallback)
-        onClockStartCallback();
 
     if (clock_mode == INTERNAL_CLOCK) {
         ATOMIC(clock_state = STARTED)
     } else {
         ATOMIC(clock_state = STARTING)
     }
+
+    if (onClockStartCallback)
+        onClockStartCallback();
 }
 
 void uClockClass::stop()
 {
     ATOMIC(clock_state = STOPED)
-    resetCounters();
     start_timer = 0;
     if (onClockStopCallback)
         onClockStopCallback();
@@ -530,10 +513,8 @@ void uClockClass::calculateReferencedata()
     mod_clock_ref = output_ppqn / input_ppqn;
     mod_step_ref = output_ppqn / 4;
     // sync callback references update
-    for (uint8_t i = 0; i < sync_callback_size; i++) {
-        if (sync_callbacks[i].callback)
-            sync_callbacks[i].sync_ref = output_ppqn / sync_callbacks[i].resolution;
-    }
+    for (uint8_t i = 0; i < sync_callback_size; i++)
+        sync_callbacks[i].sync_ref = output_ppqn / sync_callbacks[i].resolution;
 }
 
 void uClockClass::setOutputPPQN(PPQNResolution resolution)
@@ -615,9 +596,8 @@ void uClockClass::setExtIntervalBuffer(size_t buffer_size)
     ext_interval_buffer_size = buffer_size;
     ext_interval_buffer = new uint32_t[ext_interval_buffer_size];
 
-    for (uint8_t i=0; i < ext_interval_buffer_size; i++) {
+    for (uint8_t i=0; i < ext_interval_buffer_size; i++)
         ext_interval_buffer[i] = 0;
-    }
 }
 
 void uClockClass::setPhaseLockQuartersCount(uint8_t count)
@@ -628,28 +608,28 @@ void uClockClass::setPhaseLockQuartersCount(uint8_t count)
 void uClockClass::resetCounters()
 {
     tick = 0;
-    int_clock_tick = 0;
     mod_clock_counter = 0;
+    int_clock_tick = 0;
     ext_clock_tick = 0;
     ext_clock_us = 0;
     ext_interval = 0;
-    ext_interval_idx = 0;
+    //ext_interval_idx = 0;
+
     // sync output counters
     for (uint8_t i = 0; i < sync_callback_size; i++) {
-        if (sync_callbacks[i].callback) {
-            sync_callbacks[i].mod_counter = 0;
-            sync_callbacks[i].tick = 0;
-        }
+        sync_callbacks[i].mod_counter = 0;
+        sync_callbacks[i].tick = 0;
     }
 
+    // stepseq counters
     for (uint8_t track=0; track < track_slots_size; track++) {
         tracks[track].step_counter = 0;
         tracks[track].mod_step_counter = 0;
     }
 
-    //for (uint8_t i=0; i < ext_interval_buffer_size; i++) {
+    // external bpm read buffer
+    //for (uint8_t i=0; i < ext_interval_buffer_size; i++)
     //    ext_interval_buffer[i] = 0;
-    //}
 }
 
 void uClockClass::tap()
@@ -700,6 +680,20 @@ uint32_t uClockClass::getNowTimer()
 uint32_t uClockClass::getPlayTime()
 {
     return start_timer;
+}
+
+uint16_t uClockClass::getIntOverflowCounter()
+{
+    uint16_t counter = 0;
+    ATOMIC(counter = int_overflow_counter)
+    return counter
+}
+
+uint16_t uClockClass::getExtOverflowCounter()
+{
+    uint16_t counter = 0;
+    ATOMIC(counter = ext_overflow_counter)
+    return counter
 }
 
 } } // end namespace umodular::clock
