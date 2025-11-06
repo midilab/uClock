@@ -117,15 +117,43 @@ void onSync4Callback(uint32_t tick) {
 void onSync24Callback(uint32_t tick) {
   // send sync signal to...
 }
+```
 
-// The callback function called by uClock each Pulse of 48PPQN clock resolution.
-void onSync48Callback(uint32_t tick) {
-  // send sync signal to...
+**Available Sync Resolutions**: `SYNC1`, `SYNC2`, `SYNC4`, `SYNC8`, `SYNC12`, `SYNC24`, `SYNC48`
+
+### Shuffle and Groove
+
+Add humanization and swing to your sequences with shuffle support.
+
+#### Global Shuffle
+
+```cpp
+void setup() {
+    uClock.setOnStep(onStepCallback);
+    uClock.init();
+
+    // Define shuffle template (16 steps)
+    // Positive values = delay, negative values = early
+    int8_t grooveTemplate[] = {0, -2, 0, -2, 0, -2, 0, -2,
+                                0, -2, 0, -2, 0, -2, 0, -2};
+    uClock.setShuffleTemplate(grooveTemplate, 16, 0);
+    
+    // Enable shuffle for the global track
+    uClock.setShuffle(true);
+
 }
+```
 
-// The callback function called when clock starts by using uClock.start() method.
-void onClockStartCallback() {
-  // send start signal to...
+#### Multi-Track Shuffle
+
+```cpp
+void onMultiTrackStep(uint32_t step, uint8_t track) {
+    // Handle different tracks independently
+    if (track == 0) {
+        // Kick drum pattern
+    } else if (track == 1) {
+        // Hi-hat pattern with different shuffle
+    }
 }
 
 // The callback function called when clock stops by using uClock.stop() method.
