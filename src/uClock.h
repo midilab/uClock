@@ -91,6 +91,10 @@ struct SyncCallback {
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
 
+#ifndef MINIMUM_SYNC_COUNTER
+    #define MINIMUM_SYNC_COUNTER 4
+#endif
+
 class uClockClass {
 
     public:

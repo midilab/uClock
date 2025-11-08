@@ -270,7 +270,7 @@ void uClockClass::handleExternalClock()
     switch (clock_state) {
         case STARTING:
             clock_state = SYNCING;
-            start_sync_counter = 4;
+            start_sync_counter = MINIMUM_SYNC_COUNTER;
             break;
         case SYNCING:
             if (--start_sync_counter == 0)
