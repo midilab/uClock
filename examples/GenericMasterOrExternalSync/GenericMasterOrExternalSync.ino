@@ -59,13 +59,13 @@ void setup() {
   uClock.setOnStep(onStepCallback);
   // multi sync output signatures avaliable
   // normaly used by eurorack modular modules
-  uClock.setOnSync1(onSync1Callback);
-  uClock.setOnSync2(onSync2Callback);
-  uClock.setOnSync4(onSync4Callback);
+  uClock.setOnSync(uClock.PPQN_1, onSync1Callback);
+  uClock.setOnSync(uClock.PPQN_2, onSync2Callback);
+  uClock.setOnSync(uClock.PPQN_4, onSync4Callback);
   // midi sync standard
-  uClock.setOnSync24(onSync24Callback);
-  // some korg machines do 48ppqn
-  uClock.setOnSync48(onSync48Callback);
+  uClock.setOnSync(uClock.PPQN_24, onSync24Callback);
+  // some korg machines does 48ppqn
+  uClock.setOnSync(uClock.PPQN_48, onSync48Callback);
 
   uClock.setOnClockStart(onClockStartCallback);
   uClock.setOnClockStop(onClockStopCallback);

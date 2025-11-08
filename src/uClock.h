@@ -2,10 +2,10 @@
  *  @file       uClock.h
  *  Project     BPM clock generator for Arduino
  *  @brief      A Library to implement BPM clock tick calls using hardware interruption. Supported and tested on AVR boards(ATmega168/328, ATmega16u4/32u4 and ATmega2560) and ARM boards(RPI2040, Teensy, Seedstudio XIAO M0 and ESP32)
- *  @version    2.2.1
+ *  @version    2.3.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
- *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
+ *  @license    MIT - (c) 2025 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,18 +39,13 @@ namespace umodular { namespace clock {
 // max: (output_ppqn/4)-1 ticks
 // adjust the size of you template if more than 16 shuffle step info needed
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
-typedef struct {
-    bool active = false;
-    uint8_t size = MAX_SHUFFLE_TEMPLATE_SIZE;
-    int8_t step[MAX_SHUFFLE_TEMPLATE_SIZE] = {0};
-} SHUFFLE_TEMPLATE;
 
 #define MIN_BPM	1
-#define MAX_BPM	400
+#define MAX_BPM	500
 
 #define PHASE_FACTOR 16
-#define PLL_X 220
 
+#define MICROS_PER_MIN (60000000UL)
 #define SECS_PER_MIN  (60UL)
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
@@ -64,8 +59,10 @@ class uClockClass {
         };
 
         enum ClockState {
-            PAUSED = 0,
+            STOPED = 0,
+            PAUSED,
             STARTING,
+            SYNCING,
             STARTED
         };
 
@@ -83,46 +80,22 @@ class uClockClass {
             PPQN_960 = 960
         };
 
-        ClockState clock_state;
+        ClockState clock_state = STOPED;
 
         uClockClass();
+        ~uClockClass();
 
+        // set main input and output clock rates
+        void setOutputPPQN(PPQNResolution resolution);
+        void setInputPPQN(PPQNResolution resolution);
+        
+        // callbacks setup
         void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
             onOutputPPQNCallback = callback;
         }
 
-        void setOnStep(void (*callback)(uint32_t step)) {
-            onStepCallback = callback;
-        }
-
-        // multiple output clock signatures
-        void setOnSync1(void (*callback)(uint32_t tick)) {
-            onSync1Callback = callback;
-        }
-
-        void setOnSync2(void (*callback)(uint32_t tick)) {
-            onSync2Callback = callback;
-        }
-
-        void setOnSync4(void (*callback)(uint32_t tick)) {
-            onSync4Callback = callback;
-        }
-
-        void setOnSync8(void (*callback)(uint32_t tick)) {
-            onSync8Callback = callback;
-        }
-
-        void setOnSync12(void (*callback)(uint32_t tick)) {
-            onSync12Callback = callback;
-        }
-
-        void setOnSync24(void (*callback)(uint32_t tick)) {
-            onSync24Callback = callback;
-        }
-
-        void setOnSync48(void (*callback)(uint32_t tick)) {
-            onSync48Callback = callback;
-        }
+        // multiple output sync clock signatures callback register
+        void setOnSync(PPQNResolution resolution, void (*callback)(uint32_t tick));
 
         void setOnClockStart(void (*callback)()) {
             onClockStartCallback = callback;
@@ -132,13 +105,43 @@ class uClockClass {
             onClockStopCallback = callback;
         }
 
-        void init();
-        void setOutputPPQN(PPQNResolution resolution);
-        void setInputPPQN(PPQNResolution resolution);
+        void setOnClockPause(void (*callback)()) {
+            onClockPauseCallback = callback;
+        }
 
-        void handleTimerInt();
+        void setOnClockContinue(void (*callback)()) {
+            onClockContinueCallback = callback;
+        }
+
+        // Step Seq extension support?
+        // Step Seq supports per track control:
+        // shuffle: YES
+        // shift: ROADMAP
+        // direction: ROADMAP
+        // keep API compatibility for setOnStep global track
+        void setOnStep(void (*callback)(uint32_t step)) {
+            if (tracks == nullptr) {
+                track_slots_size = 1;
+                // alloc once and forever policy
+                tracks = new TRACK_SLOT[track_slots_size];
+                onStepGlobalCallback = callback;
+            }
+        }
+        // extended stepSeq multitrack support for setOnStep
+        void setOnStep(void (*callback)(uint32_t step, uint8_t track), uint8_t track_number) {
+            if (tracks == nullptr) {
+                track_slots_size = track_number;
+                // alloc once and forever policy
+                tracks = new TRACK_SLOT[track_slots_size];
+                onStepMultiCallback = callback;
+            }
+        }
+
+        void init();
+
+        // the main processing of internal and external tick system
+        void handleInternalClock();
         void handleExternalClock();
-        void resetCounters();
 
         // external class control
         void start();
@@ -147,6 +150,17 @@ class uClockClass {
         void setTempo(float bpm);
         float getTempo();
 
+        // Step Seq extension for global and multi track sequences control
+        // void setShift(int8_t shift, uint8_t track = 0);
+        // void setDirection(uint8_t direction, uint8_t track = 0);
+        void setShuffle(bool active, uint8_t track = 0);
+        bool isShuffled(uint8_t track = 0);
+        void setShuffleSize(uint8_t size, uint8_t track = 0);
+        void setShuffleData(uint8_t step, int8_t tick, uint8_t track = 0);
+        void setShuffleTemplate(int8_t * shuff, uint8_t size, uint8_t track = 0);
+        // use this to know how many positive or negative ticks to add to current note length
+        int8_t getShuffleLength(uint8_t track = 0);
+
         // for software timer implementation(fallback for no board support)
         void run();
 
@@ -154,20 +168,12 @@ class uClockClass {
         void setClockMode(ClockMode tempo_mode);
         ClockMode getClockMode();
         void clockMe();
+        void setPhaseLockQuartersCount(uint8_t count);
         // for smooth slave tempo calculate display you should raise the
         // buffer_size of ext_interval_buffer in between 64 to 128. 254 max size.
         // note: this doesn't impact on sync time, only display time getTempo()
         // if you dont want to use it, it is default set it to 1 for memory save
-        void setExtIntervalBuffer(uint8_t buffer_size);
-
-        // shuffle
-        void setShuffle(bool active);
-        bool isShuffled();
-        void setShuffleSize(uint8_t size);
-        void setShuffleData(uint8_t step, int8_t tick);
-        void setShuffleTemplate(int8_t * shuff, uint8_t size);
-        // use this to know how many positive or negative ticks to add to current note length
-        int8_t getShuffleLength();
+        void setExtIntervalBuffer(size_t buffer_size);
 
         // todo!
         void tap();
@@ -180,81 +186,102 @@ class uClockClass {
         uint32_t getNowTimer();
         uint32_t getPlayTime();
 
+        // interrupt overflow debug
+        uint16_t getIntOverflowCounter();
+        uint16_t getExtOverflowCounter();
+
         uint32_t bpmToMicroSeconds(float bpm);
+        
+        void resetCounters();
 
     private:
         float inline freqToBpm(uint32_t freq);
         float inline constrainBpm(float bpm);
         void calculateReferencedata();
 
-        // shuffle
-        bool inline processShuffle();
+        // callbacks
+        void (*onOutputPPQNCallback)(uint32_t tick) = nullptr;
+        void (*onClockStartCallback)() = nullptr;
+        void (*onClockStopCallback)() = nullptr;
+        void (*onClockPauseCallback)() = nullptr;
+        void (*onClockContinueCallback)() = nullptr;
+        // step seq extension for global and multi track sequences control
+        void (*onStepGlobalCallback)(uint32_t step) = nullptr;
+        void (*onStepMultiCallback)(uint32_t step, uint8_t track) = nullptr;
+        
 
-        void (*onOutputPPQNCallback)(uint32_t tick);
-        void (*onStepCallback)(uint32_t step);
-        void (*onSync1Callback)(uint32_t tick);
-        void (*onSync2Callback)(uint32_t tick);
-        void (*onSync4Callback)(uint32_t tick);
-        void (*onSync8Callback)(uint32_t tick);
-        void (*onSync12Callback)(uint32_t tick);
-        void (*onSync24Callback)(uint32_t tick);
-        void (*onSync48Callback)(uint32_t tick);
-        void (*onClockStartCallback)();
-        void (*onClockStopCallback)();
+        typedef struct {
+            bool active = false;
+            uint8_t size = MAX_SHUFFLE_TEMPLATE_SIZE;
+            int8_t step[MAX_SHUFFLE_TEMPLATE_SIZE] = {0}; // int8 supports max PPQN_480 of internal clock resolution
+        } SHUFFLE_TEMPLATE;
+        
+        typedef struct {
+            volatile SHUFFLE_TEMPLATE tmplt;
+            int8_t last_shff = 0; // int8 supports max PPQN_480 of internal clock resolution
+            bool shuffle_shoot_ctrl = true;
+            volatile int8_t shuffle_length_ctrl = 0;
+        } SHUFFLE_DATA;
+        
+        typedef struct {
+            SHUFFLE_DATA shuffle;
+            //int8_t shift = 0;
+            //uint8_t direction = 0;
+            uint32_t step_counter = 0;
+            uint8_t mod_step_counter;
+        } TRACK_SLOT;
+        
+        // sync callback structure for dynamic multiple sync outputs support
+        struct SyncCallback {
+            void (*callback)(uint32_t tick) = nullptr;
+            uint8_t mod_counter = 0;
+            uint16_t sync_ref = 0;
+            uint32_t tick = 0;
+            PPQNResolution resolution;
+        };
+        
+        // sync callback data
+        SyncCallback * sync_callbacks = nullptr;
+        uint8_t sync_callback_size = 0;
 
-        // clock input/output control
+        // clock core
+        // input/output tick resolution
         PPQNResolution output_ppqn = PPQN_96;
         PPQNResolution input_ppqn = PPQN_24;
+        volatile float tempo = 120.0;
+        volatile ClockMode clock_mode = INTERNAL_CLOCK;
+        uint32_t start_timer = 0;
+
         // output and internal counters, ticks and references
-        uint32_t tick;
-        uint32_t int_clock_tick;
-        uint8_t mod_clock_counter;
-        uint16_t mod_clock_ref;
-        uint8_t mod_step_counter;
-        uint8_t mod_step_ref;
-        uint32_t step_counter;
-        uint8_t mod_sync1_counter;
-        uint16_t mod_sync1_ref;
-        uint32_t sync1_tick;
-        uint8_t mod_sync2_counter;
-        uint16_t mod_sync2_ref;
-        uint32_t sync2_tick;
-        uint8_t mod_sync4_counter;
-        uint16_t mod_sync4_ref;
-        uint32_t sync4_tick;
-        uint8_t mod_sync8_counter;
-        uint16_t mod_sync8_ref;
-        uint32_t sync8_tick;
-        uint8_t mod_sync12_counter;
-        uint16_t mod_sync12_ref;
-        uint32_t sync12_tick;
-        uint8_t mod_sync24_counter;
-        uint16_t mod_sync24_ref;
-        uint32_t sync24_tick;
-        uint8_t mod_sync48_counter;
-        uint16_t mod_sync48_ref;
-        uint32_t sync48_tick;
+        volatile uint32_t tick = 0;
+        volatile uint32_t int_clock_tick = 0;
+        uint8_t mod_step_ref = 0;
+        uint8_t mod_clock_counter = 0;
+        uint16_t mod_clock_ref = 0;
 
         // external clock control
-        volatile uint32_t ext_clock_us;
-        volatile uint32_t ext_clock_tick;
-        volatile uint32_t ext_interval;
-        uint32_t last_interval;
-        uint32_t sync_interval;
+        volatile uint32_t ext_clock_us = 0;
+        volatile uint32_t ext_clock_tick = 0;
+        volatile uint32_t ext_interval = 0;
+        volatile float external_tempo = tempo;
+        uint8_t phase_lock_quarters = 1;
 
-        float tempo;
-        uint32_t start_timer;
-        ClockMode clock_mode;
+        // debug interrupts overflow
+        volatile uint16_t int_overflow_counter = 0;
+        volatile uint16_t ext_overflow_counter = 0;
 
+        // StepSeq extension
+        // main stepseq tick processor
+        void stepSeqTick();
+        // stepseq shuffle processor
+        bool inline processShuffle(uint8_t track = 0);
+        TRACK_SLOT * tracks = nullptr;
+        size_t track_slots_size = 0;
+
+        // external clock bpm read calculus getTempo()
         volatile uint32_t * ext_interval_buffer = nullptr;
-        uint8_t ext_interval_buffer_size;
-        uint16_t ext_interval_idx;
-
-        // shuffle implementation
-        volatile SHUFFLE_TEMPLATE shuffle;
-        int8_t last_shff = 0;
-        bool shuffle_shoot_ctrl = true;
-        volatile int8_t shuffle_length_ctrl = 0;
+        size_t ext_interval_buffer_size = 0;
+        uint16_t ext_interval_idx = 0;
 };
 
 } } // end namespace umodular::clock

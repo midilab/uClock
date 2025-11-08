@@ -111,7 +111,8 @@ void setup() {
   //
   // uClock Setup
   //
-  uClock.setOnSync24(onSync24Callback);
+  // Set the callback function for the clock output to send MIDI Sync message based on 24PPQN
+  uClock.setOnSync(uClock.PPQN_24, onSync24Callback);
   // For MIDI Sync Start and Stop
   uClock.setOnClockStart(onClockStart);
   uClock.setOnClockStop(onClockStop);
@@ -144,16 +145,16 @@ void loop() {
       u8x8->drawUTF8(8 + 4, 7, " ");
     }
   }
-  if (clock_state != uClock.state) {
-    clock_state = uClock.state;
+  if (clock_state != uClock.clock_state) {
+    clock_state = uClock.clock_state;
     if (clock_state >= 1) {
       u8x8->drawUTF8(0, 7, "Playing");
     } else {
       u8x8->drawUTF8(0, 7, "Stopped ");
     }
   }
-  if (clock_mode != uClock.getMode()) {
-    clock_mode = uClock.getMode();
+  if (clock_mode != uClock.getClockMode()) {
+    clock_mode = uClock.getClockMode();
     if (clock_mode == uClock.EXTERNAL_CLOCK) {
       u8x8->drawUTF8(10, 0, "Slave ");
     } else {
