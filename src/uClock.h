@@ -5,7 +5,7 @@
  *  @version    2.3.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
- *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
+ *  @license    MIT - (c) 2025 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -41,45 +41,6 @@ namespace umodular { namespace clock {
 // max: (output_ppqn/4)-1 ticks
 // adjust the size of you template if more than 16 shuffle step info needed
 #define MAX_SHUFFLE_TEMPLATE_SIZE   16
-typedef struct {
-    bool active = false;
-    uint8_t size = MAX_SHUFFLE_TEMPLATE_SIZE;
-    int8_t step[MAX_SHUFFLE_TEMPLATE_SIZE] = {0}; // int8 supports max PPQN_480 of internal clock resolution
-} SHUFFLE_TEMPLATE;
-
-typedef struct {
-    volatile SHUFFLE_TEMPLATE tmplt;
-    int8_t last_shff = 0; // int8 supports max PPQN_480 of internal clock resolution
-    bool shuffle_shoot_ctrl = true;
-    volatile int8_t shuffle_length_ctrl = 0;
-} SHUFFLE_DATA;
-
-typedef struct {
-    SHUFFLE_DATA shuffle;
-    //int8_t shift = 0;
-    //uint8_t direction = 0;
-    uint32_t step_counter = 0;
-    uint8_t mod_step_counter;
-} TRACK_SLOT;
-
-enum SyncResolution {
-    SYNC1 = 1,
-    SYNC2 = 2,
-    SYNC4 = 4,
-    SYNC8 = 8,
-    SYNC12 = 12,
-    SYNC24 = 24,
-    SYNC48 = 48
-};
-
-// sync callback structure for dynamic multiple sync outputs support
-struct SyncCallback {
-    void (*callback)(uint32_t tick) = nullptr;
-    uint8_t mod_counter = 0;
-    uint16_t sync_ref = 0;
-    uint32_t tick = 0;
-    SyncResolution resolution;
-};
 
 #define MIN_BPM	1
 #define MAX_BPM	500
@@ -130,54 +91,17 @@ class uClockClass {
         uClockClass();
         ~uClockClass();
 
+        // set main input and output clock rates
+        void setOutputPPQN(PPQNResolution resolution);
+        void setInputPPQN(PPQNResolution resolution);
+        
+        // callbacks setup
         void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
             onOutputPPQNCallback = callback;
         }
 
-        // multiple output sync clock signatures support
-        void setOnSync(SyncResolution resolution, void (*callback)(uint32_t tick)) {
-            // alloc once and forever policy!
-           	// reallocate by creating a new array, copying data, and deleting the old one
-           	SyncCallback * new_sync_callbacks = new SyncCallback[sync_callback_size+1];
-           	if (sync_callbacks != nullptr) {
-          		memcpy(new_sync_callbacks, sync_callbacks, sizeof(SyncCallback) * (sync_callback_size+1));
-          		delete[] sync_callbacks;
-           	}
-            sync_callbacks = new_sync_callbacks;
-
-            sync_callbacks[sync_callback_size].callback = callback;
-            sync_callbacks[sync_callback_size].resolution = resolution;
-
-            ++sync_callback_size;
-        }
-
-        void setOnSync1(void (*callback)(uint32_t tick)) {
-            setOnSync(SYNC1, callback);
-        }
-
-        void setOnSync2(void (*callback)(uint32_t tick)) {
-            setOnSync(SYNC2, callback);
-        }
-
-        void setOnSync4(void (*callback)(uint32_t tick)) {
-            setOnSync(SYNC4, callback);
-        }
-
-        void setOnSync8(void (*callback)(uint32_t tick)) {
-            setOnSync(SYNC8, callback);
-        }
-
-        void setOnSync12(void (*callback)(uint32_t tick)) {
-            setOnSync(SYNC12, callback);
-        }
-
-        void setOnSync24(void (*callback)(uint32_t tick)) {
-            setOnSync(SYNC24, callback);
-        }
-
-        void setOnSync48(void (*callback)(uint32_t tick)) {
-            setOnSync(SYNC48, callback);
-        }
+        // multiple output sync clock signatures callback register
+        void setOnSync(PPQNResolution resolution, void (*callback)(uint32_t tick));
 
         void setOnClockStart(void (*callback)()) {
             onClockStartCallback = callback;
@@ -220,12 +144,10 @@ class uClockClass {
         }
 
         void init();
-        void setOutputPPQN(PPQNResolution resolution);
-        void setInputPPQN(PPQNResolution resolution);
 
+        // the main processing of internal and external tick system
         void handleInternalClock();
         void handleExternalClock();
-        void resetCounters();
 
         // external class control
         void start();
@@ -280,6 +202,8 @@ class uClockClass {
         uint16_t getExtOverflowCounter();
 
         uint32_t bpmToMicroSeconds(float bpm);
+        
+        void resetCounters();
 
     private:
         float inline freqToBpm(uint32_t freq);
@@ -295,6 +219,38 @@ class uClockClass {
         // step seq extension for global and multi track sequences control
         void (*onStepGlobalCallback)(uint32_t step) = nullptr;
         void (*onStepMultiCallback)(uint32_t step, uint8_t track) = nullptr;
+        
+
+        typedef struct {
+            bool active = false;
+            uint8_t size = MAX_SHUFFLE_TEMPLATE_SIZE;
+            int8_t step[MAX_SHUFFLE_TEMPLATE_SIZE] = {0}; // int8 supports max PPQN_480 of internal clock resolution
+        } SHUFFLE_TEMPLATE;
+        
+        typedef struct {
+            volatile SHUFFLE_TEMPLATE tmplt;
+            int8_t last_shff = 0; // int8 supports max PPQN_480 of internal clock resolution
+            bool shuffle_shoot_ctrl = true;
+            volatile int8_t shuffle_length_ctrl = 0;
+        } SHUFFLE_DATA;
+        
+        typedef struct {
+            SHUFFLE_DATA shuffle;
+            //int8_t shift = 0;
+            //uint8_t direction = 0;
+            uint32_t step_counter = 0;
+            uint8_t mod_step_counter;
+        } TRACK_SLOT;
+        
+        // sync callback structure for dynamic multiple sync outputs support
+        struct SyncCallback {
+            void (*callback)(uint32_t tick) = nullptr;
+            uint8_t mod_counter = 0;
+            uint16_t sync_ref = 0;
+            uint32_t tick = 0;
+            PPQNResolution resolution;
+        };
+        
         // sync callback data
         SyncCallback * sync_callbacks = nullptr;
         uint8_t sync_callback_size = 0;

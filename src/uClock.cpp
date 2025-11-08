@@ -5,7 +5,7 @@
  *  @version    2.3.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
- *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
+ *  @license    MIT - (c) 2025 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -82,6 +82,9 @@
 #if !defined(UCLOCK_PLATFORM_FOUND)
     #pragma message ("NOTE: uClock is using the 'software timer' approach instead of specific board interrupted support, because board is not supported or because of USE_UCLOCK_SOFTWARE_TIMER build flag. Remember to call uClock.run() inside your loop().")
     #include "platforms/software.h"
+    #if !defined(USE_UCLOCK_SOFTWARE_TIMER)
+        #define USE_UCLOCK_SOFTWARE_TIMER
+    #endif
 #endif
 
 //
@@ -370,7 +373,7 @@ uClockClass::ClockMode uClockClass::getClockMode()
 // for software timer implementation(fallback for no timer board support)
 void uClockClass::run()
 {
-#if !defined(UCLOCK_PLATFORM_FOUND)
+#if defined(USE_UCLOCK_SOFTWARE_TIMER)
     // call software timer implementation
     softwareTimerHandler(micros());
 #endif
@@ -543,6 +546,26 @@ void uClockClass::setInputPPQN(PPQNResolution resolution)
         input_ppqn = resolution;
         calculateReferencedata();
     )
+}
+
+void uClockClass::setOnSync(PPQNResolution resolution, void (*callback)(uint32_t tick)) {
+    // sets sync callback only if the resolution is lower or equal main clock rate
+    if (resolution > output_ppqn)
+        return;
+
+    // alloc once and forever policy!
+   	// reallocate by creating a new array, copying data, and deleting the old one
+   	SyncCallback * new_sync_callbacks = new SyncCallback[sync_callback_size+1];
+   	if (sync_callbacks != nullptr) {
+  		memcpy(new_sync_callbacks, sync_callbacks, sizeof(SyncCallback) * (sync_callback_size+1));
+  		delete[] sync_callbacks;
+   	}
+    sync_callbacks = new_sync_callbacks;
+
+    sync_callbacks[sync_callback_size].callback = callback;
+    sync_callbacks[sync_callback_size].resolution = resolution;
+
+    ++sync_callback_size;
 }
 
 void uClockClass::setTempo(float bpm)

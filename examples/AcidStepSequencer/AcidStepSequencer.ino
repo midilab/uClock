@@ -158,7 +158,8 @@ void setup()
   uClock.setOnOutputPPQN(onOutputPPQNCallback);
 
   // for MIDI sync
-  uClock.setOnSync24(onSync24Callback);
+  // Set the callback function for the clock output to send MIDI Sync message based on 24PPQN
+  uClock.setOnSync(uClock.PPQN_24, onSync24Callback);
 
   // Set the callback function for the step sequencer on 16ppqn
   uClock.setOnStep(onStepCallback);
