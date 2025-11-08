@@ -144,8 +144,8 @@ void setup() {
   uClock.setOnSync(uClock.PPQN_24, onSync24Callback);
   
   // Set the callback function for MIDI Start and Stop messages.
-  uClock.setOnClockStartOutput(onClockStart);
-  uClock.setOnClockStopOutput(onClockStop);
+  uClock.setOnClockStart(onClockStart);
+  uClock.setOnClockStop(onClockStop);
 
   // Inits the clock
   uClock.init();
