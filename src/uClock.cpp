@@ -5,7 +5,7 @@
  *  @version    2.3.0
  *  @author     Romulo Silva
  *  @date       10/06/2017
- *  @license    MIT - (c) 2024 - Romulo Silva - contact@midilab.co
+ *  @license    MIT - (c) 2025 - Romulo Silva - contact@midilab.co
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),

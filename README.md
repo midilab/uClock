@@ -1,12 +1,14 @@
 # uClock - BPM Clock Generator Library
 
-A professional-grade BPM clock generator library for Arduino and compatible microcontrollers, designed for musicians, artists, and engineers creating sequencers, sync boxes, and real-time musical devices.
+A professional-grade BPM clock generator library for Arduino and PlatformIO, designed for musicians, artists, and engineers creating sequencers, sync boxes, and real-time musical devices. It is built to be multi-architecture, portable, and easy to use within the open-source ecosystem.
 
 ## Overview
 
 **uClock** delivers precise, hardware-interrupt-driven clock timing for music and media applications. Whether you're building a MIDI sequencer, modular synthesizer clock, or synchronizing multiple devices, uClock provides the rock-solid timing foundation your project needs.
 
 The library leverages hardware timer interrupts to ensure accurate BPM generation and synchronization, making it suitable for professional music production, live performance, and creative installations.
+
+The absence of real-time features necessary for creating professional-level embedded devices for music and video on open-source community-based platforms like Arduino led to the development of uClock. By leveraging timer hardware interrupts, the library can schedule and manage real-time processing with safe shared resource access through its API.
 
 ## Supported Platforms
 
@@ -21,7 +23,7 @@ Open-source platforms like Arduino and PlatformIO traditionally lack the real-ti
 
 - **Precise timing** through hardware interrupts
 - **Flexible clock resolutions** from 1 to 960 PPQN
-- **External sync support** for master/slave configurations
+- **External sync support** for external sync configurations
 - **Shuffle and groove** capabilities for humanized timing
 - **Multi-track sequencing** with independent shuffle per track
 - **Multiple sync outputs** for different device standards
@@ -135,7 +137,7 @@ void setup() {
 
   // set main clock rate for output(sequencer resolution)
   uClock.setOutputPPQN(uClock.PPQN_96);
-  // set main clock rate for output(sequencer resolution) and input(expected sync signal)
+  // set main clock rate for input(expected sync signal rate)
   uClock.setInputPPQN(uClock.PPQN_24);
   
   // Set the callback function for the clock output to send MIDI Sync message based on 24PPQN
@@ -153,14 +155,15 @@ void setup() {
 
   // Set the clock BPM to 126 BPM
   //uClock.setTempo(126);
-  // Starts the clock, tick-tac-tick-tac...
   //uClock.start();
 }
 
 void loop() {
   // call clockMe() each time you receive an external clock pulse
   // in this example we set inputPPQN to 24 PPQN
-  // wich expects a signal comming from MIDI device
+  // wich expects a signal clock rate comming from MIDI device
+  // PS: Idealy you should do midi sync with another interruption schema
+  // the more code on loop() the less accuracy the MIDI_CLOCK signal reads
   if (Serial.available() > 0) {
     uint8_t midi_byte = Serial.read();
     
@@ -170,17 +173,12 @@ void loop() {
             break;
     
         case MIDI_START:
-            uClock.start();  // Let uClock handle start
+            uClock.start(); 
             break;
     
         case MIDI_STOP:
-            uClock.stop();   // Let uClock handle stop
+            uClock.stop();
             break;
-    
-        // Optional: ignore other real-time messages
-        // case 0xF9: // Tick
-        // case 0xFE: // Active Sense
-        //     break;
     }
   }
 }
@@ -203,21 +201,27 @@ void onSync1(uint32_t tick) {
     triggerModularPulse();
 }
 
+void onSync2(uint32_t tick) {
+    // Send Pocket Operators sync (2 pulse per quarter note)
+    triggerPocketOperatorsPulse();
+}
+
 void onSync24(uint32_t tick) {
     // Send MIDI clock (24 PPQN)
     Serial.write(MIDI_CLOCK_BYTE);
 }
 
 void onSync48(uint32_t tick) {
-    // Send 48 PPQN for vintage gear
+    // Send 48 PPQN for vintage gear like Korg DIN Sync 48
     digitalWrite(SYNC_OUT_PIN, !digitalRead(SYNC_OUT_PIN));
 }
 
 void setup() {    
-    // set main clock rate for output(sequencer resolution) and input(expected sync signal)
+    // set main clock rate for output(sequencer resolution)
     uClock.setOutputPPQN(uClock.PPQN_96);
     // set sync callbacks
     uClock.setOnSync(uClock.PPQN_1, onSync1);
+    uClock.setOnSync(uClock.PPQN_2, onSync2);
     uClock.setOnSync(uClock.PPQN_24, onSync24);
     uClock.setOnSync(uClock.PPQN_48, onSync48);
     // do only init after all setup is done
@@ -226,6 +230,10 @@ void setup() {
     // Set the clock BPM to 126 BPM
     uClock.setTempo(126);
     uClock.start();
+}
+
+void loop() {
+    // Your main code here
 }
 ```
 
@@ -249,11 +257,18 @@ uClock includes a built-in extension specifically designed for creating step seq
 ```cpp
 #include <uClock.h>
 
+#define MAX_STEPS 16
+//#define TRACK_NUMBER 8
+
+// a pattern example for drums mainly
+uint8_t pattern[MAX_STEPS] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0};
+
 // Called every 16th note
 // not dependent on internal or external clock resolution
 // single track callback(doesn't mean you can't code a multirack sequencer here)
 void onStepCallback(uint32_t step) {
-    // triger synth or drum notes
+    if (pattern[step % MAX_STEPS])
+        playNote();
 }
 
 // the multirack callback 
@@ -263,12 +278,18 @@ void onStepCallback(uint32_t step) {
 void setup() {
     // Configure callbacks
     uClock.setOnStep(onStepCallback);
-    // want multitrack support on shuffle per track?
-    //uClock.setOnStep(onStepCallback, 8);
+    // with multitrack support?
+    //uClock.setOnStep(onStepCallback, TRACK_NUMBER);
     
     uClock.init();
     
+    // Set the clock BPM to 126 BPM
+    uClock.setTempo(126);
     uClock.start();
+}
+
+void loop() {
+    // Your main code here
 }
 ```
 
@@ -278,7 +299,7 @@ Add humanization and swing to your sequences with shuffle support. Re-create tim
 
 #### How Shuffle Works
 
-![Ableton Shuffle Example](https://raw.githubusercontent.com/midilab/uclock/develop/doc/shuflle-example.gif)
+![Ableton Shuffle Example](https://raw.githubusercontent.com/midilab/uclock/main/doc/shuflle-example.gif)
 
 Shuffle operates by shifting individual steps earlier or later in time, along with adjusting note lengths to maintain musical coherence. As shown in the Ableton example above:
 
@@ -329,7 +350,7 @@ void onStepCallback(uint32_t step, uint8_t track) {
     // ...
 }
 
-// global shuffle instead?
+// no multirack support gives you a global shuffle flavor
 //void onStepCallback(uint32_t step) {
 //}
 
@@ -351,18 +372,27 @@ void setup() {
     
     // set main clock rate for output(sequencer resolution) and input(expected sync signal)
     uClock.setOutputPPQN(uClock.PPQN_96);
-    // passing second argument for the number of tracks to handle
-    // multitrack individual shuffle support
+    // the second argument of setOnStep is used to request multitrack support
+    // multitrack individual shuffle support for this example
     uClock.setOnStep(onStepCallback, TRACKS_SIZE);
     // global shuffle? no need to multitrack handle of step sequencer extension
+    // set the callback without second param
     //uClock.setOnStep(onStepCallback);
     
     uClock.init();
     
-    // set a template for shuffle
-    uClock.setShuffleTemplate(shuffle_templates[current_shuffle]);
-    // enable/disable shuffle
-    uClock.setShuffle(true);
+    // set a template for shuffle for specific tracks
+    uClock.setShuffleTemplate(shuffle_templates[current_shuffle], 0);
+    uClock.setShuffleTemplate(shuffle_templates[current_shuffle], 1);
+    uClock.setShuffleTemplate(shuffle_templates[current_shuffle], 2);
+    uClock.setShuffleTemplate(shuffle_templates[current_shuffle], 3);
+    // if no multirack support set on setOnStep() then the suffle is global
+    //uClock.setShuffleTemplate(shuffle_templates[current_shuffle]);
+    // enable/disable shuffle for specific tracks
+    uClock.setShuffle(true, 0);
+    uClock.setShuffle(true, 1);
+    uClock.setShuffle(true, 2);
+    uClock.setShuffle(true, 3);
     
     uClock.start();
 }
@@ -396,7 +426,7 @@ int8_t getShuffleLength(uint8_t track = 0);
 - Positive values = delay
 - Zero = no shuffle (straight timing)
 
-### External Sync Phase Lock
+### External Sync and Phase Lock
 
 Fine-tune synchronization with external clocks:
 
@@ -412,9 +442,11 @@ void setup() {
     // Lower values = tighter sync but may jitter
     uClock.setPhaseLockQuartersCount(1);
 
-    // Smooth tempo reading for display
+    // Smooth tempo reading for uClock.getTempo()
     // Buffer size: 1-254 (larger = smoother but slower lock time response)
-    // The higher the value the longer it takes to visual bpm sync
+    // The higher the value the longer it takes to sync getTempo() value to actual tempo
+    // PS: the tempo taken to bpm sync here it is for getTempo() value only
+    // it does not affect the main clock.
     uClock.setExtIntervalBuffer(64);
 }
 ```
@@ -544,31 +576,168 @@ Complete examples are available in the `examples/` directory:
 
 ## Technical Details
 
-### Thread Safety
+### Concurrency Safety
 
-All clock operations that have shared variables or resources migth use atomic operations. When modifying shared variables from your code:
+uClock operates at interruption or thread(when avaliable) level, wich means your microcontroller will be executing uClock callbacks processing detached from your main `loop()` code, that creates a concurrency programming context where you need to properly protect read and write access to any shared resource between uClock callback code and `loop()` code.
 
+All clock operations that involve shared variables or resources use atomic operations to ensure concurrency-safe access between interrupt/threads contexts and your main `loop()` code.
+
+* interruption/thread: Depending on micrcontroller platform we levarage a FreeRTOS implementation when multi core avaliable. In this scenario, a threaded context will be used for callbacks instead of interruption.
+
+#### Understanding Shared Resources
+
+**What are shared variables or resources?**
+
+Any data that is accessed both inside uClock callbacks (which run in interrupt/thread context) and inside your `loop()` function (which runs in the main program context) is considered a shared resource.
+
+**Examples of shared resources:**
+- Pattern data arrays modified in `loop()` and read in `onStepCallback()`
+- Sequencer state variables (mute, arp, etc.) modified in `loop()` and read in `onStepCallback()`
+- MIDI buffers or output queues used in `loop()` and `onStepCallback()`
+
+#### Safe Modification Using ATOMIC
+
+When modifying shared variables from your main code, always use the `ATOMIC()` macro:
 ```cpp
+void onStepCallback(uint32_t step) {
+    // Read pattern state in interrupt context
+    if (!sequencer.mute) {
+        playNote();
+    }
+}
 
+// Example: Safely updating sequencer state from user input
+void loop() {
+    if (buttonPressed()) {
+        uint8_t mute = readButton();
+        
+        ATOMIC(
+            sequencer.mute = mute;
+        )
+    }
+}
+```
+```cpp
+// Example: Safely modifying pattern data
+uint8_t pattern[16] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0};
+
+void onStepCallback(uint32_t step) {
+    // Read pattern in interrupt context
+    if (pattern[step % 16]) {
+        playNote();
+    }
+}
+
+void loop() {
+    if (userEditedPattern()) {
+        // Safely modify from main loop
+        ATOMIC(
+            pattern[4] = 1;
+            pattern[8] = 0;
+        )
+    }
+}
+```
+
+#### When to Use ATOMIC
+
+**You MUST use ATOMIC when:**
+- Modifying variables at `loop()` that are readed inside uClock callbacks
+- Updating multiple related variables that must change together atomically at `loop()`
+- Writing or Reading variables that are `volatile` (often used with interrupts/threads) at `loop()`
+
+**You DON'T need ATOMIC when:**
+- Coding inside any uClock callback
+- Using uClock's built-in methods like `setTempo()`, `start()`, `stop()` (all uClock public API are already protected)
+
+#### Built-in Thread Safety
+
+uClock's API methods are already interrupt/thread-safe and handle atomic operations internally:
+```cpp
+// These are SAFE to call from loop() without ATOMIC
+uClock.setTempo(120.0);
+uClock.start();
+uClock.stop();
+uClock.pause();
+uClock.setShuffle(true, 0);
+uClock.setShuffleTemplate(template, 16, 0);
+```
+
+#### Common Pitfalls
+
+**❌ Wrong - Race condition:**
+```cpp
+uint8_t stepCount = 0;
+
+void onStepCallback(uint32_t step) {
+    stepCount++;  // Modified in interrupt/thread context
+}
+
+void loop() {
+    if (stepCount >= 16) {  // Read in main loop - NOT ATOMIC!
+        stepCount = 0;      // Modified in main loop - DANGER!
+        doSomething();
+    }
+}
+```
+
+**✅ Correct - Atomic access:**
+```cpp
+volatile uint8_t stepCount = 0;
+
+void onStepCallback(uint32_t step) {
+    stepCount++;  // Modified in interrupt/thread context
+}
+
+void loop() {
+    uint8_t currentCount;
+    
+    ATOMIC(
+        currentCount = stepCount;  // Atomic read
+    )
+    
+    if (currentCount >= 16) {
+        ATOMIC(
+            stepCount = 0;  // Atomic write
+        )
+        doSomething();
+    }
+}
+```
+
+#### Advanced: Platform-Specific Implementation
+
+For AVR platforms, `ATOMIC()` is defined as:
+```cpp
+#define ATOMIC(X) noInterrupts(); X; interrupts();
+```
+
+For some ARM's and other platforms with multi-core architecture, uClock uses platform-appropriate atomic mechanisms. 
+
+From user perspective the ATOMIC() macro is transparent and safe to use when you need, independently from you micro-controller architecture.
+
+**Note:** Keep atomic sections as short as possible to minimize interrupt latency. Only include the actual shared variable access inside the `ATOMIC()` block:
+```cpp
+// Good - minimal atomic section
+ATOMIC(pattern = newPattern;)
+updateDisplay(pattern);  // Outside atomic section
+
+// Less ideal - unnecessary code in atomic section
 ATOMIC(
-    // Modify shared variables safely
-    tempo = newTempo;
+    pattern = newPattern;
+    updateDisplay(pattern);  // This doesn't need to be atomic!
 )
 ```
 
 ## License
 
-MIT License - Copyright (c) 2024 Romulo Silva
+MIT License - Copyright (c) 2025 Romulo Silva
 
 ## Support & Community
 
 - **Documentation**: [GitHub Repository](https://github.com/midilab/uClock)
 - **Issues**: Report bugs via GitHub Issues
 - **Contact**: contact@midilab.co
-
-## Acknowledgments
-
-Created and maintained by Romulo Silva for the open-source music technology community.
 
 ---
 
