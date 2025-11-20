@@ -43,7 +43,7 @@ void initTimer(uint32_t init_clock)
     // create the clockTask
     xTaskCreate(clockTask, "clockTask", CLOCK_STACK_SIZE, NULL, 1, &taskHandle);
 
-    _uclockTimer = timerBegin(init_clock);
+    _uclockTimer = timerBegin(1000000);
 
     // attach to generic uclock ISR
     timerAttachInterrupt(_uclockTimer, &handlerISR);
