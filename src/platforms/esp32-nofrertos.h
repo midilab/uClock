@@ -17,7 +17,7 @@ void ARDUINO_ISR_ATTR handlerISR(void)
 
 void initTimer(uint32_t init_clock)
 {
-    _uclockTimer = timerBegin(init_clock);
+    _uclockTimer = timerBegin(1000000);
 
     // attach to generic uclock ISR
     timerAttachInterrupt(_uclockTimer, &handlerISR);

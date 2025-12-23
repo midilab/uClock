@@ -534,16 +534,19 @@ void loop() {
 
 ⚠️ **Note**: Software timer mode provides less accurate timing than hardware interrupts.
 
-## Migration Guide (v1.x → v2.0)
+## Migration Guide (v1.x → v2.3)
 
 ### Breaking Changes
 
-| Old API (v1.x) | New API (v2.0+) |
+| Old API (v1.x) | New API (v2.3+) |
 |----------------|-----------------|
 | `setClock96PPQNOutput()` | `setOnOutputPPQN()` |
 | `setClock16PPQNOutput()` | `setOnStep()` |
 | `setOnClockStartOutput()` | `setOnClockStart()` |
 | `setOnClockStopOutput()` | `setOnClockStop()` |
+| `setOnSync24()` | `setOnSync(uClock.PPQN_24, onSync24)` |
+| `setOnSync48()` | `setOnSync(uClock.PPQN_48, onSync48)` |
+| `setOnSyncXX()` | `setOnSync(uClock.PPQN_XX, onSyncXX)` |
 
 ### Resolution Changes
 
