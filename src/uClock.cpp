@@ -67,9 +67,9 @@
         #define UCLOCK_PLATFORM_FOUND
     #endif
     //
-    // RP2040 (Raspberry Pico) family
+    // RP2040 and RP2350 (Raspberry Pico and Pico 2) family
     //
-    #if defined(ARDUINO_ARCH_RP2040)
+    #if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_RP2350)
         #include "platforms/rp2040.h"
         #define UCLOCK_PLATFORM_FOUND
     #endif

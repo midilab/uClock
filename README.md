@@ -15,7 +15,7 @@ The absence of real-time features necessary for creating professional-level embe
 - **AVR**: ATmega168/328, ATmega16u4/32u4, ATmega2560
 - **ARM**: Teensy (all versions), STM32XX, Seeed Studio XIAO M0
 - **ESP32**: All ESP32 family boards
-- **RP2040**: Raspberry Pi Pico and compatible boards
+- **RP2040/RP2350**: Raspberry Pico, Pico 2, and compatible boards
 
 ## Why uClock?
 
