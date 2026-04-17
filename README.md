@@ -15,7 +15,7 @@ The absence of real-time features necessary for creating professional-level embe
 - **AVR**: ATmega168/328, ATmega16u4/32u4, ATmega2560
 - **ARM**: Teensy (all versions), STM32XX, Seeed Studio XIAO M0
 - **ESP32**: All ESP32 family boards
-- **RP2040**: Raspberry Pi Pico and compatible boards
+- **RP2040/RP2350**: Raspberry Pico, Pico 2, and compatible boards
 
 ## Why uClock?
 
@@ -534,16 +534,19 @@ void loop() {
 
 ⚠️ **Note**: Software timer mode provides less accurate timing than hardware interrupts.
 
-## Migration Guide (v1.x → v2.0)
+## Migration Guide (v1.x → v2.3)
 
 ### Breaking Changes
 
-| Old API (v1.x) | New API (v2.0+) |
+| Old API (v1.x) | New API (v2.3+) |
 |----------------|-----------------|
 | `setClock96PPQNOutput()` | `setOnOutputPPQN()` |
 | `setClock16PPQNOutput()` | `setOnStep()` |
 | `setOnClockStartOutput()` | `setOnClockStart()` |
 | `setOnClockStopOutput()` | `setOnClockStop()` |
+| `setOnSync24()` | `setOnSync(uClock.PPQN_24, onSync24)` |
+| `setOnSync48()` | `setOnSync(uClock.PPQN_48, onSync48)` |
+| `setOnSyncXX()` | `setOnSync(uClock.PPQN_XX, onSyncXX)` |
 
 ### Resolution Changes
 
