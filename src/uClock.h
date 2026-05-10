@@ -62,7 +62,6 @@ class uClockClass {
             STOPED = 0,
             PAUSED,
             STARTING,
-            SYNCING,
             STARTED
         };
 
@@ -88,7 +87,7 @@ class uClockClass {
         // set main input and output clock rates
         void setOutputPPQN(PPQNResolution resolution);
         void setInputPPQN(PPQNResolution resolution);
-        
+
         // callbacks setup
         void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
             onOutputPPQNCallback = callback;
@@ -191,7 +190,7 @@ class uClockClass {
         uint16_t getExtOverflowCounter();
 
         uint32_t bpmToMicroSeconds(float bpm);
-        
+
         void resetCounters();
 
     private:
@@ -208,21 +207,21 @@ class uClockClass {
         // step seq extension for global and multi track sequences control
         void (*onStepGlobalCallback)(uint32_t step) = nullptr;
         void (*onStepMultiCallback)(uint32_t step, uint8_t track) = nullptr;
-        
+
 
         typedef struct {
             bool active = false;
             uint8_t size = MAX_SHUFFLE_TEMPLATE_SIZE;
             int8_t step[MAX_SHUFFLE_TEMPLATE_SIZE] = {0}; // int8 supports max PPQN_480 of internal clock resolution
         } SHUFFLE_TEMPLATE;
-        
+
         typedef struct {
             volatile SHUFFLE_TEMPLATE tmplt;
             int8_t last_shff = 0; // int8 supports max PPQN_480 of internal clock resolution
             bool shuffle_shoot_ctrl = true;
             volatile int8_t shuffle_length_ctrl = 0;
         } SHUFFLE_DATA;
-        
+
         typedef struct {
             SHUFFLE_DATA shuffle;
             //int8_t shift = 0;
@@ -230,7 +229,7 @@ class uClockClass {
             uint32_t step_counter = 0;
             uint8_t mod_step_counter;
         } TRACK_SLOT;
-        
+
         // sync callback structure for dynamic multiple sync outputs support
         struct SyncCallback {
             void (*callback)(uint32_t tick) = nullptr;
@@ -239,7 +238,7 @@ class uClockClass {
             uint32_t tick = 0;
             PPQNResolution resolution;
         };
-        
+
         // sync callback data
         SyncCallback * sync_callbacks = nullptr;
         uint8_t sync_callback_size = 0;
