@@ -161,6 +161,7 @@ void uClockClass::init()
 
 void uClockClass::handleInternalClock()
 {
+    // local static helpers for external sync
     static uint32_t counter = 0;
     static uint32_t now_clock_us = 0;
     static uint32_t sync_interval = 0;
@@ -253,6 +254,10 @@ void uClockClass::handleInternalClock()
 
 void uClockClass::handleExternalClock()
 {
+    // local static helpers
+    static uint32_t now_clock_us = 0;
+    static uint32_t last_interval = 0;
+
     // for debug usage while developing any application under uClock
     ++ext_overflow_counter;
 
@@ -269,21 +274,21 @@ void uClockClass::handleExternalClock()
             break;
 
         case STARTED:
-            uint32_t now_clock_us = micros();
-            uint32_t last_interval = clock_diff(ext_clock_us, now_clock_us);
+            // local static helpers
+            now_clock_us = micros();
+            last_interval = clock_diff(ext_clock_us, now_clock_us);
+
             ext_clock_us = now_clock_us;
 
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
-            if(++ext_interval_idx >= ext_interval_buffer_size) {
+            if(++ext_interval_idx >= ext_interval_buffer_size)
                 ext_interval_idx = 0;
-            }
             ext_interval_buffer[ext_interval_idx] = last_interval;
 
-            if (ext_clock_tick == 1) {
+            if (ext_clock_tick == 1)
                 ext_interval = last_interval;
-            } else {
+            else
                 ext_interval = (((uint32_t)ext_interval * (uint32_t)PLL_X) + (uint32_t)(256 - PLL_X) * (uint32_t)last_interval) >> 8;
-            }
             break;
     }
 
