@@ -181,18 +181,17 @@ void uClockClass::handleInternalClock()
                 int_clock_tick = ext_clock_tick;
                 tick = int_clock_tick * mod_clock_ref;
                 mod_clock_counter = tick % mod_clock_ref;
-                mod_step_counter = tick % mod_step_ref;
 
                 // update any counter reference to lock with int_clock_tick
                 for (uint8_t track=0; track < track_slots_size; track++) {
-                    tracks[track].step_counter = tick/mod_step_ref;
-                    tracks[track].mod_step_counter = 0;
+                    tracks[track].step_counter = tick / mod_step_ref;
+                    tracks[track].mod_step_counter = tick % mod_step_ref;
                 }
                 // update counter reference for sync callbacks
                 for (uint8_t i = 0; i < sync_callback_size; i++) {
                     if (sync_callbacks[i].callback) {
-                        sync_callbacks[i].tick = tick/sync_callbacks[i].sync_ref;
-                        sync_callbacks[i].mod_counter = 0;
+                        sync_callbacks[i].tick = int_clock_tick * sync_callbacks[i].sync_ref;
+                        sync_callbacks[i].mod_counter = sync_callbacks[i].tick % sync_callbacks[i].sync_ref;
                     }
                 }
             }
@@ -252,6 +251,12 @@ void uClockClass::handleInternalClock()
 
 void uClockClass::handleExternalClock()
 {
+    // for debug usage while developing any application under uClock
+    ++ext_overflow_counter;
+
+    // external clock tick me!
+    ++ext_clock_tick;
+
     switch (clock_state) {
         case PAUSED:
             break;
@@ -263,11 +268,8 @@ void uClockClass::handleExternalClock()
 
         case STARTED:
             uint32_t now_clock_us = micros();
-            last_interval = clock_diff(ext_clock_us, now_clock_us);
+            uint32_t last_interval = clock_diff(ext_clock_us, now_clock_us);
             ext_clock_us = now_clock_us;
-
-            // external clock tick me!
-            ext_clock_tick++;
 
             // accumulate interval incomming ticks data for getTempo() smooth reads on slave clock_mode
             if(++ext_interval_idx >= ext_interval_buffer_size) {
@@ -598,11 +600,6 @@ void uClockClass::setExtIntervalBuffer(size_t buffer_size)
 
     for (uint8_t i=0; i < ext_interval_buffer_size; i++)
         ext_interval_buffer[i] = 0;
-}
-
-void uClockClass::setPhaseLockQuartersCount(uint8_t count)
-{
-    ATOMIC(phase_lock_quarters = count)
 }
 
 void uClockClass::resetCounters()

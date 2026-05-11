@@ -44,6 +44,7 @@ namespace umodular { namespace clock {
 #define MAX_BPM	500
 
 #define PHASE_FACTOR 16
+#define PLL_X 220
 
 #define MICROS_PER_MIN (60000000UL)
 #define SECS_PER_MIN  (60UL)
@@ -167,7 +168,6 @@ class uClockClass {
         void setClockMode(ClockMode tempo_mode);
         ClockMode getClockMode();
         void clockMe();
-        void setPhaseLockQuartersCount(uint8_t count);
         // for smooth slave tempo calculate display you should raise the
         // buffer_size of ext_interval_buffer in between 64 to 128. 254 max size.
         // note: this doesn't impact on sync time, only display time getTempo()
@@ -263,7 +263,6 @@ class uClockClass {
         volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
         volatile float external_tempo = tempo;
-        uint8_t phase_lock_quarters = 1;
 
         // debug interrupts overflow
         volatile uint16_t int_overflow_counter = 0;
