@@ -162,6 +162,7 @@ void uClockClass::init()
 void uClockClass::handleInternalClock()
 {
     static uint32_t counter = 0;
+    static uint32_t now_clock_us = 0;
     static uint32_t sync_interval = 0;
 
     // for debug usage while developing any application under uClock
@@ -176,13 +177,13 @@ void uClockClass::handleInternalClock()
 
         // tick phase lock and external tempo match for EXTERNAL_CLOCK mode
         if (clock_mode == EXTERNAL_CLOCK) {
-            // sync tick position with external tick clock
+            // sync tick position with external tick clock?
             if ((int_clock_tick < ext_clock_tick) || (int_clock_tick > (ext_clock_tick + 1))) {
                 int_clock_tick = ext_clock_tick;
                 tick = int_clock_tick * mod_clock_ref;
                 mod_clock_counter = tick % mod_clock_ref;
 
-                // update any counter reference to lock with int_clock_tick
+                // update any track counter reference to lock with int_clock_tick
                 for (uint8_t track=0; track < track_slots_size; track++) {
                     tracks[track].step_counter = tick / mod_step_ref;
                     tracks[track].mod_step_counter = tick % mod_step_ref;
@@ -196,8 +197,9 @@ void uClockClass::handleInternalClock()
                 }
             }
 
-            uint32_t counter = ext_interval;
-            uint32_t now_clock_us = micros();
+            // local static helpers
+            counter = ext_interval;
+            now_clock_us = micros();
             sync_interval = clock_diff(ext_clock_us, now_clock_us);
 
             if (int_clock_tick <= ext_clock_tick) {
