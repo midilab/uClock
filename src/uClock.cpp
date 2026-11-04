@@ -740,7 +740,8 @@ void uClockClass::stepSeqTick()
         if (tracks[track].mod_step_counter >= mod_step_ref)
             tracks[track].mod_step_counter = 0;
         if (!tracks[track].shuffle.tmplt.active) {
-            if (tracks[track].mod_step_counter == 0)
+            if (tracks[track].mod_step_counter == 0
+                && int32_t(uint32_t(tracks[track].step_counter * mod_step_ref) - tick) <= 0)
                 stepProcess = true;
         } else if (processShuffle(track)) {
             stepProcess = true;
@@ -801,6 +802,18 @@ void uClockClass::setShuffle(bool active, uint8_t track)
             // A newly enabled nonnegative step belongs to the next modulo
             // window. processShuffle() immediately arms negative offsets.
             tracks[track].shuffle.shuffle_shoot_ctrl = !active;
+            if (active && mod_step_ref > 0) {
+                const uint32_t nominal_tick = tracks[track].step_counter * mod_step_ref;
+                const int32_t until_nominal = int32_t(nominal_tick - tick);
+                tracks[track].shuffle.skip_next_phase_zero =
+                    until_nominal >= mod_step_ref;
+                const int8_t offset = tracks[track].shuffle.tmplt.step[
+                    tracks[track].step_counter % tracks[track].shuffle.tmplt.size];
+                if (offset < 0 && until_nominal + offset < 0) {
+                    tracks[track].shuffle.current_shff = 0;
+                    tracks[track].shuffle.current_shff_valid = true;
+                }
+            }
             #ifdef UCLOCK_ENABLE_TRACE
                 traceEvent(TRACE_SHUFFLE_STATE, track, tracks[track].step_counter,
                        tracks[track].mod_step_counter, active ? 1 : 0, -1,
