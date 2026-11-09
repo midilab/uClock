@@ -19,10 +19,12 @@ bool handlerISR(repeating_timer *timer)
 
 void initTimer(uint32_t init_clock) {
     // set up RPi interrupt timer
-    add_repeating_timer_us(-static_cast<int32_t>(init_clock), &handlerISR, NULL, &timer);
+    if (!add_repeating_timer_us(-static_cast<int64_t>(init_clock ? init_clock : 1), &handlerISR, NULL, &timer)) {
+        timer.alarm_id = 0;
+        panic("uClock: unable to allocate RP2040 timer");
+    }
 }
 
 void setTimer(uint32_t us_interval) {
-    cancel_repeating_timer(&timer);
-    add_repeating_timer_us(-static_cast<int32_t>(us_interval), &handlerISR, NULL, &timer);
+    ATOMIC(timer.delay_us = -static_cast<int64_t>(us_interval ? us_interval : 1))
 }

@@ -84,6 +84,7 @@ class uClockClass {
             PPQN_4 = 4,
             PPQN_8 = 8,
             PPQN_12 = 12,
+            PPQN_16 = 16,
             PPQN_24 = 24,
             PPQN_48 = 48,
             PPQN_96 = 96,
@@ -268,6 +269,7 @@ class uClockClass {
         uint32_t bpmToMicroSeconds(float bpm);
         
         void resetCounters();
+        bool resetCountersToPosition(uint32_t output_tick);
 
     // private:
         float inline freqToBpm(uint32_t freq);

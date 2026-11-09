@@ -1123,6 +1123,32 @@ void uClockClass::setPhaseLockQuartersCount(uint8_t count)
     ATOMIC(phase_lock_quarters = count)
 }
 
+bool uClockClass::resetCountersToPosition(uint32_t output_tick)
+{
+    bool valid = true;
+    ATOMIC(
+        valid = mod_clock_ref != 0 && mod_step_ref != 0;
+        for (uint8_t index = 0; index < sync_callback_size; ++index) {
+            valid = valid && sync_callbacks[index].sync_ref != 0;
+        }
+        if (valid) {
+            resetCounters();
+            tick = output_tick;
+            int_clock_tick = ext_clock_tick = output_tick / mod_clock_ref;
+            mod_clock_counter = output_tick % mod_clock_ref;
+            for (uint8_t index = 0; index < sync_callback_size; ++index) {
+                sync_callbacks[index].tick = output_tick / sync_callbacks[index].sync_ref;
+                sync_callbacks[index].mod_counter = output_tick % sync_callbacks[index].sync_ref;
+            }
+            for (uint8_t track = 0; track < track_slots_size; ++track) {
+                tracks[track].step_counter = output_tick / mod_step_ref;
+                tracks[track].mod_step_counter = output_tick % mod_step_ref;
+            }
+        }
+    )
+    return valid;
+}
+
 void uClockClass::resetCounters()
 {
     tick = 0;

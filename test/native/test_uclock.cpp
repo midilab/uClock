@@ -236,6 +236,12 @@ static void test_strict_external_ppqn_4_pulse_authorizes_quarter_group()
         umodular::clock::uClockClass::PPQN_4, 24, 6);
 }
 
+static void test_strict_external_ppqn_16_pulse_authorizes_six_output_ticks()
+{
+    assert_low_ppqn_pulse_budget(
+        umodular::clock::uClockClass::PPQN_16, 6, 2);
+}
+
 static void test_strict_external_ppqn_1_pulse_authorizes_full_quarter()
 {
     assert_low_ppqn_pulse_budget(
@@ -700,15 +706,110 @@ static void test_trace_freezes_after_first_anomaly()
     TEST_ASSERT_EQUAL_UINT32(0, clock.getTraceDroppedCount());
 }
 
+static void test_position_reset_preserves_callback_and_step_alignment()
+{
+    using Clock = umodular::clock::uClockClass;
+    for (int ppqn : {1, 2, 4, 8, 12, 16, 24}) {
+        Clock clock;
+        callback_clock = &clock;
+        clock.setOutputPPQN(Clock::PPQN_96);
+        clock.setInputPPQN(static_cast<Clock::PPQNResolution>(ppqn));
+        clock.setOnSync(Clock::PPQN_24, record_sync_24);
+        clock.setOnStep(record_step);
+        clock.init();
+        clock.setStrictExternalMode(true);
+        clock.setClockMode(Clock::EXTERNAL_CLOCK);
+        clock.start();
+        for (uint32_t position : {4608u, 4608u, 6144u, 0u}) {
+            const auto state = clock.clock_state;
+            const float tempo = clock.getTempo();
+            clock.tracks[0].shuffle.current_shff_valid = true;
+            clock.tracks[0].shuffle.skip_next_phase_zero = true;
+            clock.tracks[0].shuffle.previous_shff = 8;
+            clock.ext_interval_buffer[0] = 12345;
+            clock.internal_phase_correction_remaining_us = 100;
+            sync_24_ticks.clear(); fired_steps.clear();
+            TEST_ASSERT_TRUE(clock.resetCountersToPosition(position));
+            TEST_ASSERT_EQUAL(state, clock.clock_state);
+            TEST_ASSERT_EQUAL(Clock::EXTERNAL_CLOCK, clock.clock_mode);
+            TEST_ASSERT_EQUAL_FLOAT(tempo, clock.getTempo());
+            TEST_ASSERT_TRUE(sync_24_ticks.empty() && fired_steps.empty());
+            TEST_ASSERT_FALSE(clock.tracks[0].shuffle.current_shff_valid);
+            TEST_ASSERT_FALSE(clock.tracks[0].shuffle.skip_next_phase_zero);
+            TEST_ASSERT_EQUAL_INT(0, clock.tracks[0].shuffle.previous_shff);
+            TEST_ASSERT_EQUAL_UINT32(0, clock.ext_interval_buffer[0]);
+            TEST_ASSERT_EQUAL_INT(0, clock.internal_phase_correction_remaining_us);
+            TEST_ASSERT_EQUAL_UINT32(position, clock.tick);
+            TEST_ASSERT_EQUAL_UINT32(position / (96 / ppqn), clock.int_clock_tick);
+            TEST_ASSERT_EQUAL_UINT32(clock.int_clock_tick, clock.ext_clock_tick);
+            TEST_ASSERT_EQUAL_UINT32(position / 24, clock.tracks[0].step_counter);
+            TEST_ASSERT_EQUAL_UINT32(position / 4, clock.sync_callbacks[0].tick);
+            TEST_ASSERT_EQUAL_UINT32(0, clock.getExternalTicksRemaining());
+            sync_24_ticks.clear(); fired_steps.clear();
+            fake_micros += 500000 / ppqn;
+            clock.clockMeAt(fake_micros);
+            run_until_tick(clock, position + 96 / ppqn);
+            TEST_ASSERT_FALSE(sync_24_ticks.empty());
+            TEST_ASSERT_FALSE(fired_steps.empty());
+            TEST_ASSERT_EQUAL_UINT32(position / 4, sync_24_ticks.front());
+            TEST_ASSERT_EQUAL_UINT32(position / 24, fired_steps.front());
+        }
+        clock.resetCounters();
+        TEST_ASSERT_EQUAL_UINT32(0, clock.tick);
+        TEST_ASSERT_EQUAL_UINT32(0, clock.sync_callbacks[0].tick);
+    }
+}
+
+static void test_position_reset_validates_references_and_tracks_fractional_phase()
+{
+    using Clock = umodular::clock::uClockClass;
+    Clock clock;
+    TEST_ASSERT_FALSE(clock.resetCountersToPosition(101));
+    TEST_ASSERT_EQUAL_UINT32(0, clock.tick);
+    clock.setOutputPPQN(Clock::PPQN_96);
+    clock.setInputPPQN(Clock::PPQN_24);
+    clock.setOnSync(Clock::PPQN_24, record_sync_24);
+    clock.setOnStep(record_step);
+    clock.init();
+    TEST_ASSERT_TRUE(clock.resetCountersToPosition(101));
+    TEST_ASSERT_EQUAL_UINT32(25, clock.int_clock_tick);
+    TEST_ASSERT_EQUAL_UINT32(1, clock.mod_clock_counter);
+    TEST_ASSERT_EQUAL_UINT32(25, clock.sync_callbacks[0].tick);
+    TEST_ASSERT_EQUAL_UINT32(1, clock.sync_callbacks[0].mod_counter);
+    TEST_ASSERT_EQUAL_UINT32(4, clock.tracks[0].step_counter);
+    TEST_ASSERT_EQUAL_UINT32(5, clock.tracks[0].mod_step_counter);
+    TEST_ASSERT_EQUAL(Clock::INTERNAL_CLOCK, clock.clock_mode);
+    TEST_ASSERT_EQUAL(Clock::STOPPED, clock.clock_state);
+    clock.start();
+    clock.pause();
+    const auto paused = clock.clock_state;
+    TEST_ASSERT_TRUE(clock.resetCountersToPosition(101));
+    TEST_ASSERT_EQUAL(paused, clock.clock_state);
+    clock.mod_clock_ref = 0;
+    TEST_ASSERT_FALSE(clock.resetCountersToPosition(0));
+    TEST_ASSERT_EQUAL_UINT32(101, clock.tick);
+    clock.mod_clock_ref = 4;
+    clock.mod_step_ref = 0;
+    TEST_ASSERT_FALSE(clock.resetCountersToPosition(0));
+    TEST_ASSERT_EQUAL_UINT32(101, clock.tick);
+    clock.mod_step_ref = 24;
+    clock.sync_callbacks[0].sync_ref = 0;
+    TEST_ASSERT_FALSE(clock.resetCountersToPosition(0));
+    TEST_ASSERT_EQUAL_UINT32(101, clock.tick);
+}
+
 int main(int, char **)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_position_reset_preserves_callback_and_step_alignment);
+    RUN_TEST(test_position_reset_validates_references_and_tracks_fractional_phase);
     RUN_TEST(test_sync_callback_growth_preserves_existing_entries);
     RUN_TEST(test_reduced_ppqn_recovers_counters_above_new_references);
     RUN_TEST(test_output_tick_end_runs_after_sync_and_step_callbacks);
     RUN_TEST(test_strict_external_clock_allows_only_one_output_group_per_pulse);
     RUN_TEST(test_back_to_back_external_pulses_preserve_both_output_groups);
     RUN_TEST(test_strict_external_ppqn_4_pulse_authorizes_quarter_group);
+    RUN_TEST(test_strict_external_ppqn_16_pulse_authorizes_six_output_ticks);
     RUN_TEST(test_strict_external_ppqn_1_pulse_authorizes_full_quarter);
     RUN_TEST(test_live_switch_to_ppqn_1_external_clock_keeps_timer_progressing);
     RUN_TEST(test_late_ppqn_1_pulse_does_not_burst_pending_ticks);
