@@ -32,6 +32,8 @@
 #include <Arduino.h>
 #include <inttypes.h>
 
+#define UCLOCK_HAS_STRICT_EXTERNAL_MODE
+
 namespace umodular { namespace clock {
 
 // Shuffle templates are specific for each PPQN output resolution
@@ -50,6 +52,16 @@ namespace umodular { namespace clock {
 #define SECS_PER_HOUR (3600UL)
 #define SECS_PER_DAY  (SECS_PER_HOUR * 24L)
 
+#ifndef MINIMUM_SYNC_COUNTER
+    #define MINIMUM_SYNC_COUNTER 4
+#endif
+
+#ifdef UCLOCK_ENABLE_TRACE
+    #ifndef UCLOCK_TRACE_BUFFER_SIZE
+        #define UCLOCK_TRACE_BUFFER_SIZE 8192
+    #endif
+#endif
+
 class uClockClass {
 
     public:
@@ -59,7 +71,7 @@ class uClockClass {
         };
 
         enum ClockState {
-            STOPED = 0,
+            STOPPED = 0,
             PAUSED,
             STARTING,
             SYNCING,
@@ -72,6 +84,7 @@ class uClockClass {
             PPQN_4 = 4,
             PPQN_8 = 8,
             PPQN_12 = 12,
+            PPQN_16 = 16,
             PPQN_24 = 24,
             PPQN_48 = 48,
             PPQN_96 = 96,
@@ -80,7 +93,7 @@ class uClockClass {
             PPQN_960 = 960
         };
 
-        ClockState clock_state = STOPED;
+        ClockState clock_state = STOPPED;
 
         uClockClass();
         ~uClockClass();
@@ -88,13 +101,20 @@ class uClockClass {
         // set main input and output clock rates
         void setOutputPPQN(PPQNResolution resolution);
         void setInputPPQN(PPQNResolution resolution);
+        PPQNResolution getOutputPPQN() const {
+            return output_ppqn;
+        }
         
         // callbacks setup
         void setOnOutputPPQN(void (*callback)(uint32_t tick)) {
             onOutputPPQNCallback = callback;
         }
 
-        // multiple output sync clock signatures callback register
+        void setOnOutputPPQNEnd(void (*callback)(uint32_t tick)) {
+            onOutputPPQNEndCallback = callback;
+        }
+
+        // Register output sync callbacks before init().
         void setOnSync(PPQNResolution resolution, void (*callback)(uint32_t tick));
 
         void setOnClockStart(void (*callback)()) {
@@ -149,6 +169,9 @@ class uClockClass {
         void pause();
         void setTempo(float bpm);
         float getTempo();
+        bool syncInternalClockToBeat(uint32_t observed_at_us);
+        int32_t getInternalPhaseCorrectionUs();
+        uint16_t getInternalPhaseSlewTicksRemaining();
 
         // Step Seq extension for global and multi track sequences control
         // void setShift(int8_t shift, uint8_t track = 0);
@@ -157,17 +180,23 @@ class uClockClass {
         bool isShuffled(uint8_t track = 0);
         void setShuffleSize(uint8_t size, uint8_t track = 0);
         void setShuffleData(uint8_t step, int8_t tick, uint8_t track = 0);
-        void setShuffleTemplate(int8_t * shuff, uint8_t size, uint8_t track = 0);
-        // use this to know how many positive or negative ticks to add to current note length
+        void setShuffleTemplate(const int8_t * shuff, uint8_t size, uint8_t track = 0);
+        int8_t getShuffleOffset(uint32_t step, uint8_t track = 0);
+        // Difference between the next and current shuffle offsets, in output-PPQN ticks.
         int8_t getShuffleLength(uint8_t track = 0);
 
         // for software timer implementation(fallback for no board support)
         void run();
 
-        // external timming control
+        // external timing control
         void setClockMode(ClockMode tempo_mode);
         ClockMode getClockMode();
         void clockMe();
+        void clockMeAt(uint32_t observed_at_us);
+
+        // strict external clock mode functions
+        void setStrictExternalMode(bool strict);
+        bool isStrictExternalMode();
         void setPhaseLockQuartersCount(uint8_t count);
         // for smooth slave tempo calculate display you should raise the
         // buffer_size of ext_interval_buffer in between 64 to 128. 254 max size.
@@ -189,18 +218,67 @@ class uClockClass {
         // interrupt overflow debug
         uint16_t getIntOverflowCounter();
         uint16_t getExtOverflowCounter();
+        bool isExternalClockStalled();
+        uint16_t getExternalTicksRemaining();
+        uint32_t getLastAcceptedExternalInterval();
+        uint32_t getExternalClockPulseAge();
+
+#ifdef UCLOCK_ENABLE_TRACE
+        enum TraceEventType : uint8_t {
+            TRACE_START,
+            TRACE_EXTERNAL_PULSE,
+            TRACE_EXTERNAL_TIMING_DELTA,
+            TRACE_PHASE_ERROR,
+            TRACE_PHASE_LOCK,
+            TRACE_TEMPO_CHANGE,
+            TRACE_STEP_FIRE,
+            TRACE_STEP_PHASE_DIVERGED,
+            TRACE_SHUFFLE_CHANGE,
+            TRACE_SHUFFLE_STATE,
+            TRACE_INTERNAL_REENTRY,
+            TRACE_EXTERNAL_REENTRY,
+            TRACE_EXTERNAL_STALLED,
+            TRACE_EXTERNAL_RESUMED,
+            TRACE_EXTERNAL_CATCH_UP,
+            TRACE_INVALID_STATE
+        };
+
+        struct TraceEvent {
+            uint32_t timestamp_us;
+            uint32_t tick;
+            uint32_t int_clock_tick;
+            uint32_t ext_clock_tick;
+            uint32_t step;
+            int32_t value;
+            uint16_t mod_clock_counter;
+            uint16_t mod_step_counter;
+            int16_t shuffle_target;
+            int8_t shuffle_value;
+            uint8_t track;
+            uint8_t type;
+            uint8_t clock_state;
+            uint8_t handler_depth;
+        };
+
+        bool popTraceEvent(TraceEvent &event);
+        void clearTrace();
+        uint32_t getTraceDroppedCount();
+        bool isTraceFrozen();
+#endif
 
         uint32_t bpmToMicroSeconds(float bpm);
         
         void resetCounters();
+        bool resetCountersToPosition(uint32_t output_tick);
 
-    private:
+    // private:
         float inline freqToBpm(uint32_t freq);
         float inline constrainBpm(float bpm);
         void calculateReferencedata();
 
         // callbacks
         void (*onOutputPPQNCallback)(uint32_t tick) = nullptr;
+        void (*onOutputPPQNEndCallback)(uint32_t tick) = nullptr;
         void (*onClockStartCallback)() = nullptr;
         void (*onClockStopCallback)() = nullptr;
         void (*onClockPauseCallback)() = nullptr;
@@ -218,7 +296,10 @@ class uClockClass {
         
         typedef struct {
             volatile SHUFFLE_TEMPLATE tmplt;
-            int8_t last_shff = 0; // int8 supports max PPQN_480 of internal clock resolution
+            int8_t current_shff = 0;
+            int8_t previous_shff = 0;
+            bool current_shff_valid = false;
+            bool skip_next_phase_zero = false;
             bool shuffle_shoot_ctrl = true;
             volatile int8_t shuffle_length_ctrl = 0;
         } SHUFFLE_DATA;
@@ -228,13 +309,13 @@ class uClockClass {
             //int8_t shift = 0;
             //uint8_t direction = 0;
             uint32_t step_counter = 0;
-            uint8_t mod_step_counter;
+            uint8_t mod_step_counter = 0;
         } TRACK_SLOT;
         
         // sync callback structure for dynamic multiple sync outputs support
         struct SyncCallback {
             void (*callback)(uint32_t tick) = nullptr;
-            uint8_t mod_counter = 0;
+            uint16_t mod_counter = 0;
             uint16_t sync_ref = 0;
             uint32_t tick = 0;
             PPQNResolution resolution;
@@ -243,6 +324,7 @@ class uClockClass {
         // sync callback data
         SyncCallback * sync_callbacks = nullptr;
         uint8_t sync_callback_size = 0;
+        bool initialized = false;
 
         // clock core
         // input/output tick resolution
@@ -251,24 +333,55 @@ class uClockClass {
         volatile float tempo = 120.0;
         volatile ClockMode clock_mode = INTERNAL_CLOCK;
         uint32_t start_timer = 0;
+        bool strict_external_mode = false;
+        volatile uint32_t last_internal_tick_us = 0;
+        volatile int32_t internal_phase_correction_us = 0;
+        volatile int32_t internal_phase_correction_remaining_us = 0;
+        volatile uint16_t internal_phase_slew_ticks_remaining = 0;
+        bool internal_phase_timer_adjusted = false;
 
         // output and internal counters, ticks and references
         volatile uint32_t tick = 0;
         volatile uint32_t int_clock_tick = 0;
         uint8_t mod_step_ref = 0;
-        uint8_t mod_clock_counter = 0;
+        uint16_t mod_clock_counter = 0;
         uint16_t mod_clock_ref = 0;
 
         // external clock control
         volatile uint32_t ext_clock_us = 0;
+        uint32_t ext_clock_timestamp = 0;
+        bool ext_clock_timestamp_valid = false;
         volatile uint32_t ext_clock_tick = 0;
         volatile uint32_t ext_interval = 0;
         volatile float external_tempo = tempo;
         uint8_t phase_lock_quarters = 1;
+        volatile uint16_t external_ticks_remaining = 0;
+        volatile bool external_clock_stalled = false;
+        volatile uint32_t last_accepted_external_interval = 0;
 
         // debug interrupts overflow
         volatile uint16_t int_overflow_counter = 0;
         volatile uint16_t ext_overflow_counter = 0;
+
+    #ifdef UCLOCK_ENABLE_TRACE
+        TraceEvent *trace_events = new TraceEvent[UCLOCK_TRACE_BUFFER_SIZE];
+        volatile uint16_t trace_head = 0;
+        volatile uint16_t trace_tail = 0;
+        volatile uint32_t trace_dropped = 0;
+        volatile bool trace_frozen = false;
+        bool trace_phase_error_active = false;
+
+        void traceEvent(TraceEventType type, uint8_t track = UINT8_MAX,
+                uint32_t step = 0, uint16_t mod_step_counter = 0,
+                int8_t shuffle_value = 0, int16_t shuffle_target = -1,
+                int32_t value = 0);
+    #endif
+
+        uint32_t getExternalClockStallTimeout();
+        void handleExternalClock(uint32_t observed_at_us,
+                     uint32_t platform_timestamp,
+                     bool platform_timestamp_valid);
+        void updateExternalTempo(uint32_t interval);
 
         // StepSeq extension
         // main stepseq tick processor

@@ -15,7 +15,7 @@ The absence of real-time features necessary for creating professional-level embe
 - **AVR**: ATmega168/328, ATmega16u4/32u4, ATmega2560
 - **ARM**: Teensy (all versions), STM32XX, Seeed Studio XIAO M0
 - **ESP32**: All ESP32 family boards
-- **RP2040**: Raspberry Pi Pico and compatible boards
+- **RP2040/RP2350**: Raspberry Pico, Pico 2, and compatible boards
 
 ## Why uClock?
 
@@ -46,13 +46,21 @@ lib_deps =
 3. Type "uclock" at the search box
 4. Click Install for latest version
 
+## Native Tests
+
+From the library root, with host `gcc` and `g++` available on `PATH`, run:
+
+```sh
+pio test -e native
+```
+
 ## Core Concepts
 
 ### Clock Resolutions (PPQN)
 
 PPQN (Pulses Per Quarter Note) determines the timing resolution of your clock:
 
-- **PPQN_1, 2, 4, 8, 12**: Modular synthesis sync standards
+- **PPQN_1, 2, 4, 8, 12, 16**: Modular synthesis sync standards
 - **PPQN_24**: Standard MIDI sync (24 pulses per beat)
 - **PPQN_48**: Common in vintage drum machines
 - **PPQN_96**: High-resolution internal clock (default)
@@ -185,6 +193,41 @@ void loop() {
 ```
 
 ## Advanced Features
+
+### Resetting to a Musical Position
+
+`bool resetCountersToPosition(uint32_t output_tick)` resets clock history and
+aligns the output, input, sync and step counters to a supplied position. Units
+are ticks at `getOutputPPQN()`, not MIDI-clock ticks or sixteenth-note steps.
+For example, at 96 output PPQN, `resetCountersToPosition(8 * 4 * 96)` positions
+the clock at the start of zero-based bar 8 in 4/4 time.
+
+Configure the resolutions, callbacks and tracks and call `init()` first. The
+method returns `false` without changing counters if the required divisors have
+not been initialized. Validation and counter updates run in one atomic section.
+The clock mode, tempo and transport state are preserved; callbacks are not
+invoked by the reset itself. The next output tick uses the supplied position,
+and sync/step callbacks retain their fractional phase when the position is not
+on one of their boundaries. External authorization, interval history, phase
+correction and pending shuffle state are cleared, just as with `resetCounters()`.
+In strict external mode a fresh pulse is required before output resumes.
+
+The existing no-argument `resetCounters()` still resets to zero. This API does
+not define song/phrase length or alter application notes, patterns or seeds;
+the application must release any held notes as appropriate before repositioning.
+
+### RP2040 Timer Updates
+
+The RP2040 adapter keeps one repeating alarm for the clock. Period changes update
+its delay atomically without cancelling or allocating alarms, including changes
+made from a clock callback. The already-scheduled deadline is retained; subsequent
+repeats use the new period. This avoids exhausting the shared SDK alarm pool while
+cancelled entries are awaiting IRQ cleanup. Initial allocation failure is reported
+with `panic()` rather than leaving playback silently without a timer.
+
+Run `python3 test/test_rp2040_timer.py` for the hardware-free adapter regression.
+It covers rapid updates with IRQs masked, updates from inside a callback,
+slower-rate recovery, interrupt-state restoration and failed initialization.
 
 ### Multiple Sync Outputs
 
