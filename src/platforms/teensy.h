@@ -1,6 +1,24 @@
 #include <Arduino.h>
+#include <util/atomic.h>
 
-#define ATOMIC(X) noInterrupts(); X; interrupts();
+#define ATOMIC(X) ATOMIC_BLOCK(ATOMIC_RESTORESTATE) { X; }
+
+#if defined(__IMXRT1062__)
+    #define UCLOCK_HAS_PLATFORM_EXTERNAL_CLOCK_TIMESTAMP
+
+    static inline uint32_t uclockPlatformExternalClockTimestamp()
+    {
+        return ARM_DWT_CYCCNT;
+    }
+
+    static inline uint32_t uclockPlatformExternalClockIntervalUs(
+        uint32_t previous_timestamp, uint32_t current_timestamp)
+    {
+        uint32_t elapsed_cycles = current_timestamp - previous_timestamp;
+        return (uint32_t)(((uint64_t)elapsed_cycles * 1000000ULL) /
+                          (uint32_t)F_CPU_ACTUAL);
+    }
+#endif
 
 IntervalTimer _uclockTimer;
 

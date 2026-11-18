@@ -54,7 +54,7 @@ void onClockStop() {
 }
 
 void setup() {
-#if defined(ARDUINO_ARCH_MBED) && defined(ARDUINO_ARCH_RP2040)
+#if defined(ARDUINO_ARCH_MBED) && (defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_RP2350))
   // Manual begin() is required on core without built-in support for TinyUSB such as mbed rp2040
   TinyUSB_Device_Init(0);
 #endif
